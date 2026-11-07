@@ -72,6 +72,8 @@ enum EffortSource {
 model User {
   id            String       @id @default(cuid())
   email         String       @unique
+  /// Username único (login por username ou email, Fase 1B). Minúsculas, [a-z0-9._-].
+  username      String?      @unique
   emailVerified DateTime?
   name          String?
   image         String?

@@ -27,6 +27,7 @@ Hierarquia efetiva: `SUPER_ADMIN` > `OWNER` > `EDITOR` > `COMMENTER` > `VIEWER`.
 | Gerir projetos e legendas              | ✓           | ✓     | —      | —         | —      |
 | Convidar / alterar papéis de membros   | ✓           | ✓     | —      | —         | —      |
 | Eliminar workspace / transferir posse  | ✓           | ✓     | —      | —         | —      |
+| Exportar documentos (PDF, DOCX)        | ✓           | ✓     | ✓      | ✓         | —      |
 | Administração da plataforma            | ✓           | —     | —      | —         | —      |
 
 ## 2. Regras de servidor
@@ -40,7 +41,9 @@ Hierarquia efetiva: `SUPER_ADMIN` > `OWNER` > `EDITOR` > `COMMENTER` > `VIEWER`.
 
 ## 3. Proteção de rotas
 
-- `src/middleware.ts` protege `/(workspace)/**` e `/api/**` (exceto `/api/auth/**`): sem sessão → redirecionar para `/entrar?seguinte=<rota>`.
+- `src/middleware.ts` protege `/dashboard/**`, `/workspace/**` e `/admin/**` (e `/api/**`, exceto `/api/auth/**`, quando existir): sem sessão → redirecionar para `/login?seguinte=<rota>`. Com sessão, `/login` → `/dashboard`.
+- Matriz e helpers em `src/lib/rbac.ts` (`hasPermission`, `canEditDocument`, `canManageProject`, `canExportDocument`, `assertCan`); na interface, `<RoleGuard allowed={[...]} fallback={...}>` (`src/components/auth/RoleGuard.tsx`).
+- `?seguinte=` só aceita caminhos internos (`/x`), nunca `//host` nem URLs absolutos.
 - `/admin/**` exige `PlatformRole.SUPER_ADMIN`, verificado no servidor (layout + actions), não só no middleware.
 - Cabeçalhos: CSP restritiva (`default-src 'self'`; scripts com nonce), `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `frame-ancestors 'none'`.
 

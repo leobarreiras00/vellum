@@ -39,7 +39,9 @@ Sequência única ao montar o ecrã de entrada:
 3. **Aparo da caneta:** o ícone da caneta segue a ponta do traço. Em cada frame, ler o progresso (`useMotionValue` ligado ao `pathLength`) e posicionar o aparo com `path.getPointAtLength(progress * L)`; a rotação deriva da tangente (`atan2` entre dois pontos próximos), suavizada e limitada a ±25°.
 4. **Levantar (2100–2400 ms):** a caneta afasta-se (`x +12`, `y -12`, `opacity → 0`) e o formulário entra com `staggerChildren: 0.05`.
 
-Regras: tinta em `--text-primary`; traço `strokeLinecap="round"`; a animação não bloqueia o formulário (os campos são focáveis desde o início).
+Regras: tinta em `--text-primary`; traço `strokeLinecap="round"`; a animação nunca prende o utilizador: botão «Saltar introdução ↵» (Enter/Esc), flag `vellum:intro-seen` em `sessionStorage` para não repetir em recargas, e «Repetir animação da caneta» no ecrã de login.
+
+Implementação de referência (Fase 1B): `src/components/auth/PenWritingIntro.tsx` — escrita 0–2,3 s com `pathLength=1` + `strokeDashoffset` controlados em `requestAnimationFrame`, aparo posicionado com `getPointAtLength` e inclinação pela tangente (±25°, suavizada); revelação 2,3–2,9 s com `layout` do Motion (assinatura reduz e sobe) e modal a emergir com `[0.22, 1, 0.36, 1]`.
 
 ## 4. `prefers-reduced-motion`
 

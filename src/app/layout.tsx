@@ -7,6 +7,8 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { AuthProvider } from "@/context/AuthContext";
+import { getSession } from "@/lib/auth";
 import { DEFAULT_THEME, THEME_INIT_SCRIPT } from "@/lib/themes";
 
 import "./globals.css";
@@ -48,7 +50,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await getSession();
+
   return (
     <html
       lang="pt-PT"
@@ -60,7 +64,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <AuthProvider initialUser={session}>{children}</AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -3,7 +3,7 @@
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
-**Estado atual:** Fase 1A concluída · Próximo passo: Fase 1B (shadcn/ui, ESLint/Prettier/Vitest/Playwright, App Shell, CI)
+**Estado atual:** Fase 1B concluída · Próximo passo: Fase 1C (shadcn/ui, ESLint/Prettier/Vitest/Playwright, App Shell, CI)
 **Última atualização:** 2026-11-07
 
 ---
@@ -35,21 +35,39 @@
 - [x] Página temporária de verificação do Design System em `src/app/page.tsx`
 - [x] Validado: `tsc --noEmit` e `next build` sem erros; capturas nos 5 temas, desktop e móvel
 
-### Fase 1B — Ferramentas e App Shell
+### Fase 1B — Login com Caneta SVG, Modal de Autenticação e RBAC ✅ CONCLUÍDA (2026-11-07)
+
+- [x] `src/components/auth/PenWritingIntro.tsx`: cena em ecrã inteiro (grão de papel, pauta e margem a `opacity-30`); escrita do monograma + «Vellum» em 0–2,3 s (`pathLength`/`strokeDashoffset`), aparo de caneta (carvão + terracota, só tokens) a seguir a ponta do traço com inclinação pela tangente (±25°); ponto final em `accent-primary`
+- [x] Revelação 2,3–2,9 s: aparo levanta e desvanece, assinatura reduz e sobe (`layout` do Motion), modal emerge com `[0.22, 1, 0.36, 1]`
+- [x] «Saltar introdução ↵» (também Enter/Esc), «Repetir animação da caneta», flag `vellum:intro-seen` em `sessionStorage`, `prefers-reduced-motion` mostra a assinatura estática
+- [x] `src/components/auth/AuthModal.tsx` + `AuthFields.tsx`: Entrar (username ou email, mostrar/ocultar palavra-passe, validação PT-PT), perfis de demonstração RBAC com 1 clique, Criar conta (nome, username único, email, palavra-passe com força, 5 temas com pré-visualização), Recuperar em 2 passos (código de 6 algarismos + nova palavra-passe com indicador de força)
+- [x] `src/app/(auth)/login/page.tsx` com `<AppFooter variant="full" />`; `src/app/(auth)/actions.ts` (Server Actions com Zod)
+- [x] `src/lib/rbac.ts`: matriz `SUPER_ADMIN`/`USER` × `OWNER`/`EDITOR`/`COMMENTER`/`VIEWER`, `hasPermission`, `canEditDocument`, `canDeleteDocument`, `canManageProject`, `canExportDocument`, `assertCan`
+- [x] `src/lib/auth.ts` (motor de sessão provisório), `src/lib/session-token.ts` (cookie httpOnly assinado HMAC-SHA256, Web Crypto), `src/lib/auth-schemas.ts`, `src/lib/demo-profiles.ts`
+- [x] `src/context/AuthContext.tsx` (`useAuth`) e `src/components/auth/RoleGuard.tsx`
+- [x] `src/middleware.ts`: `/dashboard`, `/workspace`, `/admin` sem sessão → `/login?seguinte=…`; `/login` com sessão → `/dashboard`; `/admin` exige `SUPER_ADMIN`
+- [x] `/` redireciona para `/login` ou `/dashboard`; página do Design System movida para `/design-system`
+- [x] `/dashboard` provisório: saudação, papel efetivo, ações com `<RoleGuard>` e matriz RBAC; `<AppFooter variant="statusbar" />`
+- [x] `User.username` (opcional, único) no `schema.prisma`; `AUTH_SECRET` e `VELLUM_DEMO_AUTH` no `.env.example`
+- [x] Validado: `tsc --noEmit`, `next build`, fluxo E2E com Playwright (intro, saltar, movimento reduzido, validação, registo, recuperação, login demo, logout, redirecionamentos, `?seguinte=//host` bloqueado), desktop e móvel, `warm-cream` e `dark-espresso`
+
+### Fase 1C — Ferramentas e App Shell
 
 - [ ] Instalar e personalizar shadcn/ui
-- [ ] Configurar ESLint, Prettier, Vitest e Playwright (o script `lint` será adicionado aqui)
+- [ ] Configurar ESLint, Prettier, Vitest e Playwright (o script `lint` será adicionado aqui); converter o fluxo E2E da Fase 1B em testes
 - [ ] Primeira migração Prisma (`prisma migrate dev --name init`) com PostgreSQL local
-- [ ] App Shell: Sidebar e Topbar (o `<AppFooter variant="statusbar" />` já existe)
+- [ ] App Shell: Sidebar e Topbar (o `<AppFooter variant="statusbar" />` já existe) a substituir o `/dashboard` provisório
 - [ ] Persistir o tema em `User.theme` quando houver sessão (Fase 2)
 - [ ] Pipeline CI (lint, typecheck, testes)
 
 ## Fase 2 — Módulo 1 (Auth & RBAC) + Módulo 2 (Workspace Engine)
 
-- [ ] Better-Auth (email/palavra-passe, magic link, OAuth)
+- [ ] Better-Auth (email/palavra-passe, magic link, OAuth) a substituir o motor provisório de `src/lib/auth.ts` (mesma API pública)
+- [ ] Envio real do código de recuperação por email (hoje só visível em modo de demonstração)
 - [ ] Modelos `User`, `Workspace`, `Membership` e papéis RBAC
-- [ ] Helper de permissões `can()` e proteção de rotas
-- [ ] Ecrã de login com **Caneta SVG animada**
+- [x] Helper de permissões (`hasPermission`/`assertCan`) e proteção de rotas (middleware) — Fase 1B
+- [ ] `assertCan` nas Server Actions de conteúdo, com papel lido de `WorkspaceMember`
+- [x] Ecrã de login com **Caneta SVG animada** — Fase 1B
 - [ ] Modelos `Project`, `Page`, `Note`, `Tag`
 - [ ] Árvore de navegação com drag & drop
 - [ ] Favoritos, recentes e lixo (eliminação lógica)
@@ -102,6 +120,12 @@
 | 2026-11-07 | Tailwind 3.4 (configuração em `tailwind.config.ts`) e `tailwind-merge` 2.x; Prisma 6.x (o 7 muda o gerador e a configuração). |
 | 2026-11-07 | RBAC em dois níveis: `PlatformRole` (`USER`, `SUPER_ADMIN`) e `WorkspaceRole` (`OWNER`, `EDITOR`, `COMMENTER`, `VIEWER`); substitui `owner/admin/…` do ARCHITECTURE.md. |
 | 2026-11-07 | Animação com `motion` (importado de `motion/react`), curva `[0.22, 1, 0.36, 1]`. |
+| 2026-11-07 | Fase 1B redefinida pelo Leonardo como Login + Auth + RBAC; ferramentas e App Shell passam a Fase 1C. |
+| 2026-11-07 | Motor de sessão provisório (memória + scrypt + cookie HMAC) com a API que o Better-Auth vai substituir na Fase 2. Tokens de recuperação: SHA-256, 15 min, uso único. |
+| 2026-11-07 | Rota de entrada é `/login?seguinte=<rota>` (substitui `/entrar` da skill de segurança, já corrigida). |
+| 2026-11-07 | Exportar documentos exige `COMMENTER` ou superior; `VIEWER` só lê. `EDITOR` elimina apenas documentos próprios. |
+| 2026-11-07 | O modal surge após a escrita (até 2,9 s), com saltar por botão/Enter/Esc e flag de sessão; substitui a regra «campos focáveis desde o início» da skill de movimento (já corrigida). |
+| 2026-11-07 | Auth da Fase 1B nos caminhos pedidos (`src/lib/auth.ts`, `src/lib/rbac.ts`, `src/context/`, `src/components/auth/`); migra para `src/modules/auth/` com `index.ts` quando o módulo crescer (Fase 2). |
 
 ---
 

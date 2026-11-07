@@ -132,15 +132,37 @@ Qualquer contribuição (humana ou agente de IA) segue obrigatoriamente as 5 ski
 cp .env.example .env        # definir DATABASE_URL (PostgreSQL)
 npm install
 npx prisma generate
-npm run dev                 # http://localhost:3000
+npm run dev                 # http://localhost:3000 → /login
 ```
+
+### Rotas (Fase 1B)
+
+| Rota             | Descrição                                                                 |
+| ---------------- | ------------------------------------------------------------------------- |
+| `/`              | Redireciona para `/dashboard` (com sessão) ou `/login` (sem sessão)      |
+| `/login`         | Caneta SVG + modal (Entrar, Criar conta, Recuperar); `?vista=registo` ou `?vista=recuperar` |
+| `/dashboard`     | Destino pós-login: sessão, `<RoleGuard>` e matriz RBAC (rota protegida)  |
+| `/design-system` | Página de verificação do Design System (Fase 1A)                          |
+
+### Perfis de demonstração RBAC
+
+Ativos em desenvolvimento (em produção só com `VELLUM_DEMO_AUTH=true`). Entram com um clique no ecrã de login ou manualmente:
+
+| Perfil        | Username      | Palavra-passe   | Papéis                      |
+| ------------- | ------------- | --------------- | --------------------------- |
+| Leo Barreiras | `leo`         | `Atelier-2026`  | `SUPER_ADMIN` · `OWNER`     |
+| Ana Silva     | `ana.silva`   | `Editora-2026`  | `USER` · `EDITOR`           |
+| Marta Rocha   | `marta.rocha` | `Revisora-2026` | `USER` · `COMMENTER`        |
+| Pedro Costa   | `pedro.costa` | `Leitor-2026`   | `USER` · `VIEWER`           |
+
+> O motor de sessão da Fase 1B guarda as contas em memória: contas criadas no registo desaparecem ao reiniciar o servidor. A persistência em PostgreSQL via Better-Auth chega na Fase 2.
 
 ## Roadmap
 
 | Fase | Âmbito                                              | Estado        |
 | :--: | --------------------------------------------------- | ------------- |
 | 0    | Governação e fundação documental                    | ✅ Concluída  |
-| 1    | Fundação técnica (Next.js, temas, Prisma, App Shell)| ⏳ 1A concluída |
+| 1    | Fundação técnica (Next.js, temas, Prisma, login, App Shell)| ⏳ 1A e 1B concluídas |
 | 2    | Auth & RBAC · Workspace Engine                      | ○ Planeada    |
 | 3    | Editor Rico · Estúdio Mermaid                       | ○ Planeada    |
 | 4    | Calendário · Telemetria & Dashboard                 | ○ Planeada    |
