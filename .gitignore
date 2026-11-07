@@ -1,0 +1,130 @@
+# =============================================================================
+# Vellum — .gitignore
+# © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+# =============================================================================
+
+# --- macOS -------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100
+.Trashes
+.fseventsd
+.DocumentRevisions-V100
+.TemporaryItems
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+Icon?
+
+# --- Windows / Linux (colaboradores) -----------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*~
+.directory
+
+# --- Dependências Node.js ----------------------------------------------------
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+jspm_packages/
+bower_components/
+
+# --- Next.js 15 --------------------------------------------------------------
+.next/
+out/
+build/
+dist/
+next-env.d.ts
+.vercel/
+.turbo/
+*.tsbuildinfo
+
+# --- Variáveis de ambiente (NUNCA versionar segredos) ------------------------
+.env
+.env.*
+.env*.local
+!.env.example
+
+# --- Prisma ------------------------------------------------------------------
+prisma/*.db
+prisma/*.db-journal
+prisma/dev.db*
+*.sqlite
+*.sqlite3
+# As migrações (prisma/migrations/) SÃO versionadas.
+
+# --- Playwright --------------------------------------------------------------
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+playwright/.auth/
+e2e/.auth/
+
+# --- Testes & cobertura ------------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+junit.xml
+
+# --- Logs --------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# --- Caches & temporários ----------------------------------------------------
+.cache/
+.temp/
+.tmp/
+tmp/
+temp/
+.eslintcache
+.stylelintcache
+.prettiercache
+.parcel-cache/
+.swc/
+.vite/
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+*.pid
+*.seed
+*.pid.lock
+
+# --- Exportações geradas (DOCX/PDF de testes locais) -------------------------
+exports/tmp/
+/public/exports/
+
+# --- Editores & IDEs ---------------------------------------------------------
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+.fleet/
+
+# --- Claude Code (configurações locais pessoais) -----------------------------
+.claude/settings.local.json
+
+# --- Diversos ----------------------------------------------------------------
+*.pem
+.vercel
+.netlify
+storybook-static/
