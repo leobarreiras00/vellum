@@ -5,13 +5,15 @@
  *
  * Seed editorial em PT-PT associado aos 4 perfis de demonstração RBAC:
  * 3 projetos, páginas e subpáginas hierárquicas, 6 notas rápidas e registos de
- * esforço dos últimos 21 dias. As datas são relativas ao momento do seed para
+ * esforço dos últimos 200 dias (mapa de consistência), legendas, eventos e
+ * Notas do Dia do calendário. As datas são relativas ao momento do seed para
  * que o atelier pareça sempre vivo.
  */
 import { docToPlainText } from "@/lib/document-content";
 import { architectureOverviewContent } from "@/lib/workspace-seed-content";
 import { DEMO_PROFILES, DEMO_WORKSPACE_NAME } from "@/lib/demo-profiles";
 import { countWords } from "@/lib/utils";
+import { buildCalendarSeed } from "@/lib/calendar-seed";
 import type {
   DocumentRecord,
   EffortLogRecord,
@@ -504,35 +506,8 @@ export function buildSeed(now = Date.now()): StoreData {
     deletedAt: null,
   }));
 
-  // Esforço: últimos 21 dias para quem escreve (Leo, Ana) e revê (Marta).
-  const effortLogs: EffortLogRecord[] = [];
-  const random = prng(2026);
-  const writers: Array<[string, number]> = [
-    [LEO, 1.0],
-    [ANA, 0.8],
-    [MARTA, 0.35],
-  ];
-  for (let day = 20; day >= 0; day--) {
-    for (const [userId, intensity] of writers) {
-      for (const project of projects) {
-        if (!project.members.some((m) => m.userId === userId)) continue;
-        if (random() > 0.62) continue;
-        const projectDocs = documents.filter((d) => d.projectId === project.id);
-        const doc = projectDocs[Math.floor(random() * projectDocs.length)];
-        const minutes = Math.round((20 + random() * 70) * intensity);
-        const start = now - day * DAY - (2 + random() * 6) * HOUR;
-        effortLogs.push({
-          id: `eff-${effortLogs.length + 1}`,
-          userId,
-          workspaceId: DEMO_WORKSPACE_ID,
-          projectId: project.id,
-          documentId: doc?.id ?? null,
-          startedAt: iso(day === 0 ? Math.min(start, now - HOUR) : start),
-          activeSeconds: minutes * 60,
-        });
-      }
-    }
-  }
+  const effortLogs = seedEffortLogs(now, projects, documents, 0, EFFORT_HISTORY_DAYS);
+  const calendar = buildCalendarSeed(now);
 
   return {
     version: 1,
@@ -576,8 +551,65 @@ export function buildSeed(now = Date.now()): StoreData {
       },
     ],
     effortLogs,
+    calendarLegends: calendar.legends,
+    calendarEvents: calendar.events,
+    dayNotes: calendar.dayNotes,
     preferences: Object.fromEntries(
       DEMO_PROFILES.map((p) => [p.id, { theme: p.theme, dailyGoalMinutes: 240, readingFont: "serif" as const }]),
     ),
   };
+}
+
+/** Dias de histórico de esforço semeado (mapa de consistência anual). */
+export const EFFORT_HISTORY_DAYS = 200;
+
+/**
+ * Registos de esforço semeados entre `fromDay` e `toDay` dias atrás para quem
+ * escreve (Leo, Ana) e revê (Marta). A densidade cai com a antiguidade para o
+ * mapa de consistência mostrar um hábito a ganhar forma.
+ */
+export function seedEffortLogs(
+  now: number,
+  projects: readonly Pick<ProjectRecord, "id" | "members">[],
+  documents: readonly Pick<DocumentRecord, "id" | "projectId">[],
+  fromDay: number,
+  toDay: number,
+): EffortLogRecord[] {
+  const logs: EffortLogRecord[] = [];
+  const random = prng(2026 + fromDay);
+  const writers: Array<[string, number]> = [
+    [LEO, 1.0],
+    [ANA, 0.8],
+    [MARTA, 0.35],
+  ];
+  for (let day = toDay; day >= fromDay; day--) {
+    const density = day <= 21 ? 0.62 : day <= 90 ? 0.45 : 0.28;
+    const weekend = new Date(now - day * DAY).getUTCDay() % 6 === 0;
+    for (const [userId, intensity] of writers) {
+      for (const project of projects) {
+        if (!project.members.some((m) => m.userId === userId)) continue;
+        if (random() > (weekend ? density * 0.5 : density)) continue;
+        const projectDocs = documents.filter((d) => d.projectId === project.id);
+        const doc = projectDocs[Math.floor(random() * projectDocs.length)];
+        const minutes = Math.round((20 + random() * 70) * intensity);
+        const start = now - day * DAY - (2 + random() * 6) * HOUR;
+        const startedAt = new Date(day === 0 ? Math.min(start, now - HOUR) : start).toISOString();
+        const focus = random() < 0.15;
+        logs.push({
+          id: `eff-${fromDay}-${logs.length + 1}`,
+          userId,
+          workspaceId: DEMO_WORKSPACE_ID,
+          projectId: project.id,
+          documentId: doc?.id ?? null,
+          startedAt,
+          activeSeconds: minutes * 60,
+          wordsWritten: Math.round(minutes * (6 + random() * 14) * intensity),
+          edits: Math.round(minutes / (4 + random() * 4)),
+          kind: focus ? "focus" : "tracked",
+          updatedAt: startedAt,
+        });
+      }
+    }
+  }
+  return logs;
 }

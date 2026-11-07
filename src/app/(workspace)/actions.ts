@@ -19,6 +19,15 @@ import {
   addComment,
   convertNoteToDocument,
   createDocument,
+  createEvent,
+  createLegend,
+  deleteEvent,
+  deleteLegend,
+  logFocusSession,
+  recordEffort,
+  saveDayNote,
+  updateEvent,
+  updateLegend,
   createNote,
   createProject,
   deleteComment,
@@ -37,6 +46,11 @@ import {
 } from "@/lib/workspace-store";
 import {
   commentInputSchema,
+  dayNoteInputSchema,
+  effortHeartbeatSchema,
+  eventInputSchema,
+  focusSessionSchema,
+  legendInputSchema,
   documentContentSaveSchema,
   documentCreateSchema,
   documentUpdateSchema,
@@ -184,4 +198,50 @@ const exportSchema = z.object({ kind: z.enum(["document", "project"]), id: idSch
 
 export async function exportMarkdownAction(input: unknown) {
   return run((user) => exportMarkdown(user, exportSchema.parse(input)));
+}
+
+/* Calendário (Módulo 4) ---------------------------------------------------- */
+
+export async function createLegendAction(input: unknown) {
+  return run(async (user) => {
+    const legend = await createLegend(user, legendInputSchema.parse(input));
+    return { id: legend.id };
+  });
+}
+
+export async function updateLegendAction(legendId: unknown, input: unknown) {
+  return run((user) => updateLegend(user, idSchema.parse(legendId), legendInputSchema.parse(input)));
+}
+
+export async function deleteLegendAction(legendId: unknown) {
+  return run((user) => deleteLegend(user, idSchema.parse(legendId)));
+}
+
+export async function createEventAction(input: unknown) {
+  return run(async (user) => {
+    const event = await createEvent(user, eventInputSchema.parse(input));
+    return { id: event.id };
+  });
+}
+
+export async function updateEventAction(eventId: unknown, input: unknown) {
+  return run((user) => updateEvent(user, idSchema.parse(eventId), eventInputSchema.parse(input)));
+}
+
+export async function deleteEventAction(eventId: unknown) {
+  return run((user) => deleteEvent(user, idSchema.parse(eventId)));
+}
+
+export async function saveDayNoteAction(input: unknown) {
+  return run((user) => saveDayNote(user, dayNoteInputSchema.parse(input)));
+}
+
+/* Telemetria de esforço (Módulo 5) ----------------------------------------- */
+
+export async function recordEffortAction(input: unknown) {
+  return run((user) => recordEffort(user, effortHeartbeatSchema.parse(input)));
+}
+
+export async function logFocusSessionAction(input: unknown) {
+  return run((user) => logFocusSession(user, focusSessionSchema.parse(input)));
 }

@@ -40,6 +40,10 @@ export interface TelemetrySnapshot {
   focusedSecondsToday: number;
   /** Palavras no documento atual. */
   wordCount: number;
+  /** Palavras escritas hoje (Motor de Telemetria, Fase 4). */
+  wordsToday?: number;
+  /** Minutos sem interação até a contagem pausar. */
+  idleMinutes?: number;
 }
 
 type FullFooterProps = {
@@ -155,7 +159,7 @@ function StatusbarFooter({
     >
       {/* Esquerda — telemetria */}
       <div className="flex shrink-0 items-center gap-3">
-        <TelemetryIndicator isActive={telemetry.isActive} />
+        <TelemetryIndicator isActive={telemetry.isActive} idleMinutes={telemetry.idleMinutes ?? 2} />
         <Divider />
         <span className="inline-flex items-center gap-1" title="Tempo focado hoje">
           <Timer aria-hidden="true" className="size-3" strokeWidth={1.5} />
@@ -169,6 +173,15 @@ function StatusbarFooter({
           <span className="nums text-primary">{formatNumber(telemetry.wordCount)}</span>
           palavras
         </span>
+        {telemetry.wordsToday !== undefined && (
+          <span
+            className="nums hidden text-muted lg:inline"
+            title="Palavras escritas hoje"
+            data-testid="statusbar-words-today"
+          >
+            +{formatNumber(telemetry.wordsToday)} hoje
+          </span>
+        )}
       </div>
 
       {/* Centro — direitos reservados */}
@@ -192,11 +205,21 @@ function Divider({ className }: { className?: string }) {
   return <span aria-hidden="true" className={cn("h-3 w-px bg-subtle", className)} />;
 }
 
-function TelemetryIndicator({ isActive }: { isActive: boolean }) {
+function TelemetryIndicator({ isActive, idleMinutes }: { isActive: boolean; idleMinutes: number }) {
   const reduceMotion = useReducedMotion();
 
   return (
-    <span className="inline-flex items-center gap-1.5" role="status" aria-live="polite">
+    <span
+      className="inline-flex items-center gap-1.5"
+      role="status"
+      aria-live="polite"
+      data-telemetry-state={isActive ? "active" : "paused"}
+      title={
+        isActive
+          ? `A medir esforço · pausa ao fim de ${idleMinutes} min sem atividade`
+          : "Em pausa · retoma com qualquer tecla, clique ou movimento"
+      }
+    >
       <span className="relative grid size-2.5 place-items-center" aria-hidden="true">
         {isActive ? (
           <>

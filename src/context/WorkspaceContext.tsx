@@ -38,7 +38,7 @@ interface WorkspaceContextValue {
   /** Executa uma Server Action e aplica o instantâneo devolvido. */
   run: <T>(
     action: () => Promise<WorkspaceActionResult<T>>,
-    options?: { success?: string },
+    options?: { success?: string; silent?: boolean },
   ) => Promise<WorkspaceActionResult<T>>;
   isPending: boolean;
   /** Sujeito RBAC no contexto de um projeto (papel de projeto restringe). */
@@ -88,7 +88,7 @@ export function WorkspaceProvider({ initial, children }: WorkspaceProviderProps)
           if (result.ok) {
             setSnapshot(result.snapshot);
             if (options?.success) notify(options.success);
-          } else {
+          } else if (!options?.silent) {
             notify(result.error, "error");
           }
           resolve(result);

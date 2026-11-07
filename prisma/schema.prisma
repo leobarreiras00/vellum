@@ -79,6 +79,8 @@ enum EffortSource {
   MERMAID
   CALENDAR
   QUICK_NOTE
+  /// Sessão de foco registada manualmente (Pomodoro / Sessão Editorial) — Fase 4.
+  FOCUS_SESSION
 }
 
 // -----------------------------------------------------------------------------
@@ -119,6 +121,7 @@ model User {
   calendarEvents      CalendarEvent[]
   notifications       Notification[]
   effortLogs          EffortLog[]
+  dayNotes            DayNote[]
 
   @@index([deletedAt])
 }
@@ -162,6 +165,7 @@ model Workspace {
   legends        CalendarLegend[]
   notifications  Notification[]
   effortLogs     EffortLog[]
+  dayNotes       DayNote[]
 
   @@index([ownerId])
 }
@@ -300,14 +304,15 @@ model QuickNote {
 
 /// Legendas (categorias) do calendário, personalizáveis por workspace.
 model CalendarLegend {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   name        String
-  /// Cor da legenda (hex validado com Zod); dado do utilizador, não token de UI.
-  color       String
-  position    Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  /// Tinta harmónica da legenda (lista fechada, Fase 4); dado do utilizador, não token de UI.
+  color       InkColor  @default(TERRACOTA)
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
 
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   events    CalendarEvent[]
@@ -331,7 +336,10 @@ model CalendarEvent {
   allDay          Boolean   @default(false)
   /// Regra de recorrência RFC 5545 (RRULE), ex.: "FREQ=WEEKLY;BYDAY=MO".
   recurrenceRule  String?
+  /// Antecedência do lembrete em minutos (0, 5, 15, 30, 60, 120, 1440, 2880); null = sem notificação.
   reminderMinutes Int?
+  /// «Dia Importante / Marco»: selo especial na grelha e destaque no dashboard (Fase 4).
+  isImportant     Boolean   @default(false)
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   deletedAt       DateTime?
@@ -344,6 +352,26 @@ model CalendarEvent {
 
   @@index([workspaceId, startsAt])
   @@index([legendId])
+  @@index([workspaceId, isImportant, startsAt])
+}
+
+/// «Nota do Dia»: folha de registo diário, privada de cada pessoa (Fase 4).
+model DayNote {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  /// Dia no fuso Europe/Lisbon.
+  date        DateTime @db.Date
+  content     String   @db.Text
+  /// Documentos de projeto ligados a este dia.
+  documentIds String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId, date])
 }
 
 model Notification {
@@ -381,6 +409,8 @@ model EffortLog {
   activeSeconds Int          @default(0)
   idleSeconds   Int          @default(0)
   keystrokes    Int          @default(0)
+  /// Rajadas de edição em campos editáveis (Fase 4).
+  edits         Int          @default(0)
   wordsDelta    Int          @default(0)
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt

@@ -171,6 +171,9 @@ export interface DocumentCommentRecord {
   deletedAt: string | null;
 }
 
+export const EFFORT_KINDS = ["tracked", "focus"] as const;
+export type EffortKind = (typeof EFFORT_KINDS)[number];
+
 export interface EffortLogRecord {
   id: string;
   userId: string;
@@ -179,6 +182,77 @@ export interface EffortLogRecord {
   documentId: string | null;
   startedAt: string;
   activeSeconds: number;
+  /** Palavras escritas durante a sessão (Fase 4). */
+  wordsWritten: number;
+  /** Rajadas de edição (teclado em campos editáveis) durante a sessão (Fase 4). */
+  edits: number;
+  /** `tracked` = medido pelo Motor de Telemetria; `focus` = sessão de foco registada. */
+  kind: EffortKind;
+  /** Último heartbeat agregado nesta sessão. */
+  updatedAt: string;
+}
+
+/* ==========================================================================
+   Calendário (Módulo 4)
+   ========================================================================== */
+
+/** Antecedência dos lembretes, em minutos (`null` = sem lembrete). */
+export const REMINDER_OPTIONS = [0, 5, 15, 30, 60, 120, 1440, 2880] as const;
+export const REMINDER_LABELS: Record<number, string> = {
+  0: "À hora do evento",
+  5: "5 minutos antes",
+  15: "15 minutos antes",
+  30: "30 minutos antes",
+  60: "1 hora antes",
+  120: "2 horas antes",
+  1440: "1 dia antes",
+  2880: "2 dias antes",
+};
+
+export interface CalendarLegendRecord {
+  id: string;
+  workspaceId: string;
+  name: string;
+  color: InkColor;
+  position: number;
+  createdAt: string;
+  deletedAt: string | null;
+}
+
+export interface CalendarEventRecord {
+  id: string;
+  workspaceId: string;
+  createdById: string;
+  title: string;
+  /** Dia (AAAA-MM-DD, hora de Lisboa). */
+  date: string;
+  /** "HH:MM" (24 h, Lisboa); `null` em eventos de dia inteiro. */
+  startTime: string | null;
+  endTime: string | null;
+  allDay: boolean;
+  projectId: string | null;
+  documentId: string | null;
+  legendId: string | null;
+  /** Dia Importante / Marco: selo especial na grelha e destaque no dashboard. */
+  isImportant: boolean;
+  /** Minutos de antecedência do lembrete; `null` = sem notificação. */
+  reminderMinutes: number | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+/** «Nota do Dia»: folha de registo diário, privada de cada pessoa. */
+export interface DayNoteRecord {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  date: string;
+  content: string;
+  /** Documentos de projeto ligados a este dia. */
+  documentIds: string[];
+  updatedAt: string;
 }
 
 export const READING_FONTS = ["serif", "sans"] as const;
@@ -201,6 +275,9 @@ export interface StoreData {
   notes: QuickNoteRecord[];
   comments: DocumentCommentRecord[];
   effortLogs: EffortLogRecord[];
+  calendarLegends: CalendarLegendRecord[];
+  calendarEvents: CalendarEventRecord[];
+  dayNotes: DayNoteRecord[];
   preferences: Record<string, UserPreferences>;
 }
 
@@ -231,6 +308,21 @@ export interface DocumentView extends Omit<DocumentRecord, "deletedAt" | "worksp
 }
 export type CommentView = Omit<DocumentCommentRecord, "deletedAt" | "workspaceId">;
 export type NoteView = Omit<QuickNoteRecord, "deletedAt" | "workspaceId">;
+export type LegendView = Omit<CalendarLegendRecord, "deletedAt" | "workspaceId">;
+export type CalendarEventView = Omit<CalendarEventRecord, "deletedAt" | "workspaceId">;
+export type DayNoteView = Omit<DayNoteRecord, "workspaceId" | "userId">;
+
+/** Agregados de esforço do utilizador atual (por dia AAAA-MM-DD, Lisboa). */
+export interface EffortSummary {
+  todaySeconds: number;
+  byDay: Record<string, number>;
+  wordsByDay: Record<string, number>;
+  editsByDay: Record<string, number>;
+  /** Segundos por projeto e por dia (`_` = fora de projetos). */
+  byProjectDay: Record<string, Record<string, number>>;
+  /** Segundos por documento (só do utilizador atual). */
+  byDocument: Record<string, number>;
+}
 
 export interface WorkspaceSnapshot {
   workspace: { id: string; name: string };
@@ -239,9 +331,15 @@ export interface WorkspaceSnapshot {
   documents: DocumentView[];
   notes: NoteView[];
   comments: CommentView[];
+  legends: LegendView[];
+  events: CalendarEventView[];
+  /** Notas do Dia do utilizador atual. */
+  dayNotes: DayNoteView[];
+  /** Diagramas Mermaid ativos em todos os documentos. */
+  diagramCount: number;
   preferences: UserPreferences;
-  /** Esforço do utilizador atual: total de hoje e por dia (AAAA-MM-DD, Europa/Lisboa). */
-  effort: { todaySeconds: number; byDay: Record<string, number> };
+  /** Esforço do utilizador atual (AAAA-MM-DD, Europa/Lisboa). */
+  effort: EffortSummary;
   generatedAt: string;
 }
 
@@ -303,6 +401,77 @@ export const noteInputSchema = z.object({
   isPinned: z.boolean().default(false),
 });
 export type NoteInput = z.infer<typeof noteInputSchema>;
+
+const dayKey = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida.");
+const timeKey = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Hora inválida (HH:MM).");
+
+export const legendInputSchema = z.object({
+  name: z.string().trim().min(2, "Dê um nome com pelo menos 2 caracteres.").max(40, "Máximo de 40 caracteres."),
+  color: inkSchema,
+});
+export type LegendInput = z.infer<typeof legendInputSchema>;
+
+export const eventInputSchema = z
+  .object({
+    title: z.string().trim().min(1, "Dê um título ao evento.").max(120, "Máximo de 120 caracteres."),
+    date: dayKey,
+    allDay: z.boolean().default(false),
+    startTime: timeKey.nullable().default(null),
+    endTime: timeKey.nullable().default(null),
+    projectId: id.nullable().default(null),
+    documentId: id.nullable().default(null),
+    legendId: id.nullable().default(null),
+    isImportant: z.boolean().default(false),
+    reminderMinutes: z
+      .number()
+      .int()
+      .refine((v) => (REMINDER_OPTIONS as readonly number[]).includes(v), "Lembrete inválido.")
+      .nullable()
+      .default(null),
+    notes: z.string().trim().max(4000, "Máximo de 4000 caracteres.").default(""),
+  })
+  .transform((v) => (v.allDay ? { ...v, startTime: null, endTime: null } : v))
+  .superRefine((v, ctx) => {
+    if (!v.allDay && !v.startTime) {
+      ctx.addIssue({ code: "custom", path: ["startTime"], message: "Indique a hora de início ou marque Dia inteiro." });
+    }
+    if (v.startTime && v.endTime && v.endTime <= v.startTime) {
+      ctx.addIssue({ code: "custom", path: ["endTime"], message: "O fim tem de ser depois do início." });
+    }
+  });
+export type EventInput = z.infer<typeof eventInputSchema>;
+
+export const dayNoteInputSchema = z.object({
+  date: dayKey,
+  content: z.string().max(20_000, "Máximo de 20 000 caracteres."),
+  documentIds: z.array(id).max(20, "No máximo 20 documentos ligados.").default([]),
+});
+export type DayNoteInput = z.infer<typeof dayNoteInputSchema>;
+
+/** Heartbeat do Motor de Telemetria (agregado no servidor). */
+export const effortHeartbeatSchema = z.object({
+  projectId: id.nullable().default(null),
+  documentId: id.nullable().default(null),
+  activeSeconds: z
+    .number()
+    .int()
+    .min(1)
+    .max(15 * 60),
+  wordsWritten: z.number().int().min(0).max(20_000).default(0),
+  edits: z.number().int().min(0).max(5_000).default(0),
+});
+export type EffortHeartbeat = z.infer<typeof effortHeartbeatSchema>;
+
+/** Sessão de foco registada manualmente (Pomodoro / Sessão Editorial). */
+export const focusSessionSchema = z.object({
+  projectId: id.nullable().default(null),
+  documentId: id.nullable().default(null),
+  minutes: z.number().int().min(5, "Mínimo de 5 minutos.").max(240, "Máximo de 4 horas."),
+  wordsWritten: z.number().int().min(0).max(20_000, "Máximo de 20 000 palavras.").default(0),
+  /** Dias atrás (0 = hoje), para preencher o histórico. */
+  daysAgo: z.number().int().min(0).max(365).default(0),
+});
+export type FocusSessionInput = z.infer<typeof focusSessionSchema>;
 
 export const preferencesInputSchema = z
   .object({

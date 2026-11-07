@@ -11,6 +11,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { WorkspaceShell } from "@/components/layout/WorkspaceShell";
+import { TelemetryProvider } from "@/context/TelemetryContext";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import { getSession } from "@/lib/auth";
 import { DEMO_PROFILES, demoRoleTag, isDemoAuthEnabled } from "@/lib/demo-profiles";
@@ -40,7 +41,9 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
 
   return (
     <WorkspaceProvider initial={snapshot}>
-      <WorkspaceShell demoProfiles={demoProfiles}>{children}</WorkspaceShell>
+      <TelemetryProvider>
+        <WorkspaceShell demoProfiles={demoProfiles}>{children}</WorkspaceShell>
+      </TelemetryProvider>
     </WorkspaceProvider>
   );
 }

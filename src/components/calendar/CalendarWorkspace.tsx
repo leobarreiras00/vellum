@@ -1,0 +1,399 @@
+/**
+ * Vellum — Calendário Built-in Personalizável (Módulo 4)
+ * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * Licença proprietária — ver LICENSE na raiz do repositório.
+ *
+ * Template base duplo, alternável no cabeçalho:
+ *  1. Vista Calendário — grelha mensal ou semanal clássica;
+ *  2. Vista Agenda — lista cronológica do mês + Folha de Notas do dia.
+ * Legendas filtráveis, Dias Importantes, eventos com lembretes e Notas do Dia.
+ * Escrever eventos exige calendar:edit (o servidor volta a verificar).
+ */
+"use client";
+
+import { CalendarDays, ChevronLeft, ChevronRight, NotebookTabs, Plus, SlidersHorizontal, Star } from "lucide-react";
+import { motion, useReducedMotion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
+
+import { AgendaView } from "@/components/calendar/AgendaView";
+import { EventDialog, type EventDialogState } from "@/components/calendar/EventDialog";
+import { LegendManager } from "@/components/calendar/LegendManager";
+import { MonthGrid } from "@/components/calendar/MonthGrid";
+import { useDayNotes } from "@/components/calendar/useDayNotes";
+import { WeekGrid } from "@/components/calendar/WeekGrid";
+import { Button } from "@/components/ui/Button";
+import { useWorkspace } from "@/context/WorkspaceContext";
+import {
+  addDays,
+  compareEvents,
+  dayShortLabel,
+  monthLabel,
+  parseDayKey,
+  relativeDayLabel,
+  shiftMonth,
+  weekDays,
+} from "@/lib/calendar";
+import { sumRange } from "@/lib/telemetry";
+import { EASE_EDITORIAL, cn, formatDuration, formatNumber } from "@/lib/utils";
+import { lisbonDay, type CalendarEventView } from "@/lib/workspace-types";
+
+type CalendarView = "grelha" | "agenda";
+type GridScale = "mes" | "semana";
+
+const VIEW_KEY = "vellum:calendar-view";
+const SCALE_KEY = "vellum:calendar-scale";
+const HIDDEN_KEY = "vellum:calendar-hidden-legends";
+const NO_LEGEND = "__sem-legenda";
+
+function readLocal(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeLocal(key: string, value: string) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // Armazenamento indisponível.
+  }
+}
+
+export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
+  const { snapshot, can } = useWorkspace();
+  const { byDate: notes, save: saveNote } = useDayNotes();
+  const reduce = useReducedMotion();
+  const today = lisbonDay(new Date());
+
+  const [view, setView] = useState<CalendarView>(initialDay ? "agenda" : "grelha");
+  const [scale, setScale] = useState<GridScale>("mes");
+  const [selected, setSelected] = useState(initialDay ?? today);
+  const [cursor, setCursor] = useState(() => {
+    const { year, month } = parseDayKey(initialDay ?? today);
+    return { year, month };
+  });
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+  const [dialog, setDialog] = useState<EventDialogState>({ open: false });
+  const [legendsOpen, setLegendsOpen] = useState(false);
+
+  // Preferências locais da vista.
+  useEffect(() => {
+    if (!initialDay) {
+      const storedView = readLocal(VIEW_KEY);
+      if (storedView === "grelha" || storedView === "agenda") setView(storedView);
+    }
+    const storedScale = readLocal(SCALE_KEY);
+    if (storedScale === "mes" || storedScale === "semana") setScale(storedScale);
+    try {
+      setHidden(new Set(JSON.parse(readLocal(HIDDEN_KEY) ?? "[]") as string[]));
+    } catch {
+      // Valor inválido: ignora.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Ligação direta (?dia=AAAA-MM-DD), por exemplo a partir de uma notificação.
+  useEffect(() => {
+    if (!initialDay) return;
+    setSelected(initialDay);
+    setCursor({ year: parseDayKey(initialDay).year, month: parseDayKey(initialDay).month });
+    setView("agenda");
+  }, [initialDay]);
+
+  const chooseView = (next: CalendarView) => {
+    setView(next);
+    writeLocal(VIEW_KEY, next);
+  };
+  const chooseScale = (next: GridScale) => {
+    setScale(next);
+    writeLocal(SCALE_KEY, next);
+  };
+  const toggleLegend = (id: string) =>
+    setHidden((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      writeLocal(HIDDEN_KEY, JSON.stringify([...next]));
+      return next;
+    });
+
+  const legends = useMemo(() => new Map(snapshot.legends.map((l) => [l.id, l])), [snapshot.legends]);
+  const visibleEvents = useMemo(
+    () => snapshot.events.filter((e) => !hidden.has(e.legendId && legends.has(e.legendId) ? e.legendId : NO_LEGEND)),
+    [snapshot.events, hidden, legends],
+  );
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEventView[]>();
+    for (const event of [...visibleEvents].sort(compareEvents)) {
+      map.set(event.date, [...(map.get(event.date) ?? []), event]);
+    }
+    return map;
+  }, [visibleEvents]);
+
+  const canEdit = can("calendar:edit");
+  const goalSeconds = snapshot.preferences.dailyGoalMinutes * 60;
+  const monthPrefix = `${cursor.year}-${String(cursor.month).padStart(2, "0")}`;
+  const monthEvents = visibleEvents.filter((e) => e.date.startsWith(monthPrefix));
+  const monthImportant = monthEvents.filter((e) => e.isImportant).length;
+  const monthEffort = sumRange(snapshot.effort.byDay, `${monthPrefix}-01`, `${monthPrefix}-31`);
+  const label = monthLabel(cursor.year, cursor.month);
+  const week = weekDays(selected);
+  const weekLabel = `${dayShortLabel(week[0]!)} – ${dayShortLabel(week[6]!)}`;
+  const nextImportant = snapshot.events.filter((e) => e.isImportant && e.date >= today).sort(compareEvents)[0];
+
+  const move = (delta: number) => {
+    if (view === "grelha" && scale === "semana") {
+      const next = addDays(selected, delta * 7);
+      setSelected(next);
+      setCursor({ year: parseDayKey(next).year, month: parseDayKey(next).month });
+      return;
+    }
+    const next = shiftMonth(cursor.year, cursor.month, delta);
+    setCursor(next);
+    const keepDay = Math.min(parseDayKey(selected).day, 28);
+    setSelected(`${next.year}-${String(next.month).padStart(2, "0")}-${String(keepDay).padStart(2, "0")}`);
+  };
+  const goToday = () => {
+    setSelected(today);
+    setCursor({ year: parseDayKey(today).year, month: parseDayKey(today).month });
+  };
+  const selectDay = (day: string) => {
+    setSelected(day);
+    setCursor({ year: parseDayKey(day).year, month: parseDayKey(day).month });
+  };
+
+  const gridProps = {
+    eventsByDay,
+    legends,
+    notes,
+    effortByDay: snapshot.effort.byDay,
+    goalSeconds,
+    today,
+    selected,
+    canEdit,
+    onOpenEvent: (eventId: string) => setDialog({ open: true, eventId }),
+    onNewEvent: (date: string) => setDialog({ open: true, date }),
+    onOpenDay: (day: string) => {
+      selectDay(day);
+      chooseView("agenda");
+    },
+    onSaveNote: (date: string, content: string) => saveNote(date, content, notes.get(date)?.documentIds ?? []),
+  };
+
+  const legendChips = [
+    ...snapshot.legends.map((l) => ({ id: l.id, name: l.name, color: l.color })),
+    ...(snapshot.events.some((e) => !e.legendId || !legends.has(e.legendId))
+      ? [{ id: NO_LEGEND, name: "Sem legenda", color: "grafite" as const }]
+      : []),
+  ];
+
+  return (
+    <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 md:px-8 lg:pt-10">
+      <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
+        <div className="min-w-0">
+          <p className="eyebrow">Calendário · agenda editorial</p>
+          <h1 className="mt-2 text-4xl font-normal leading-tight tracking-tight first-letter:uppercase">
+            {view === "grelha" && scale === "semana" ? weekLabel : label}
+          </h1>
+          <p className="nums mt-1.5 font-serif text-lg italic text-muted">
+            {formatNumber(monthEvents.length)} eventos · {formatNumber(monthImportant)}{" "}
+            {monthImportant === 1 ? "dia importante" : "dias importantes"} · {formatDuration(monthEffort)} de esforço
+            focado
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Segmented
+            label="Vista do calendário"
+            value={view}
+            onChange={chooseView}
+            options={[
+              { value: "grelha", label: "Calendário", icon: <CalendarDays aria-hidden="true" strokeWidth={1.5} /> },
+              {
+                value: "agenda",
+                label: "Agenda com Notas",
+                icon: <NotebookTabs aria-hidden="true" strokeWidth={1.5} />,
+              },
+            ]}
+            reduce={Boolean(reduce)}
+            id="vista"
+          />
+          {view === "grelha" && (
+            <Segmented
+              label="Escala da grelha"
+              value={scale}
+              onChange={chooseScale}
+              options={[
+                { value: "mes", label: "Mês" },
+                { value: "semana", label: "Semana" },
+              ]}
+              reduce={Boolean(reduce)}
+              id="escala"
+            />
+          )}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={view === "grelha" && scale === "semana" ? "Semana anterior" : "Mês anterior"}
+              onClick={() => move(-1)}
+            >
+              <ChevronLeft aria-hidden="true" strokeWidth={1.5} />
+            </Button>
+            <Button size="sm" onClick={goToday}>
+              Hoje
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={view === "grelha" && scale === "semana" ? "Semana seguinte" : "Mês seguinte"}
+              onClick={() => move(1)}
+            >
+              <ChevronRight aria-hidden="true" strokeWidth={1.5} />
+            </Button>
+          </div>
+          {canEdit && (
+            <Button variant="primary" size="md" onClick={() => setDialog({ open: true, date: selected })}>
+              <Plus aria-hidden="true" strokeWidth={1.5} />
+              Novo evento
+            </Button>
+          )}
+        </div>
+      </header>
+
+      {/* Legendas: filtro rápido + gestor */}
+      <div
+        className="mt-6 flex flex-wrap items-center gap-1.5 border-y border-subtle py-2.5"
+        aria-label="Filtrar por legenda"
+        role="group"
+      >
+        <span className="eyebrow mr-1">Legendas</span>
+        {legendChips.map((chip) => {
+          const active = !hidden.has(chip.id);
+          return (
+            <button
+              key={chip.id}
+              type="button"
+              data-ink={chip.color}
+              aria-pressed={active}
+              onClick={() => toggleLegend(chip.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+                active
+                  ? "border-ink/30 bg-ink/[0.08] text-primary"
+                  : "border-subtle bg-transparent text-muted line-through decoration-muted/60",
+              )}
+            >
+              <span
+                aria-hidden="true"
+                className={cn("size-2 rounded-full", active ? "bg-ink" : "border border-ink/50")}
+              />
+              {chip.name}
+            </button>
+          );
+        })}
+        <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setLegendsOpen(true)}>
+          <SlidersHorizontal aria-hidden="true" strokeWidth={1.5} />
+          Gerir legendas
+        </Button>
+      </div>
+
+      {nextImportant && (
+        <p className="nums mt-3 flex items-center gap-1.5 text-xs text-muted">
+          <Star aria-hidden="true" className="size-3 fill-current text-accent-primary" strokeWidth={1.5} />
+          Próximo dia importante:{" "}
+          <button
+            type="button"
+            className="text-primary underline-offset-4 hover:text-accent-primary hover:underline"
+            onClick={() => gridProps.onOpenDay(nextImportant.date)}
+          >
+            {nextImportant.title}
+          </button>
+          · {dayShortLabel(nextImportant.date)} ({relativeDayLabel(nextImportant.date, today)})
+        </p>
+      )}
+
+      <motion.div
+        key={view + scale}
+        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22, ease: EASE_EDITORIAL }}
+        className="mt-5"
+      >
+        {view === "agenda" ? (
+          <AgendaView
+            {...gridProps}
+            year={cursor.year}
+            month={cursor.month}
+            onSelectDay={selectDay}
+            onSaveNote={saveNote}
+          />
+        ) : scale === "semana" ? (
+          <WeekGrid {...gridProps} anchor={selected} label={weekLabel} />
+        ) : (
+          <MonthGrid {...gridProps} year={cursor.year} month={cursor.month} label={label} />
+        )}
+      </motion.div>
+
+      {view === "grelha" && (
+        <p className="mt-4 text-xs text-muted">
+          Cada dia mostra os eventos pela cor da legenda, o selo de Dia Importante, o esforço focado (a terracota quando
+          cumpre a meta) e a Nota do Dia. Clique no número do dia para abrir a Agenda com Notas.
+        </p>
+      )}
+
+      <EventDialog state={dialog} onClose={() => setDialog({ open: false })} />
+      <LegendManager open={legendsOpen} onClose={() => setLegendsOpen(false)} hidden={hidden} onToggle={toggleLegend} />
+    </div>
+  );
+}
+
+interface SegmentedProps<T extends string> {
+  id: string;
+  label: string;
+  value: T;
+  onChange: (value: T) => void;
+  options: Array<{ value: T; label: string; icon?: React.ReactNode }>;
+  reduce: boolean;
+}
+
+function Segmented<T extends string>({ id, label, value, onChange, options, reduce }: SegmentedProps<T>) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className="flex items-center rounded-lg border border-subtle bg-surface p-0.5"
+    >
+      {options.map((option) => {
+        const selected = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "relative inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-xs transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary [&_svg]:size-3.5",
+              selected ? "text-primary" : "text-muted hover:text-primary",
+            )}
+          >
+            {selected && (
+              <motion.span
+                layoutId={`calendar-segment-${id}`}
+                className="absolute inset-0 rounded-md border border-subtle bg-elevated shadow-paper"
+                transition={reduce ? { duration: 0 } : { duration: 0.22, ease: EASE_EDITORIAL }}
+              />
+            )}
+            <span className="relative inline-flex items-center gap-1.5">
+              {option.icon}
+              {option.label}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}

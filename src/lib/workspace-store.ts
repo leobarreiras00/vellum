@@ -20,13 +20,23 @@ import path from "node:path";
 
 import type { SessionUser } from "@/lib/auth";
 import { ForbiddenError, assertCan, canDeleteDocument, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
-import { docToMarkdown, docToPlainText, type DocContent } from "@/lib/document-content";
+import { docStats, docToMarkdown, docToPlainText, type DocContent } from "@/lib/document-content";
 import { countWords } from "@/lib/utils";
-import { buildSeed } from "@/lib/workspace-seed";
+import { buildCalendarSeed } from "@/lib/calendar-seed";
+import { DEMO_WORKSPACE_ID, EFFORT_HISTORY_DAYS, buildSeed, seedEffortLogs } from "@/lib/workspace-seed";
 import {
   initialsOf,
   lisbonDay,
   projectSubject,
+  type CalendarEventRecord,
+  type CalendarLegendRecord,
+  type DayNoteInput,
+  type EffortHeartbeat,
+  type EffortLogRecord,
+  type EffortSummary,
+  type EventInput,
+  type FocusSessionInput,
+  type LegendInput,
   type CommentKind,
   type DocumentCommentRecord,
   type DocumentRecord,
@@ -92,13 +102,36 @@ async function load(): Promise<StoreData> {
   }
 }
 
-/** Completa ficheiros gravados por versões anteriores (Fase 2A) com os campos da Fase 3. */
+/** Completa ficheiros gravados por versões anteriores (Fases 2A e 3) com os campos novos. */
 function upgrade(data: StoreData): StoreData {
   data.comments ??= [];
   for (const doc of data.documents) {
     doc.contentJson ??= null;
     doc.version ??= 1;
   }
+  // Fase 4: telemetria de esforço com palavras, edições e tipo de sessão.
+  for (const log of data.effortLogs) {
+    log.wordsWritten ??= Math.round((log.activeSeconds / 60) * 11);
+    log.edits ??= Math.round(log.activeSeconds / 360);
+    log.kind ??= "tracked";
+    log.updatedAt ??= log.startedAt;
+  }
+  // Fase 4: calendário. Ficheiros anteriores recebem o seed do calendário e o
+  // histórico de esforço do atelier de demonstração (mapa de consistência).
+  if (!data.calendarEvents) {
+    const hasDemo = data.workspaces.some((w) => w.id === DEMO_WORKSPACE_ID);
+    const calendar = buildCalendarSeed();
+    data.calendarLegends = hasDemo ? calendar.legends : [];
+    data.calendarEvents = hasDemo ? calendar.events : [];
+    data.dayNotes = hasDemo ? calendar.dayNotes : [];
+    if (hasDemo) {
+      const demoProjects = data.projects.filter((p) => p.workspaceId === DEMO_WORKSPACE_ID);
+      const demoDocs = data.documents.filter((d) => d.workspaceId === DEMO_WORKSPACE_ID && !d.deletedAt);
+      data.effortLogs.push(...seedEffortLogs(Date.now(), demoProjects, demoDocs, 22, EFFORT_HISTORY_DAYS));
+    }
+  }
+  data.calendarLegends ??= [];
+  data.dayNotes ??= [];
   return data;
 }
 
@@ -248,15 +281,26 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
       };
     });
 
-  const today = lisbonDay(new Date());
-  const byDay: Record<string, number> = {};
-  let todaySeconds = 0;
-  for (const log of logs) {
-    if (log.userId !== user.userId) continue;
-    const day = lisbonDay(log.startedAt);
-    byDay[day] = (byDay[day] ?? 0) + log.activeSeconds;
-    if (day === today) todaySeconds += log.activeSeconds;
-  }
+  const effort = summarizeEffort(logs, user.userId);
+  const strip = <T extends { deletedAt: string | null; workspaceId: string }>({
+    deletedAt: _d,
+    workspaceId: _w,
+    ...rest
+  }: T) => rest;
+  const legends = data.calendarLegends
+    .filter((l) => l.workspaceId === workspaceId && !l.deletedAt)
+    .sort((a, b) => a.position - b.position);
+  const events = data.calendarEvents
+    .filter((e) => e.workspaceId === workspaceId && !e.deletedAt && (!e.projectId || liveProjectIds.has(e.projectId)))
+    .map((e) => ({ ...e, documentId: e.documentId && liveDocIds.has(e.documentId) ? e.documentId : null }))
+    .sort((a, b) => a.date.localeCompare(b.date) || (a.startTime ?? "").localeCompare(b.startTime ?? ""));
+  const dayNotes = data.dayNotes
+    .filter((n) => n.workspaceId === workspaceId && n.userId === user.userId)
+    .map(({ workspaceId: _w, userId: _u, ...note }) => ({
+      ...note,
+      documentIds: note.documentIds.filter((id) => liveDocIds.has(id)),
+    }));
+  const diagramCount = documents.reduce((sum, d) => sum + (d.contentJson ? docStats(d.contentJson).diagrams : 0), 0);
 
   return {
     workspace: { id: workspaceId, name: workspace?.name ?? user.workspaceName },
@@ -287,8 +331,12 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
     comments: comments
       .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
       .map(({ deletedAt: _d, workspaceId: _w, ...comment }) => comment),
+    legends: legends.map(strip),
+    events: events.map(strip),
+    dayNotes,
+    diagramCount,
     preferences: data.preferences[user.userId] ?? defaultPreferences(user),
-    effort: { todaySeconds, byDay },
+    effort,
     generatedAt: now(),
   };
 }
@@ -725,4 +773,275 @@ function slug(value: string): string {
       .replace(/^-+|-+$/g, "")
       .slice(0, 60) || "documento"
   );
+}
+
+/* ==========================================================================
+   Telemetria de esforço (Módulo 5)
+   ========================================================================== */
+
+/** Agregados de esforço do utilizador (por dia de Lisboa, projeto e documento). */
+function summarizeEffort(logs: readonly EffortLogRecord[], userId: string): EffortSummary {
+  const today = lisbonDay(new Date());
+  const summary: EffortSummary = {
+    todaySeconds: 0,
+    byDay: {},
+    wordsByDay: {},
+    editsByDay: {},
+    byProjectDay: {},
+    byDocument: {},
+  };
+  for (const log of logs) {
+    if (log.userId !== userId) continue;
+    const day = lisbonDay(log.startedAt);
+    summary.byDay[day] = (summary.byDay[day] ?? 0) + log.activeSeconds;
+    summary.wordsByDay[day] = (summary.wordsByDay[day] ?? 0) + (log.wordsWritten ?? 0);
+    summary.editsByDay[day] = (summary.editsByDay[day] ?? 0) + (log.edits ?? 0);
+    const projectKey = log.projectId ?? "_";
+    const perProject = (summary.byProjectDay[projectKey] ??= {});
+    perProject[day] = (perProject[day] ?? 0) + log.activeSeconds;
+    if (log.documentId)
+      summary.byDocument[log.documentId] = (summary.byDocument[log.documentId] ?? 0) + log.activeSeconds;
+    if (day === today) summary.todaySeconds += log.activeSeconds;
+  }
+  return summary;
+}
+
+/** Projeto/documento de um registo de esforço: só aceita o que a pessoa pode ler. */
+function effortTarget(
+  data: StoreData,
+  user: SessionUser,
+  workspaceId: string,
+  input: { projectId: string | null; documentId: string | null },
+): { projectId: string | null; documentId: string | null } {
+  if (input.documentId) {
+    const doc = liveDocument(data, workspaceId, input.documentId);
+    assertCan(subjectIn(user, liveProject(data, workspaceId, doc.projectId)), "document:read");
+    return { projectId: doc.projectId, documentId: doc.id };
+  }
+  if (input.projectId) {
+    assertCan(subjectIn(user, liveProject(data, workspaceId, input.projectId)), "document:read");
+    return { projectId: input.projectId, documentId: null };
+  }
+  return { projectId: null, documentId: null };
+}
+
+/** Uma sessão medida continua no mesmo registo se o último heartbeat foi há menos disto. */
+const SESSION_GAP_MS = 10 * 60 * 1000;
+
+/**
+ * Heartbeat do Motor de Telemetria: agrega o tempo ativo, palavras e edições na
+ * sessão corrente (mesma pessoa, projeto, documento e dia) ou abre uma nova.
+ */
+export async function recordEffort(user: SessionUser, input: EffortHeartbeat): Promise<void> {
+  assertCan(user, "document:read");
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const target = effortTarget(data, user, workspaceId, input);
+    const timestamp = now();
+    const today = lisbonDay(timestamp);
+    const current = data.effortLogs.findLast(
+      (l) =>
+        l.userId === user.userId &&
+        l.workspaceId === workspaceId &&
+        l.kind === "tracked" &&
+        l.projectId === target.projectId &&
+        l.documentId === target.documentId,
+    );
+    if (
+      current &&
+      lisbonDay(current.startedAt) === today &&
+      Date.now() - new Date(current.updatedAt).getTime() < SESSION_GAP_MS
+    ) {
+      current.activeSeconds += input.activeSeconds;
+      current.wordsWritten += input.wordsWritten;
+      current.edits += input.edits;
+      current.updatedAt = timestamp;
+      return;
+    }
+    data.effortLogs.push({
+      id: newId("eff"),
+      userId: user.userId,
+      workspaceId,
+      ...target,
+      startedAt: new Date(Date.now() - input.activeSeconds * 1000).toISOString(),
+      activeSeconds: input.activeSeconds,
+      wordsWritten: input.wordsWritten,
+      edits: input.edits,
+      kind: "tracked",
+      updatedAt: timestamp,
+    });
+  });
+}
+
+/** Regista uma sessão de foco concluída (Pomodoro / Sessão Editorial). */
+export async function logFocusSession(user: SessionUser, input: FocusSessionInput): Promise<void> {
+  assertCan(user, "document:read");
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const target = effortTarget(data, user, workspaceId, input);
+    const end = Date.now() - input.daysAgo * 86_400_000;
+    const startedAt = new Date(end - input.minutes * 60_000).toISOString();
+    data.effortLogs.push({
+      id: newId("eff"),
+      userId: user.userId,
+      workspaceId,
+      ...target,
+      startedAt: input.daysAgo === 0 && lisbonDay(startedAt) !== lisbonDay(new Date()) ? now() : startedAt,
+      activeSeconds: input.minutes * 60,
+      wordsWritten: input.wordsWritten,
+      edits: Math.round(input.minutes / 5),
+      kind: "focus",
+      updatedAt: now(),
+    });
+  });
+}
+
+/* ==========================================================================
+   Calendário: legendas, eventos e Notas do Dia (Módulo 4)
+   ========================================================================== */
+
+function liveLegend(data: StoreData, workspaceId: string, legendId: string): CalendarLegendRecord {
+  const legend = data.calendarLegends.find((l) => l.id === legendId && l.workspaceId === workspaceId && !l.deletedAt);
+  if (!legend) throw new NotFoundError();
+  return legend;
+}
+
+function liveEvent(data: StoreData, workspaceId: string, eventId: string): CalendarEventRecord {
+  const event = data.calendarEvents.find((e) => e.id === eventId && e.workspaceId === workspaceId && !e.deletedAt);
+  if (!event) throw new NotFoundError();
+  return event;
+}
+
+function assertUniqueLegend(data: StoreData, workspaceId: string, name: string, exceptId?: string) {
+  const clash = data.calendarLegends.some(
+    (l) =>
+      l.workspaceId === workspaceId &&
+      !l.deletedAt &&
+      l.id !== exceptId &&
+      l.name.toLocaleLowerCase("pt-PT") === name.toLocaleLowerCase("pt-PT"),
+  );
+  if (clash) throw new ValidationError("Já existe uma legenda com esse nome.");
+}
+
+export async function createLegend(user: SessionUser, input: LegendInput): Promise<CalendarLegendRecord> {
+  assertCan(user, "legend:manage");
+  return mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    assertUniqueLegend(data, workspaceId, input.name);
+    const legend: CalendarLegendRecord = {
+      id: newId("lg"),
+      workspaceId,
+      name: input.name,
+      color: input.color,
+      position: nextPosition(data.calendarLegends.filter((l) => l.workspaceId === workspaceId && !l.deletedAt)),
+      createdAt: now(),
+      deletedAt: null,
+    };
+    data.calendarLegends.push(legend);
+    return legend;
+  });
+}
+
+export async function updateLegend(user: SessionUser, legendId: string, input: LegendInput): Promise<void> {
+  assertCan(user, "legend:manage");
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const legend = liveLegend(data, workspaceId, legendId);
+    assertUniqueLegend(data, workspaceId, input.name, legend.id);
+    legend.name = input.name;
+    legend.color = input.color;
+  });
+}
+
+export async function deleteLegend(user: SessionUser, legendId: string): Promise<void> {
+  assertCan(user, "legend:manage");
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const legend = liveLegend(data, workspaceId, legendId);
+    legend.deletedAt = now();
+    for (const event of data.calendarEvents) if (event.legendId === legend.id) event.legendId = null;
+  });
+}
+
+/** Valida as ligações do evento (legenda, projeto, documento) e devolve o sujeito RBAC. */
+function eventSubject(data: StoreData, user: SessionUser, workspaceId: string, input: EventInput): RbacSubject {
+  if (input.legendId) liveLegend(data, workspaceId, input.legendId);
+  let projectId = input.projectId;
+  if (input.documentId) {
+    const doc = liveDocument(data, workspaceId, input.documentId);
+    if (projectId && doc.projectId !== projectId) throw new ValidationError("O documento não pertence ao projeto.");
+    projectId = doc.projectId;
+  }
+  return projectId ? subjectIn(user, liveProject(data, workspaceId, projectId)) : user;
+}
+
+export async function createEvent(user: SessionUser, input: EventInput): Promise<CalendarEventRecord> {
+  return mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    assertCan(eventSubject(data, user, workspaceId, input), "calendar:edit");
+    const timestamp = now();
+    const event: CalendarEventRecord = {
+      id: newId("evt"),
+      workspaceId,
+      createdById: user.userId,
+      ...input,
+      projectId: input.documentId ? liveDocument(data, workspaceId, input.documentId).projectId : input.projectId,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+      deletedAt: null,
+    };
+    data.calendarEvents.push(event);
+    return event;
+  });
+}
+
+export async function updateEvent(user: SessionUser, eventId: string, input: EventInput): Promise<void> {
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const event = liveEvent(data, workspaceId, eventId);
+    // Tem de poder editar no projeto atual e no novo.
+    if (event.projectId) assertCan(subjectIn(user, liveProject(data, workspaceId, event.projectId)), "calendar:edit");
+    assertCan(eventSubject(data, user, workspaceId, input), "calendar:edit");
+    Object.assign(event, input, {
+      projectId: input.documentId ? liveDocument(data, workspaceId, input.documentId).projectId : input.projectId,
+      updatedAt: now(),
+    });
+  });
+}
+
+/** Eliminar: quem criou (com calendar:edit) ou o Proprietário. */
+export async function deleteEvent(user: SessionUser, eventId: string): Promise<void> {
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const event = liveEvent(data, workspaceId, eventId);
+    const subject = event.projectId ? subjectIn(user, liveProject(data, workspaceId, event.projectId)) : user;
+    assertCan(subject, "calendar:edit");
+    if (event.createdById !== user.userId && !canDeleteDocument(subject, { createdById: event.createdById })) {
+      throw new ForbiddenError("calendar:edit");
+    }
+    event.deletedAt = now();
+  });
+}
+
+/** Nota do Dia: privada de cada pessoa; conteúdo vazio sem ligações apaga a nota. */
+export async function saveDayNote(user: SessionUser, input: DayNoteInput): Promise<void> {
+  assertCan(user, "calendar:read");
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const documentIds = [...new Set(input.documentIds)];
+    for (const id of documentIds) {
+      const doc = liveDocument(data, workspaceId, id);
+      assertCan(subjectIn(user, liveProject(data, workspaceId, doc.projectId)), "document:read");
+    }
+    const index = data.dayNotes.findIndex(
+      (n) => n.workspaceId === workspaceId && n.userId === user.userId && n.date === input.date,
+    );
+    if (!input.content.trim() && documentIds.length === 0) {
+      if (index >= 0) data.dayNotes.splice(index, 1);
+      return;
+    }
+    const record = { content: input.content, documentIds, updatedAt: now() };
+    if (index >= 0) Object.assign(data.dayNotes[index]!, record);
+    else data.dayNotes.push({ id: newId("dia"), workspaceId, userId: user.userId, date: input.date, ...record });
+  });
 }

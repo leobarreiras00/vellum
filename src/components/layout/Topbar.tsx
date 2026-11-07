@@ -14,6 +14,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Fragment } from "react";
 
+import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useShell } from "@/components/layout/ShellContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { AvatarStack } from "@/components/ui/Avatar";
@@ -171,6 +172,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
           </Button>
         )}
 
+        <NotificationCenter />
         <ThemeMenu />
 
         <Button

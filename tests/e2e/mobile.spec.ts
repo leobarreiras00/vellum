@@ -27,3 +27,18 @@ test("documento no telemóvel: Folha A4 escalada sem deslocamento horizontal", a
   const main = await page.locator("#conteudo").evaluate((el) => el.scrollWidth - el.clientWidth);
   expect(main).toBeLessThanOrEqual(1);
 });
+
+test("calendário e dashboard no telemóvel sem deslocamento horizontal da página", async ({ page }) => {
+  await loginAs(page, PROFILES.leo);
+  await expect(page.getByTestId("kpi-tempo")).toBeVisible();
+  let overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  await page.goto("/calendar");
+  await expect(page.getByRole("table", { name: /Calendário de/ })).toBeVisible();
+  await page.getByRole("radio", { name: "Agenda com Notas" }).click();
+  await expect(page.getByTestId("day-sheet")).toBeVisible();
+  overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  const main = await page.locator("#conteudo").evaluate((el) => el.scrollWidth - el.clientWidth);
+  expect(main).toBeLessThanOrEqual(1);
+});

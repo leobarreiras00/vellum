@@ -1,17 +1,20 @@
 /**
- * Vellum — Calendário (/calendar) · pré-visualização
+ * Vellum — Calendário (/calendar)
  * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
- * O calendário completo (FullCalendar, eventos, legendas, lembretes) é da
- * Fase 4. Esta vista mensal mostra já o esforço diário e as páginas editadas.
+ * Calendário Built-in Personalizável (Fase 4): Vista Calendário (mês/semana)
+ * e Vista Agenda com Notas. `?dia=AAAA-MM-DD` abre a agenda nesse dia (ligação
+ * usada pelo Centro de Notificações e pelo dashboard).
  */
 import type { Metadata } from "next";
 
-import { CalendarClient } from "@/app/(workspace)/calendar/CalendarClient";
+import { CalendarWorkspace } from "@/components/calendar/CalendarWorkspace";
 
 export const metadata: Metadata = { title: "Calendário" };
 
-export default function CalendarPage() {
-  return <CalendarClient />;
+export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ dia?: string | string[] }> }) {
+  const { dia } = await searchParams;
+  const day = typeof dia === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dia) ? dia : undefined;
+  return <CalendarWorkspace initialDay={day} />;
 }

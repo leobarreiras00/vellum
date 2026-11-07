@@ -11,7 +11,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { exportMarkdownAction, updatePreferencesAction } from "@/app/(workspace)/actions";
 import { AppFooter } from "@/components/layout/AppFooter";
@@ -23,40 +23,13 @@ import { useTheme } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/Toaster";
 import { ProjectFormDialog } from "@/components/workspace/ProjectFormDialog";
 import { ProjectMembersDialog } from "@/components/workspace/ProjectMembersDialog";
+import { useTelemetry } from "@/context/TelemetryContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { useEventReminders } from "@/hooks/useNotifications";
 import { THEME_STORAGE_KEY, type ThemeId } from "@/lib/themes";
 import { parseWorkspacePath } from "@/lib/workspace-routes";
 
 const SIDEBAR_KEY = "vellum:sidebar-collapsed";
-
-/* ==========================================================================
-   Telemetria leve (só no cliente): ativo se houve interação no último minuto
-   ========================================================================== */
-
-function useLiveFocus() {
-  const [isActive, setActive] = useState(false);
-  const [liveSeconds, setLiveSeconds] = useState(0);
-  const lastInput = useRef(0);
-
-  useEffect(() => {
-    const mark = () => {
-      lastInput.current = Date.now();
-    };
-    const events: Array<keyof WindowEventMap> = ["keydown", "pointerdown", "wheel"];
-    events.forEach((e) => window.addEventListener(e, mark, { passive: true }));
-    const timer = window.setInterval(() => {
-      const active = document.visibilityState === "visible" && Date.now() - lastInput.current < 60_000;
-      setActive(active);
-      if (active) setLiveSeconds((s) => s + 1);
-    }, 1000);
-    return () => {
-      events.forEach((e) => window.removeEventListener(e, mark));
-      window.clearInterval(timer);
-    };
-  }, []);
-
-  return { isActive, liveSeconds };
-}
 
 /* ==========================================================================
    Shell
@@ -83,7 +56,8 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
   });
   const [isExporting, setExporting] = useState(false);
   const [ready, setReady] = useState(false);
-  const { isActive, liveSeconds } = useLiveFocus();
+  const telemetry = useTelemetry();
+  useEventReminders();
 
   // Preferências locais da barra lateral (e marca o shell como hidratado).
   useEffect(() => {
@@ -211,9 +185,11 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
         <AppFooter
           variant="statusbar"
           telemetry={{
-            isActive,
-            focusedSecondsToday: snapshot.effort.todaySeconds + liveSeconds,
+            isActive: telemetry.isActive,
+            focusedSecondsToday: telemetry.todaySeconds,
             wordCount,
+            wordsToday: telemetry.wordsToday,
+            idleMinutes: Math.round(telemetry.idleMs / 60_000),
           }}
         />
       </div>

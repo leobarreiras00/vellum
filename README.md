@@ -148,12 +148,12 @@ npm run build && npm run test:e2e
 | -------------------------------------- | ------------------------------------------------------------------------- |
 | `/`                                    | Redireciona para `/dashboard` (com sessão) ou `/login` (sem sessão)      |
 | `/login`                               | Caneta SVG + modal (Entrar, Criar conta, Recuperar); `?vista=registo` ou `?vista=recuperar` |
-| `/dashboard`                           | Saudação, esforço do dia face à meta, páginas recentes, notas fixadas e projetos |
+| `/dashboard`                           | Dashboard executivo: 4 KPIs de esforço, horas por projeto (7/30 dias), mapa de consistência anual, «Continuar a Escrever», dias importantes; separador RBAC (`#rbac`) |
 | `/projects`                            | Hub de projetos em grelha ou lista editorial                             |
 | `/projects/[id]`                       | Projeto: árvore de documentos, notas associadas, membros e exportação    |
 | `/projects/[id]/pages/[pageId]`        | Página: leitura na fonte escolhida e edição (`?editar=1`)                 |
 | `/notes`                               | Mural de Notas Rápidas (`?nova=1`, `?projeto=<id>`, `?nota=<id>`)         |
-| `/calendar`                            | Pré-visualização mensal com esforço e páginas editadas (completo na Fase 4) |
+| `/calendar`                            | Calendário (grelha mês/semana) e Agenda com Notas do Dia; eventos, legendas, Dias Importantes e lembretes (`?dia=AAAA-MM-DD`) |
 | `/settings`                            | 5 temas, fonte de leitura, meta diária e matriz RBAC ativa                |
 | `/design-system`                       | Página de verificação do Design System (Fase 1A)                          |
 
@@ -161,7 +161,7 @@ Todas as rotas do workspace partilham o App Shell (Sidebar retrátil, Topbar con
 
 ### Dados locais (Fase 2)
 
-Projetos, páginas, notas, membros e preferências ficam em `.data/workspace.json` (ignorado pelo Git), criado com o seed editorial na primeira utilização. Para repor o seed: apagar a pasta `.data/` e reiniciar o servidor. O caminho pode ser mudado com `VELLUM_DATA_FILE`.
+Projetos, páginas, notas, membros, eventos do calendário, Notas do Dia, registos de esforço e preferências ficam em `.data/workspace.json` (ignorado pelo Git), criado com o seed editorial na primeira utilização. Para repor o seed: apagar a pasta `.data/` e reiniciar o servidor. O caminho pode ser mudado com `VELLUM_DATA_FILE`.
 
 ### Perfis de demonstração RBAC
 
@@ -185,8 +185,8 @@ Com uma conta de demonstração, o seletor no topo da barra lateral troca de per
 | 0    | Governação e fundação documental                    | ✅ Concluída  |
 | 1    | Fundação técnica (Next.js, temas, Prisma, login, App Shell)| ✅ 1A, 1B e 1C concluídas |
 | 2    | Auth & RBAC · Workspace Engine                      | ⏳ 2A concluída (workspace); 2B (Better-Auth + PostgreSQL) planeada |
-| 3    | Editor Rico · Estúdio Mermaid                       | ○ Planeada    |
-| 4    | Calendário · Telemetria & Dashboard                 | ○ Planeada    |
+| 3    | Editor Rico · Estúdio Mermaid                       | ✅ 3A concluída |
+| 4    | Calendário · Notificações · Telemetria & Dashboard  | ✅ Concluída  |
 | 5    | Exportação Fiel · Sincronização · Lançamento        | ○ Planeada    |
 
 Detalhe completo em [`.claude/PROGRESS.md`](.claude/PROGRESS.md).

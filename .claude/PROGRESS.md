@@ -3,7 +3,7 @@
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
-**Estado atual:** Fase 3 concluída (Editor Rico, Folha A4, Estúdio Mermaid, comentários) + ferramentas de qualidade (ESLint, Prettier, Vitest, CI) · Próximo passo: Fase 2B (PostgreSQL + Better-Auth) ou Fase 4 (Calendário + Telemetria)
+**Estado atual:** Fase 4 concluída (Calendário personalizável, Notificações, Motor de Telemetria de Esforço e Dashboard analítico) · Próximo passo: Fase 2B (PostgreSQL + Better-Auth), Fase 3B ou Fase 5 (Exportação fiel)
 **Última atualização:** 2026-11-07
 
 ---
@@ -135,14 +135,32 @@
 
 ## Fase 4 — Módulo 4 (Calendário + Notificações) + Módulo 5 (Telemetria & Dashboard)
 
-- [ ] FullCalendar com vistas e tema dinâmico
-- [ ] Eventos ligados a páginas e tarefas
-- [ ] Recorrência, lembretes e importação/exportação ICS
-- [ ] Centro de notificações e preferências
-- [ ] Recolha de telemetria de esforço (heartbeats)
-- [ ] Agregações diárias por projeto
-- [ ] Dashboard Recharts (tempo, streak, mapa de calor, tarefas)
-- [ ] Controlos de privacidade da telemetria
+### Fase 4 — Calendário Personalizável, Notificações, Telemetria de Esforço e Dashboard Analítico ✅ CONCLUÍDA (2026-11-07)
+
+- [x] Modelo (`workspace-types.ts`): `CalendarLegendRecord`, `CalendarEventRecord` (data + horas de Lisboa, dia inteiro, projeto/documento, legenda, `isImportant`, `reminderMinutes`, notas), `DayNoteRecord` (privada por pessoa, documentos ligados), `EffortLogRecord` com `wordsWritten`, `edits`, `kind` (`tracked`/`focus`) e `updatedAt`; schemas Zod `eventInputSchema`, `legendInputSchema`, `dayNoteInputSchema`, `effortHeartbeatSchema`, `focusSessionSchema`
+- [x] Repositório (`workspace-store.ts`): legendas (`legend:manage`), eventos (`calendar:edit` no projeto; eliminar = autor ou Proprietário), Notas do Dia (`calendar:read`, só documentos que a pessoa lê), `recordEffort` (heartbeats agregados na mesma sessão se < 10 min) e `logFocusSession`; instantâneo com `legends`, `events`, `dayNotes`, `diagramCount` e `effort` alargado (`wordsByDay`, `editsByDay`, `byProjectDay`, `byDocument`)
+- [x] Ficheiros `.data/workspace.json` antigos são atualizados ao carregar: campos novos no esforço + seed do calendário e 200 dias de histórico no atelier de demonstração
+- [x] Seed (`calendar-seed.ts`): 5 legendas (Entrega Crítica, Sessão de Escrita, Reunião, Marco de Projeto, Pessoal), 13 eventos relativos a hoje (4 Dias Importantes, lembretes) e 3 Notas do Dia; esforço semeado passa a 200 dias com palavras e edições
+- [x] `src/lib/calendar.ts` (puro): aritmética de dias em UTC, grelha mensal/semanal (segunda primeiro), conversão Lisboa ↔ instante com DST, rótulos PT-PT e `buildNotifications` (lembretes de eventos por terminar nos próximos 7 dias; Dias Importantes nas próximas 3 semanas, vencidos na véspera)
+- [x] `src/lib/telemetry.ts` (puro): `periodTotals`, `effortScore` (40% consistência · 30% tempo vs. meta · 20% palavras vs. 3500/semana · 10% edições vs. 140/semana), `heatLevel`, `yearGrid` (53 semanas), `currentStreak`
+- [x] `/calendar` (`src/components/calendar/`): `CalendarWorkspace` com template duplo alternável no cabeçalho — **Calendário** (`MonthGrid` com eventos pela cor da legenda, selo «Marco» de Dia Importante, esforço do dia e edição rápida da Nota do Dia em popover; `WeekGrid` com faixa de dia inteiro, régua 07:00–22:00 e notas no rodapé) e **Agenda com Notas** (`AgendaView`: lista cronológica do mês + `DayNoteSheet` com registo diário em papel pautado, gravação automática 900 ms e documentos de projeto ligados); `?dia=AAAA-MM-DD` abre a agenda nesse dia; vista, escala e legendas ocultas guardadas no dispositivo
+- [x] `EventDialog`: título, data, início/fim, dia inteiro, projeto e documento associados, legenda, «Marcar como Dia Importante», notificação (8 antecedências) e notas; só leitura sem `calendar:edit`; eliminação com confirmação
+- [x] `LegendManager`: criar/editar/eliminar legendas com as tintas harmónicas (`InkPicker`) e filtrar (também na barra de legendas)
+- [x] Notificações: `NotificationCenter` no sino da Topbar (contador por ler, lembretes, próximos Dias Importantes, «Marcar tudo como lido», «Ativar alertas do navegador»); `useEventReminders` envia alertas nativos (Notification API) uma vez por lembrete e por dispositivo, até 3 por ciclo de 30 s; estado lido/enviado em `localStorage` por pessoa
+- [x] Telemetria: `src/hooks/useActivityTracker.ts` (teclado, rato, roda, toque; Idle Detection a 120 s ou separador oculto; rajadas de edição em campos editáveis) e `src/context/TelemetryContext.tsx` (heartbeats por Projeto/Documento a cada 60 s ativos, ao mudar de página, ao pausar e ao esconder o separador; palavras escritas = aumento da contagem nos documentos gravados pela própria pessoa)
+- [x] `<AppFooter variant="statusbar" />`: `● Esforço Ativo` / `○ Em Pausa` (com `data-telemetry-state`), tempo focado hoje ao vivo, palavras do documento e «+N hoje»
+- [x] `/dashboard` executivo: sessão ao vivo + «Registar sessão de foco» (Pomodoro 25 · Sessão Editorial 50 · Escrita profunda 90, projeto, documento, palavras, até uma semana atrás); régua de 4 KPIs `tabular-nums` (Tempo de Uso Real, Índice de Esforço Aplicado, Notas e Páginas com diagramas Mermaid, Cadência Editorial); Horas e Esforço por Projeto (7/30 dias, barra + ritmo diário, tabela para leitores de ecrã); Mapa de Consistência Anual (creme → terracota); «Continuar a Escrever» com barra de esforço; Próximos Dias Importantes + Hoje na agenda; Notas fixadas
+- [x] Painel RBAC mantido no separador «Permissões (RBAC)» do dashboard (`/dashboard#rbac`): ações protegidas por `<RoleGuard>` + matriz completa
+- [x] `prisma/schema.prisma`: `CalendarLegend.color` → `InkColor` + `deletedAt`, `CalendarEvent.isImportant`, modelo `DayNote`, `EffortLog.edits`, `EffortSource.FOCUS_SESSION`
+- [x] Validado: `tsc --noEmit`, ESLint (0 erros), Prettier, Vitest 40/40 (17 novos: calendário, notificações, telemetria), `next build`, Playwright 20/20 (5 novos: calendário completo, centro de notificações com alertas nativos, legendas e RBAC, telemetria/dashboard/RBAC, calendário e dashboard no telemóvel), revisão visual em `warm-cream` e `dark-espresso`, desktop e Pixel 7
+
+### Fase 4B — pendente
+
+- [ ] Recorrência (RRULE) e importação/exportação ICS
+- [ ] Arrastar eventos na grelha e redimensionar na vista semanal
+- [ ] Notificações no servidor (modelo `Notification`, email, Web Push com Service Worker para Android)
+- [ ] Preferências de notificação e controlos de privacidade da telemetria (pausar medição, apagar histórico)
+- [ ] Agregações diárias no servidor quando os registos crescerem (PostgreSQL)
 
 ## Fase 5 — Módulo 6 (Exportação Fiel & Sincronização) + Lançamento
 
@@ -190,6 +208,12 @@
 | 2026-11-07 | Comentários: resolver = autor ou `document:edit`; eliminar = autor ou `document:delete`. |
 | 2026-11-07 | PDF nesta fase = impressão do navegador da Folha A4 (`@page` A4, margens 20mm); PDF no servidor via Playwright fica para a Fase 5. |
 | 2026-11-07 | ESLint 9 com flat config (o `next lint` está descontinuado); Prettier aplicado a todo o código numa só passagem. |
+| 2026-11-07 | Fase 4: calendário e gráficos feitos à medida (tokens + tintas), sem FullCalendar nem Recharts: zero dependências novas e estética editorial controlada. |
+| 2026-11-07 | Eventos guardam dia + horas de Lisboa (não instantes UTC); lembretes calculados no cliente a partir dos eventos; estado lido/enviado no dispositivo até haver modelo `Notification` no servidor. |
+| 2026-11-07 | Notas do Dia são privadas de cada pessoa e exigem só `calendar:read`; eventos exigem `calendar:edit` (Editor+); legendas exigem `legend:manage` (Proprietário). |
+| 2026-11-07 | Telemetria: inatividade a 120 s, heartbeat a cada 60 s ativos, sessões agregadas no servidor (< 10 min entre heartbeats). Palavras escritas = aumento da contagem de palavras dos documentos gravados pela própria pessoa. |
+| 2026-11-07 | Índice de Esforço Aplicado (7 dias): 40% consistência, 30% tempo vs. meta, 20% palavras (3500/semana), 10% edições (140/semana). |
+| 2026-11-07 | Painel RBAC do dashboard passa para o separador «Permissões (RBAC)» (`/dashboard#rbac`). |
 
 ---
 
