@@ -1,0 +1,49 @@
+{
+  "name": "vellum",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Vellum — Workspace & Knowledge Platform. © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.",
+  "author": "Leonardo Barreiras (Leo Barreiras) (https://github.com/leobarreiras00)",
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://github.com/leobarreiras00/vellum",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leobarreiras00/vellum.git"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.70.0",
+    "motion": "^14.10.0",
+    "next": "^15.5.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "server-only": "^0.0.1",
+    "tailwind-merge": "^2.6.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.5.0",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.0"
+  }
+}

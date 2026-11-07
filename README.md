@@ -9,7 +9,9 @@
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-propriet%C3%A1ria-C85A32?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-1C1B18?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-1C1B18?style=flat-square&logo=typescript)
-![Estado](https://img.shields.io/badge/estado-Fase%200%20conclu%C3%ADda-6E6A63?style=flat-square)
+![Estado](https://img.shields.io/badge/estado-Fase%201A%20conclu%C3%ADda-6E6A63?style=flat-square)
+
+**Repositório oficial:** [github.com/leobarreiras00/vellum](https://github.com/leobarreiras00/vellum)
 
 </div>
 
@@ -51,7 +53,7 @@ As ferramentas de conhecimento atuais obrigam a escolher entre flexibilidade e r
 | -------------- | -------------------------------------------------------------- |
 | Framework      | Next.js 15 (App Router, React Server Components)               |
 | Linguagem      | TypeScript (strict)                                            |
-| Interface      | Tailwind CSS · shadcn/ui · Framer Motion                       |
+| Interface      | Tailwind CSS · shadcn/ui · Motion (`motion/react`)             |
 | Dados          | PostgreSQL · Prisma ORM                                        |
 | Autenticação   | Better-Auth com RBAC                                           |
 | Editor         | TipTap v2 (ProseMirror) · Mermaid.js                           |
@@ -75,7 +77,8 @@ flowchart LR
 vellum/
 ├── .claude/
 │   ├── ARCHITECTURE.md     # Detalhe dos 6 módulos
-│   └── PROGRESS.md         # Roadmap e checklist das fases
+│   ├── PROGRESS.md         # Roadmap e checklist das fases
+│   └── skills/             # 5 skills obrigatórias (design, tipografia, movimento, impressão, segurança)
 ├── prisma/                 # Esquema e migrações
 ├── src/
 │   ├── app/                # Rotas (App Router)
@@ -102,7 +105,7 @@ Identidade em **tons creme**, definida por variáveis CSS. Tema padrão **Warm C
 | ------------------ | --------- |
 | `--bg-canvas`      | `#FAF7F2` |
 | `--bg-surface`     | `#F2ECE1` |
-| `--bg-elevated`    | `#FFFFFF` |
+| `--bg-elevated`    | `#FFFDF9` |
 | `--text-primary`   | `#1C1B18` |
 | `--text-muted`     | `#6E6A63` |
 | `--accent-primary` | `#C85A32` |
@@ -111,12 +114,33 @@ Identidade em **tons creme**, definida por variáveis CSS. Tema padrão **Warm C
 **Temas curados:** `warm-cream` · `sage-paper` · `nordic-slate` · `sand-dune` · `dark-espresso`
 **Tipografia:** Newsreader (serif) · Plus Jakarta Sans (sans) · JetBrains Mono (mono)
 
+## Skills de Design e Engenharia
+
+Qualquer contribuição (humana ou agente de IA) segue obrigatoriamente as 5 skills em [`.claude/skills/`](.claude/skills/):
+
+| Skill | Âmbito |
+| ----- | ------ |
+| [`frontend-design.md`](.claude/skills/frontend-design.md) | Linguagem visual "Tactile Editorial Atelier" e os 5 temas restritos |
+| [`editorial-typography.md`](.claude/skills/editorial-typography.md) | Newsreader · Plus Jakarta Sans · JetBrains Mono e regras de uso |
+| [`motion-choreography.md`](.claude/skills/motion-choreography.md) | Curva editorial, caneta SVG do login, movimento reduzido |
+| [`document-print-craft.md`](.claude/skills/document-print-craft.md) | Folha A4, Editor Híbrido e exportação sem desformatação |
+| [`security-rbac-guard.md`](.claude/skills/security-rbac-guard.md) | RBAC, proteção de rotas e Mermaid em modo `strict` |
+
+## Desenvolvimento local
+
+```bash
+cp .env.example .env        # definir DATABASE_URL (PostgreSQL)
+npm install
+npx prisma generate
+npm run dev                 # http://localhost:3000
+```
+
 ## Roadmap
 
 | Fase | Âmbito                                              | Estado        |
 | :--: | --------------------------------------------------- | ------------- |
 | 0    | Governação e fundação documental                    | ✅ Concluída  |
-| 1    | Fundação técnica (Next.js, temas, Prisma, App Shell)| ⏳ Próxima    |
+| 1    | Fundação técnica (Next.js, temas, Prisma, App Shell)| ⏳ 1A concluída |
 | 2    | Auth & RBAC · Workspace Engine                      | ○ Planeada    |
 | 3    | Editor Rico · Estúdio Mermaid                       | ○ Planeada    |
 | 4    | Calendário · Telemetria & Dashboard                 | ○ Planeada    |

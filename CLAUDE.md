@@ -7,23 +7,38 @@
 
 ## 0. Protocolo obrigatório
 
-1. **Antes de qualquer tarefa**, ler sempre `CLAUDE.md` (este ficheiro) e `.claude/PROGRESS.md`.
+1. **Antes de qualquer tarefa**, ler sempre `CLAUDE.md` (este ficheiro), `.claude/PROGRESS.md` e as **5 skills obrigatórias** em `.claude/skills/` (ver §0.1).
 2. Para detalhe dos módulos, consultar `.claude/ARCHITECTURE.md`.
 3. **No fim de cada tarefa**, atualizar `.claude/PROGRESS.md` (marcar itens concluídos, registar decisões).
 4. **Idioma:** toda a interface, documentação, mensagens de erro visíveis ao utilizador e comentários de produto em **Português de Portugal (PT-PT)** (ex.: "ficheiro", "ecrã", "utilizador", "guardar", "definições"). Identificadores de código (variáveis, funções, tipos) em inglês.
 5. **Direitos reservados:** nunca remover avisos de copyright. Cada módulo novo e o `Footer` da aplicação devem conter a menção a Leonardo Barreiras (ver §8).
+
+### 0.1 Skills obrigatórias (`.claude/skills/`)
+
+| Skill                                                              | Âmbito                                                                       |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| [`frontend-design.md`](.claude/skills/frontend-design.md)           | Linguagem visual **"Tactile Editorial Atelier"**, tokens, os 5 temas, proibições de estética genérica de IA |
+| [`editorial-typography.md`](.claude/skills/editorial-typography.md) | Papéis estritos de Newsreader / Plus Jakarta Sans / JetBrains Mono, `tabular-nums` |
+| [`motion-choreography.md`](.claude/skills/motion-choreography.md)   | Motion (`motion/react`), curva `[0.22, 1, 0.36, 1]`, caneta SVG do login, `prefers-reduced-motion` |
+| [`document-print-craft.md`](.claude/skills/document-print-craft.md) | Editor Híbrido, Folha A4 (`210mm × 297mm`), exportação sem desformatação     |
+| [`security-rbac-guard.md`](.claude/skills/security-rbac-guard.md)   | RBAC (`SUPER_ADMIN`, `OWNER`, `EDITOR`, `COMMENTER`, `VIEWER`), proteção de rotas, Mermaid `strict` |
+
+Em caso de dúvida entre uma skill e este ficheiro, prevalece o `CLAUDE.md`; qualquer divergência deve ser corrigida na mesma tarefa.
 
 ---
 
 ## 1. Identidade do produto
 
 - **Nome:** **Vellum**
+- **Repositório oficial:** [https://github.com/leobarreiras00/vellum](https://github.com/leobarreiras00/vellum)
 - **Conceito:** plataforma web de workspace e gestão de conhecimento que combina a **flexibilidade de blocos do Notion**, a **organização hierárquica em cadernos/secções do OneNote** e o **rigor de edição e paginação do Microsoft Word**.
 - **Princípios:** calma visual (tons creme, papel), fidelidade tipográfica, exportação sem desformatação, performance e privacidade.
 
 ---
 
-## 2. Design System — Tons Creme
+## 2. Design System — Tons Creme ("Tactile Editorial Atelier")
+
+> Especificação completa em `.claude/skills/frontend-design.md`. Proibido: gradientes roxos/azuis, sombras pretas pesadas e branco puro `#FFFFFF` nas áreas de trabalho.
 
 Todas as cores são definidas como **variáveis CSS** em `:root` / `[data-theme="..."]` e expostas ao Tailwind via `theme.extend.colors`. **Proibido** usar cores hexadecimais diretamente nos componentes.
 
@@ -33,7 +48,7 @@ Todas as cores são definidas como **variáveis CSS** em `:root` / `[data-theme=
 | ------------------ | --------- | ------------------------------------- |
 | `--bg-canvas`      | `#FAF7F2` | Fundo geral da aplicação              |
 | `--bg-surface`     | `#F2ECE1` | Barras laterais, painéis, cartões     |
-| `--bg-elevated`    | `#FFFFFF` | Folha do editor, modais, popovers     |
+| `--bg-elevated`    | `#FFFDF9` | Folha do editor, modais, popovers     |
 | `--text-primary`   | `#1C1B18` | Texto principal                       |
 | `--text-muted`     | `#6E6A63` | Texto secundário, metadados           |
 | `--accent-primary` | `#C85A32` | Ações primárias, foco, ligações       |
@@ -49,7 +64,7 @@ Apenas estes **5 temas** são permitidos. Não criar temas adicionais sem aprova
 4. `sand-dune`
 5. `dark-espresso` (único tema escuro)
 
-Cada tema redefine **exatamente** os mesmos 7 tokens. O tema ativo é aplicado através de `data-theme` no elemento `<html>` e persistido nas preferências do utilizador.
+Cada tema redefine **exatamente** os mesmos 7 tokens (valores na skill `frontend-design.md` e em `src/app/globals.css`). O tema ativo é aplicado através de `data-theme` no elemento `<html>` pelo `ThemeProvider` (`src/components/providers/ThemeProvider.tsx`) e persistido nas preferências do utilizador (`localStorage` agora; `User.theme` a partir da Fase 2).
 
 ### 2.3 Tipografia
 
@@ -59,12 +74,13 @@ Cada tema redefine **exatamente** os mesmos 7 tokens. O tema ativo é aplicado a
 | Sans   | **Plus Jakarta Sans**| `--font-sans`  | Interface (UI), navegação, formulários      |
 | Mono   | **JetBrains Mono**   | `--font-mono`  | Blocos de código, Mermaid, dados técnicos   |
 
-Carregar via `next/font/google` com `display: "swap"`.
+Carregar via `next/font/google` com `display: "swap"`. `tabular-nums` obrigatório em contadores, horas e estatísticas. Regras completas em `.claude/skills/editorial-typography.md`.
 
 ### 2.4 Movimento
 
-- Framer Motion para transições; durações entre 150–300 ms, curvas suaves (`easeOut`).
-- Respeitar sempre `prefers-reduced-motion`.
+- **Motion** (`motion`, importado de `motion/react`) para transições; micro-interações 150–250 ms.
+- Curva editorial padrão: `[0.22, 1, 0.36, 1]`.
+- Respeitar sempre `prefers-reduced-motion`. Regras completas em `.claude/skills/motion-choreography.md`.
 
 ---
 
@@ -76,7 +92,7 @@ Carregar via `next/font/google` com `display: "swap"`.
 | Linguagem         | **TypeScript** (modo `strict`)                                |
 | Estilos           | **Tailwind CSS** + variáveis CSS do Design System            |
 | Componentes       | **shadcn/ui** (personalizados com os tokens Creme)            |
-| Animação          | **Framer Motion**                                             |
+| Animação          | **Motion** (`motion/react`, sucessor do Framer Motion)        |
 | Base de dados     | **PostgreSQL** via **Prisma ORM**                             |
 | Autenticação      | **Better-Auth** com **RBAC** (papéis e permissões)            |
 | Editor            | **TipTap v2** (ProseMirror)                                   |
@@ -163,7 +179,7 @@ Cada módulo expõe: `components/`, `actions/` (Server Actions), `services/`, `s
  */
 ```
 
-- O componente `Footer` da aplicação deve mostrar sempre:
+- O componente `<AppFooter />` (`src/components/layout/AppFooter.tsx`, variantes `full` e `statusbar`) deve mostrar sempre:
 
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 

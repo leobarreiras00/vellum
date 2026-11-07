@@ -1,0 +1,368 @@
+/**
+ * Vellum — Design System "Tactile Editorial Atelier"
+ * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * Licença proprietária — ver LICENSE na raiz do repositório.
+ *
+ * Fonte de verdade dos 5 temas restritos (ver .claude/skills/frontend-design.md).
+ * Cada tema redefine exatamente os mesmos 7 tokens (+ canais RGB para opacidade).
+ * Os temas aplicam-se com data-theme no <html> ou em qualquer elemento (pré-visualizações).
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   Temas
+   ========================================================================== */
+
+@layer base {
+  /* 1. warm-cream — Creme Quente (padrão) */
+  :root,
+  [data-theme="warm-cream"] {
+    --bg-canvas: #FAF7F2;
+    --bg-surface: #F2ECE1;
+    --bg-elevated: #FFFDF9;
+    --text-primary: #1C1B18;
+    --text-muted: #6E6A63;
+    --accent-primary: #C85A32;
+    --border-subtle: #E4DDD0;
+    --bg-canvas-rgb: 250 247 242;
+    --bg-surface-rgb: 242 236 225;
+    --bg-elevated-rgb: 255 253 249;
+    --text-primary-rgb: 28 27 24;
+    --text-muted-rgb: 110 106 99;
+    --accent-primary-rgb: 200 90 50;
+    --border-subtle-rgb: 228 221 208;
+    --shadow-paper: 0 2px 12px -2px rgba(28, 27, 24, 0.06);
+    --shadow-sheet: 0 1px 2px rgba(28, 27, 24, 0.04), 0 12px 32px -8px rgba(28, 27, 24, 0.1);
+    --selection: rgba(200, 90, 50, 0.18);
+    color-scheme: light;
+  }
+
+  /* 2. sage-paper — Papel Sálvia */
+  [data-theme="sage-paper"] {
+    --bg-canvas: #F4F6F3;
+    --bg-surface: #E8EDE6;
+    --bg-elevated: #FAFCFA;
+    --text-primary: #1A211B;
+    --text-muted: #5C665E;
+    --accent-primary: #3B6E52;
+    --border-subtle: #D8E0D5;
+    --bg-canvas-rgb: 244 246 243;
+    --bg-surface-rgb: 232 237 230;
+    --bg-elevated-rgb: 250 252 250;
+    --text-primary-rgb: 26 33 27;
+    --text-muted-rgb: 92 102 94;
+    --accent-primary-rgb: 59 110 82;
+    --border-subtle-rgb: 216 224 213;
+    --shadow-paper: 0 2px 12px -2px rgba(28, 27, 24, 0.06);
+    --shadow-sheet: 0 1px 2px rgba(28, 27, 24, 0.04), 0 12px 32px -8px rgba(28, 27, 24, 0.1);
+    --selection: rgba(59, 110, 82, 0.18);
+    color-scheme: light;
+  }
+
+  /* 3. nordic-slate — Ardósia Nórdica */
+  [data-theme="nordic-slate"] {
+    --bg-canvas: #F3F5F8;
+    --bg-surface: #E6E9EF;
+    --bg-elevated: #FAFBFD;
+    --text-primary: #161920;
+    --text-muted: #5A6270;
+    --accent-primary: #2B5B84;
+    --border-subtle: #D5DAE2;
+    --bg-canvas-rgb: 243 245 248;
+    --bg-surface-rgb: 230 233 239;
+    --bg-elevated-rgb: 250 251 253;
+    --text-primary-rgb: 22 25 32;
+    --text-muted-rgb: 90 98 112;
+    --accent-primary-rgb: 43 91 132;
+    --border-subtle-rgb: 213 218 226;
+    --shadow-paper: 0 2px 12px -2px rgba(28, 27, 24, 0.06);
+    --shadow-sheet: 0 1px 2px rgba(28, 27, 24, 0.04), 0 12px 32px -8px rgba(28, 27, 24, 0.1);
+    --selection: rgba(43, 91, 132, 0.18);
+    color-scheme: light;
+  }
+
+  /* 4. sand-dune — Duna de Areia */
+  [data-theme="sand-dune"] {
+    --bg-canvas: #F7F3EB;
+    --bg-surface: #EDE5D5;
+    --bg-elevated: #FCF9F4;
+    --text-primary: #24201A;
+    --text-muted: #70675A;
+    --accent-primary: #B06D3B;
+    --border-subtle: #DFD5C3;
+    --bg-canvas-rgb: 247 243 235;
+    --bg-surface-rgb: 237 229 213;
+    --bg-elevated-rgb: 252 249 244;
+    --text-primary-rgb: 36 32 26;
+    --text-muted-rgb: 112 103 90;
+    --accent-primary-rgb: 176 109 59;
+    --border-subtle-rgb: 223 213 195;
+    --shadow-paper: 0 2px 12px -2px rgba(28, 27, 24, 0.06);
+    --shadow-sheet: 0 1px 2px rgba(28, 27, 24, 0.04), 0 12px 32px -8px rgba(28, 27, 24, 0.1);
+    --selection: rgba(176, 109, 59, 0.18);
+    color-scheme: light;
+  }
+
+  /* 5. dark-espresso — Espresso Escuro */
+  [data-theme="dark-espresso"] {
+    --bg-canvas: #181615;
+    --bg-surface: #221F1D;
+    --bg-elevated: #2A2624;
+    --text-primary: #EAE5DF;
+    --text-muted: #9A928A;
+    --accent-primary: #D97757;
+    --border-subtle: #332E2A;
+    --bg-canvas-rgb: 24 22 21;
+    --bg-surface-rgb: 34 31 29;
+    --bg-elevated-rgb: 42 38 36;
+    --text-primary-rgb: 234 229 223;
+    --text-muted-rgb: 154 146 138;
+    --accent-primary-rgb: 217 119 87;
+    --border-subtle-rgb: 51 46 42;
+    --shadow-paper: 0 2px 12px -2px rgba(0, 0, 0, 0.32);
+    --shadow-sheet: 0 1px 2px rgba(0, 0, 0, 0.3), 0 12px 32px -8px rgba(0, 0, 0, 0.45);
+    --selection: rgba(217, 119, 87, 0.28);
+    color-scheme: dark;
+  }
+
+  /* Textura de papel velino: feTurbulence com opacidade 0.02 */
+  :root {
+    --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");
+    --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  [data-theme] {
+    background-color: var(--bg-canvas);
+    color: var(--text-primary);
+  }
+
+  /* ========================================================================
+     Base
+     ======================================================================== */
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scrollbar-gutter: stable;
+  }
+
+  body {
+    @apply min-h-dvh bg-canvas font-sans text-primary;
+    font-feature-settings: "ss01", "cv11";
+    transition:
+      background-color 250ms var(--ease-editorial),
+      color 250ms var(--ease-editorial);
+  }
+
+  /* Camada de grão de papel, fixa e não interativa */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: var(--paper-grain);
+    background-repeat: repeat;
+  }
+
+  body > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif;
+    text-wrap: balance;
+    font-optical-sizing: auto;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Seleção de texto em terracota suave (deriva do acento do tema) */
+  ::selection {
+    background-color: var(--selection);
+    color: inherit;
+  }
+
+  /* Foco visível consistente */
+  :focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  kbd {
+    @apply inline-flex h-5 min-w-5 items-center justify-center rounded-md border border-subtle bg-surface px-1.5 font-mono text-[11px] leading-none text-muted;
+    box-shadow: 0 1px 0 0 rgb(var(--border-subtle-rgb));
+  }
+
+  /* ========================================================================
+     Scrollbars minimalistas
+     ======================================================================== */
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--text-muted-rgb) / 0.28) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--text-muted-rgb) / 0.22);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--text-muted-rgb) / 0.4);
+  }
+
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
+/* ==========================================================================
+   Componentes editoriais
+   ========================================================================== */
+
+@layer components {
+  /* Superfície tátil com grão de papel */
+  .paper-grain {
+    background-image: var(--paper-grain);
+  }
+
+  .surface-card {
+    @apply rounded-xl border border-subtle bg-elevated shadow-paper;
+  }
+
+  /* Rótulo de secção editorial */
+  .eyebrow {
+    @apply font-sans text-[11px] font-medium uppercase tracking-[0.14em] text-muted;
+  }
+
+  /* Folha A4 física (ver .claude/skills/document-print-craft.md) */
+  .sheet-a4 {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 25mm 22mm 25mm 25mm;
+    background-color: var(--bg-elevated);
+    box-shadow: var(--shadow-sheet);
+    border-radius: 2px;
+  }
+
+  /* Diálogo nativo com entrada editorial */
+  .dialog-editorial {
+    @apply m-auto max-h-[85dvh] w-[min(640px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-subtle bg-elevated p-0 text-primary shadow-sheet;
+  }
+
+  .dialog-editorial::backdrop {
+    background-color: rgb(var(--text-primary-rgb) / 0.28);
+    backdrop-filter: none;
+  }
+
+  .dialog-editorial[open] {
+    animation: vellum-sheet-in 280ms var(--ease-editorial);
+  }
+
+  .dialog-editorial[open]::backdrop {
+    animation: vellum-fade-in 220ms var(--ease-editorial);
+  }
+}
+
+@layer utilities {
+  .nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .ligatures-none {
+    font-variant-ligatures: none;
+  }
+}
+
+@keyframes vellum-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vellum-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   Movimento reduzido
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ==========================================================================
+   Impressão (ver .claude/skills/document-print-craft.md)
+   ========================================================================== */
+
+@page {
+  size: A4;
+  margin: 0;
+}
+
+@media print {
+  body::before {
+    display: none;
+  }
+
+  .sheet-a4 {
+    box-shadow: none;
+    margin: 0;
+    break-after: page;
+  }
+
+  .mermaid-figure,
+  table,
+  figure,
+  pre,
+  blockquote {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  [data-print="hide"] {
+    display: none !important;
+  }
+}
