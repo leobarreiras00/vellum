@@ -41,7 +41,9 @@ Hierarquia efetiva: `SUPER_ADMIN` > `OWNER` > `EDITOR` > `COMMENTER` > `VIEWER`.
 
 ## 3. Proteção de rotas
 
-- `src/middleware.ts` protege `/dashboard/**`, `/workspace/**` e `/admin/**` (e `/api/**`, exceto `/api/auth/**`, quando existir): sem sessão → redirecionar para `/login?seguinte=<rota>`. Com sessão, `/login` → `/dashboard`.
+- `src/middleware.ts` protege `/dashboard/**`, `/projects/**`, `/notes/**`, `/calendar/**`, `/settings/**`, `/workspace/**` e `/admin/**` (e `/api/**`, exceto `/api/auth/**`, quando existir): sem sessão → redirecionar para `/login?seguinte=<rota>`. Com sessão, `/login` → `/dashboard`.
+- O layout `src/app/(workspace)/layout.tsx` volta a verificar a sessão no servidor; páginas dinâmicas (`/projects/[id]`, `/projects/[id]/pages/[pageId]`) confirmam que o recurso pertence ao workspace do utilizador (`notFound()` caso contrário).
+- Dentro de um projeto, o papel efetivo é `projectSubject(user, project)`: o `ProjectMember.role` só restringe o papel do workspace. Na interface, `<RoleGuard subject={subjectFor(projectId)}>`.
 - Matriz e helpers em `src/lib/rbac.ts` (`hasPermission`, `canEditDocument`, `canManageProject`, `canExportDocument`, `assertCan`); na interface, `<RoleGuard allowed={[...]} fallback={...}>` (`src/components/auth/RoleGuard.tsx`).
 - `?seguinte=` só aceita caminhos internos (`/x`), nunca `//host` nem URLs absolutos.
 - `/admin/**` exige `PlatformRole.SUPER_ADMIN`, verificado no servidor (layout + actions), não só no middleware.

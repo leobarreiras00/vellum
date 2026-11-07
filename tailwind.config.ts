@@ -30,6 +30,9 @@ const config: Config = {
         },
         // Bordas → border-subtle
         subtle: token("border-subtle"),
+        // Tintas de conteúdo (etiquetas de projetos e notas) → bg-ink · text-ink · border-ink/30
+        // Não são tokens de tema: o valor vem de [data-ink] em globals.css.
+        ink: "rgb(var(--ink-rgb) / <alpha-value>)",
       },
       fontFamily: {
         serif: ["var(--font-serif)", "Georgia", "serif"],

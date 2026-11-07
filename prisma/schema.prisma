@@ -49,6 +49,22 @@ enum PageMode {
   FLUID
 }
 
+/// Etiquetas cromáticas ("tintas") de projetos e notas (Fase 2).
+enum InkColor {
+  TERRACOTA @map("terracota")
+  SALVIA    @map("salvia")
+  ARDOSIA   @map("ardosia")
+  OCRE      @map("ocre")
+  AMEIXA    @map("ameixa")
+  GRAFITE   @map("grafite")
+}
+
+/// Fonte de leitura do corpo dos documentos (Definições).
+enum ReadingFont {
+  SERIF
+  SANS
+}
+
 enum NotificationType {
   MENTION
   COMMENT
@@ -70,29 +86,33 @@ enum EffortSource {
 // -----------------------------------------------------------------------------
 
 model User {
-  id            String       @id @default(cuid())
-  email         String       @unique
+  id               String       @id @default(cuid())
+  email            String       @unique
   /// Username único (login por username ou email, Fase 1B). Minúsculas, [a-z0-9._-].
-  username      String?      @unique
-  emailVerified DateTime?
-  name          String?
-  image         String?
-  passwordHash  String?
-  platformRole  PlatformRole @default(USER)
-  theme         Theme        @default(WARM_CREAM)
-  pageMode      PageMode     @default(A4)
-  locale        String       @default("pt-PT")
-  timezone      String       @default("Europe/Lisbon")
-  lastSeenAt    DateTime?
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  deletedAt     DateTime?
+  username         String?      @unique
+  emailVerified    DateTime?
+  name             String?
+  image            String?
+  passwordHash     String?
+  platformRole     PlatformRole @default(USER)
+  theme            Theme        @default(WARM_CREAM)
+  pageMode         PageMode     @default(A4)
+  /// Meta diária de esforço focado, em minutos (Definições, Fase 2).
+  dailyGoalMinutes Int          @default(240)
+  readingFont      ReadingFont  @default(SERIF)
+  locale           String       @default("pt-PT")
+  timezone         String       @default("Europe/Lisbon")
+  lastSeenAt       DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
 
   passwordResetTokens PasswordResetToken[]
   ownedWorkspaces     Workspace[]          @relation("WorkspaceOwner")
   memberships         WorkspaceMember[]    @relation("MemberUser")
   invitationsSent     WorkspaceMember[]    @relation("MemberInviter")
   projectsCreated     Project[]
+  projectMemberships  ProjectMember[]
   documentsCreated    Document[]           @relation("DocumentCreator")
   documentsEdited     Document[]           @relation("DocumentLastEditor")
   quickNotes          QuickNote[]
@@ -133,7 +153,7 @@ model Workspace {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  owner          User             @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  owner          User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   members        WorkspaceMember[]
   projects       Project[]
   documents      Document[]
@@ -172,7 +192,9 @@ model Project {
   createdById String
   name        String
   description String?
+  /// Ícone da lista fechada (lucide-react), ex.: "layers", "compass".
   icon        String?
+  color       InkColor  @default(TERRACOTA)
   position    Int       @default(0)
   archivedAt  DateTime?
   createdAt   DateTime  @default(now())
@@ -181,12 +203,30 @@ model Project {
 
   workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   createdBy      User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
+  members        ProjectMember[]
   documents      Document[]
+  quickNotes     QuickNote[]
   calendarEvents CalendarEvent[]
   effortLogs     EffortLog[]
 
   @@index([workspaceId, position])
   @@index([workspaceId, deletedAt])
+}
+
+/// Papel num projeto concreto: só restringe o papel do workspace (nunca o eleva).
+model ProjectMember {
+  id        String        @id @default(cuid())
+  projectId String
+  userId    String
+  role      WorkspaceRole @default(VIEWER)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([userId])
 }
 
 /// Documento hierárquico (páginas e subpáginas ilimitadas).
@@ -200,6 +240,8 @@ model Document {
   createdById    String
   lastEditedById String?
   title          String    @default("Sem título")
+  /// Descrição curta ("dek") mostrada nas listagens.
+  summary        String?
   icon           String?
   coverUrl       String?
   contentJson    Json      @default("{\"type\":\"doc\",\"content\":[]}")
@@ -227,13 +269,16 @@ model Document {
   @@index([workspaceId, deletedAt])
 }
 
-/// Notas rápidas, soltas ou ligadas a um documento.
+/// Notas rápidas do mural: soltas, ligadas a um projeto e/ou ao documento em que foram convertidas.
 model QuickNote {
   id          String    @id @default(cuid())
   userId      String
   workspaceId String?
+  projectId   String?
   documentId  String?
+  title       String    @default("")
   content     String    @db.Text
+  color       InkColor  @default(TERRACOTA)
   isPinned    Boolean   @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -241,10 +286,12 @@ model QuickNote {
 
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
   document  Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
 
   @@index([userId, isPinned])
   @@index([workspaceId])
+  @@index([projectId])
 }
 
 // -----------------------------------------------------------------------------

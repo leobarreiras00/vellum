@@ -28,7 +28,7 @@ export const DEMO_WORKSPACE_NAME = "Atelier Vellum";
 export const DEMO_PROFILES: readonly DemoProfile[] = [
   {
     id: "demo-leo",
-    name: "Leo Barreiras",
+    name: "Leonardo Barreiras",
     username: "leo",
     email: "leo@vellum.local",
     password: "Atelier-2026",

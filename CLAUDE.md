@@ -91,7 +91,7 @@ Carregar via `next/font/google` com `display: "swap"`. `tabular-nums` obrigatór
 | Framework         | **Next.js 15** (App Router, React Server Components)          |
 | Linguagem         | **TypeScript** (modo `strict`)                                |
 | Estilos           | **Tailwind CSS** + variáveis CSS do Design System            |
-| Componentes       | **shadcn/ui** (personalizados com os tokens Creme)            |
+| Componentes       | Padrão **shadcn/ui** (cva + `cn`): primitivas próprias em `src/components/ui/` com os tokens Creme |
 | Animação          | **Motion** (`motion/react`, sucessor do Framer Motion)        |
 | Base de dados     | **PostgreSQL** via **Prisma ORM**                             |
 | Autenticação      | **Better-Auth** com **RBAC** (papéis e permissões)            |
@@ -127,7 +127,7 @@ src/
 │   ├── telemetry/          # Módulo 5
 │   └── export/             # Módulo 6
 ├── components/
-│   ├── ui/                 # shadcn/ui
+│   ├── ui/                 # primitivas (Button, Dialog, Field, Popover…)
 │   └── layout/             # Shell, Sidebar, Footer
 ├── lib/                    # prisma, auth, utils
 ├── styles/                 # globals.css + themes.css

@@ -12,7 +12,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { SESSION_COOKIE, verifySession } from "@/lib/session-token";
 
-const PRIVATE_PREFIXES = ["/dashboard", "/admin", "/workspace"];
+const PRIVATE_PREFIXES = ["/dashboard", "/projects", "/notes", "/calendar", "/settings", "/admin", "/workspace"];
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
@@ -43,5 +43,14 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/workspace/:path*", "/login"],
+  matcher: [
+    "/dashboard/:path*",
+    "/projects/:path*",
+    "/notes/:path*",
+    "/calendar/:path*",
+    "/settings/:path*",
+    "/admin/:path*",
+    "/workspace/:path*",
+    "/login",
+  ],
 };

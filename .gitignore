@@ -128,3 +128,6 @@ exports/tmp/
 .vercel
 .netlify
 storybook-static/
+
+# Vellum — dados locais do Workspace Engine (Fase 2, repositório JSON)
+.data/

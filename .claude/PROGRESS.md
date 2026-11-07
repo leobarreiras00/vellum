@@ -3,7 +3,7 @@
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
-**Estado atual:** Fase 1B concluída · Próximo passo: Fase 1C (shadcn/ui, ESLint/Prettier/Vitest/Playwright, App Shell, CI)
+**Estado atual:** Fases 1C e 2A concluídas (App Shell + Workspace Engine) · Próximo passo: Fase 2B (Better-Auth + PostgreSQL) ou Fase 3 (Editor Rico)
 **Última atualização:** 2026-11-07
 
 ---
@@ -51,28 +51,55 @@
 - [x] `User.username` (opcional, único) no `schema.prisma`; `AUTH_SECRET` e `VELLUM_DEMO_AUTH` no `.env.example`
 - [x] Validado: `tsc --noEmit`, `next build`, fluxo E2E com Playwright (intro, saltar, movimento reduzido, validação, registo, recuperação, login demo, logout, redirecionamentos, `?seguinte=//host` bloqueado), desktop e móvel, `warm-cream` e `dark-espresso`
 
-### Fase 1C — Ferramentas e App Shell
+### Fase 1C — App Shell & Primitivas UI ✅ CONCLUÍDA (2026-11-07)
 
-- [ ] Instalar e personalizar shadcn/ui
-- [ ] Configurar ESLint, Prettier, Vitest e Playwright (o script `lint` será adicionado aqui); converter o fluxo E2E da Fase 1B em testes
-- [ ] Primeira migração Prisma (`prisma migrate dev --name init`) com PostgreSQL local
-- [ ] App Shell: Sidebar e Topbar (o `<AppFooter variant="statusbar" />` já existe) a substituir o `/dashboard` provisório
-- [ ] Persistir o tema em `User.theme` quando houver sessão (Fase 2)
-- [ ] Pipeline CI (lint, typecheck, testes)
+- [x] Primitivas UI em `src/components/ui/` ao estilo shadcn/ui (cva + `cn`, sem Radix): `Button`, `Dialog` (`<dialog>` nativo), `Field` (`Label`, `Input`, `Textarea`, `Select`, `FieldError`), `Popover`/`PopoverItem`, `Avatar`/`AvatarStack`, `Ink` (`InkDot`, `InkTag`, `InkPicker`), `ProjectGlyph`, `RoleBadge`, `SectionHeading`, `Toaster`
+- [x] Grupo de rotas `src/app/(workspace)/` com `layout.tsx` (sessão verificada no servidor + instantâneo do workspace) a unificar `/dashboard`, `/projects`, `/notes`, `/calendar`, `/settings`
+- [x] `src/components/layout/WorkspaceShell.tsx` + `ShellContext.tsx`: estado global (barra lateral, paleta, diálogos de projeto/membros, exportação, tema persistido), atalhos `⌘K`/`Ctrl+K` e `⌘\`/`Ctrl+\`, ligação «Saltar para o conteúdo»
+- [x] `Sidebar.tsx`: `bg-surface`, borda capilar, retrátil 272 ↔ 60px com `[0.22, 1, 0.36, 1]` (gaveta sobreposta no telemóvel), monograma, troca rápida de perfil RBAC (perfis de demonstração), pesquisa `⌘K`, links principais e árvore hierárquica expansível de projetos e páginas com `+` protegido por `document:create`
+- [x] `Topbar.tsx`: breadcrumbs dinâmicos (colapsam níveis intermédios), papel efetivo (por projeto), avatares dos membros, Partilha/Permissões, Exportar (só com `canExportDocument`), menu dos 5 temas e Terminar sessão
+- [x] `<AppFooter variant="statusbar" />` fixo, com esforço de hoje (registado + sessão ao vivo), palavras do contexto e indicador «Esforço Ativo»
+- [x] `<RoleGuard>` aceita `subject` (papel efetivo dentro de um projeto)
+- [x] Playwright configurado (`playwright.config.ts`, `npm run test:e2e`): 10 testes E2E (desktop 1440×900 + Pixel 7)
+- [x] Validado: `tsc --noEmit`, `next build`, Playwright 10/10 (duas execuções seguidas), revisão visual em `warm-cream` e `dark-espresso`, desktop e móvel
 
 ## Fase 2 — Módulo 1 (Auth & RBAC) + Módulo 2 (Workspace Engine)
 
+### Fase 2A — Workspace Engine, Projetos, Páginas, Notas, ⌘K e Definições ✅ CONCLUÍDA (2026-11-07)
+
+- [x] `src/lib/workspace-types.ts`: registos alinhados com o Prisma (Workspace, Membership, Project, ProjectMember, Document, QuickNote, EffortLog, preferências), schemas Zod das fronteiras, `projectSubject()` (RBAC por projeto) e utilitários
+- [x] `src/lib/workspace-store.ts`: repositório `server-only` persistido em `.data/workspace.json` (ou `VELLUM_DATA_FILE`), escrita atómica e serializada, filtros por `workspaceId` + `deletedAt`, `assertCan` em todas as mutações; atelier pessoal criado para contas novas
+- [x] `src/lib/workspace-seed.ts`: seed PT-PT com os 4 perfis — 3 projetos (Arquitetura Plataforma Vellum, Investigação UX & Sistemas Editoriais, Planeamento Estratégico Q4), 19 páginas em até 3 níveis, 6 notas rápidas e 21 dias de esforço
+- [x] `src/app/(workspace)/actions.ts`: Server Actions (autenticar → Zod → `assertCan` → executar) que devolvem o instantâneo atualizado; `src/context/WorkspaceContext.tsx` sincroniza o cliente
+- [x] `/projects`: grelha ou lista editorial (Newsreader + `tabular-nums`) com ícone, tinta, descrição, horas de esforço, páginas, notas e membros; modal Criar/Editar/Eliminar projeto e modal de Gestão de Membros (protegidos por `canManageProject`)
+- [x] `/projects/[projectId]`: árvore de documentos (título, descrição, palavras, última edição), notas associadas, novo documento e subpáginas, exportação Markdown
+- [x] `/projects/[projectId]/pages/[pageId]`: folha de leitura na fonte escolhida; edição de título, descrição e texto (`⌘S`); eliminação lógica com subpáginas (`canDeleteDocument`)
+- [x] `/notes`: mural com captura rápida (título, conteúdo, tinta, projeto, fixar, `⌘↵`), pesquisa instantânea (`/`), filtro por projeto, edição, eliminação e «Converter em Documento de Projeto»; criar/editar exige `canEditDocument`
+- [x] `CommandPalette.tsx`: pesquisa global sem acentos (projetos, documentos — título e texto —, notas), ações rápidas (Criar nota, Criar projeto, Nova página, Ir para Design System), navegação e troca imediata dos 5 temas
+- [x] `/settings`: 5 temas curados com pré-visualização, fonte de leitura (Newsreader / Plus Jakarta Sans), meta diária de esforço (h + min) e resumo da matriz RBAC com restrições por projeto
+- [x] `/calendar`: pré-visualização mensal com esforço diário (meta cumprida a terracota) e páginas editadas
+- [x] `/dashboard` substitui o provisório: saudação, régua de números, esforço vs. meta, páginas recentes, notas fixadas e projetos
+- [x] Exportação Markdown de página (com subpáginas) ou projeto, com aviso de direitos reservados (exige `document:export`)
+- [x] Tema guardado nas preferências do utilizador quando escolhido na Topbar, ⌘K ou Definições
+- [x] `prisma/schema.prisma`: `InkColor`, `ReadingFont`, `ProjectMember`, `Project.color`, `Document.summary`, `QuickNote.title/color/projectId`, `User.dailyGoalMinutes/readingFont`
+- [x] `middleware.ts` protege `/projects`, `/notes`, `/calendar`, `/settings`
+
+### Fase 2B — Persistência real e autenticação definitiva (pendente)
+
+- [ ] Primeira migração Prisma (`prisma migrate dev --name init`) com PostgreSQL local; trocar a implementação de `workspace-store.ts` por Prisma (mesma API)
 - [ ] Better-Auth (email/palavra-passe, magic link, OAuth) a substituir o motor provisório de `src/lib/auth.ts` (mesma API pública)
-- [ ] Envio real do código de recuperação por email (hoje só visível em modo de demonstração)
-- [ ] Modelos `User`, `Workspace`, `Membership` e papéis RBAC
-- [x] Helper de permissões (`hasPermission`/`assertCan`) e proteção de rotas (middleware) — Fase 1B
-- [ ] `assertCan` nas Server Actions de conteúdo, com papel lido de `WorkspaceMember`
-- [x] Ecrã de login com **Caneta SVG animada** — Fase 1B
-- [ ] Modelos `Project`, `Page`, `Note`, `Tag`
-- [ ] Árvore de navegação com drag & drop
-- [ ] Favoritos, recentes e lixo (eliminação lógica)
-- [ ] Pesquisa global `⌘K` (full-text PT)
-- [ ] Partilha e herança de permissões
+- [ ] Envio real do código de recuperação por email
+- [ ] Papel lido de `WorkspaceMember` no servidor (hoje vem do perfil da sessão)
+- [ ] Árvore com arrastar e largar (reordenar e mover páginas)
+- [ ] Favoritos, recentes e lixo (recuperar eliminações lógicas)
+- [ ] Convites por email e gestão de membros do workspace
+- [ ] Pesquisa full-text PT no servidor (hoje é no cliente, sobre o instantâneo)
+
+### Transitado da Fase 1C (não pedido nesta entrega)
+
+- [ ] ESLint, Prettier e Vitest (o script `lint` será adicionado aqui)
+- [ ] Converter o fluxo E2E da Fase 1B (login, registo, recuperação) em testes Playwright
+- [ ] Pipeline CI (lint, typecheck, testes)
 
 ## Fase 3 — Módulo 3 (Editor Rico + Estúdio Mermaid)
 
@@ -126,6 +153,14 @@
 | 2026-11-07 | Exportar documentos exige `COMMENTER` ou superior; `VIEWER` só lê. `EDITOR` elimina apenas documentos próprios. |
 | 2026-11-07 | O modal surge após a escrita (até 2,9 s), com saltar por botão/Enter/Esc e flag de sessão; substitui a regra «campos focáveis desde o início» da skill de movimento (já corrigida). |
 | 2026-11-07 | Auth da Fase 1B nos caminhos pedidos (`src/lib/auth.ts`, `src/lib/rbac.ts`, `src/context/`, `src/components/auth/`); migra para `src/modules/auth/` com `index.ts` quando o módulo crescer (Fase 2). |
+
+| 2026-11-07 | Fase 2 dividida: 2A (Workspace Engine com repositório JSON local, pedido do Leonardo) e 2B (Prisma/PostgreSQL + Better-Auth). |
+| 2026-11-07 | Primitivas UI próprias ao estilo shadcn/ui (cva + `cn`, `<dialog>` nativo, sem Radix) em vez do CLI do shadcn: menos dependências e tokens Creme de raiz. |
+| 2026-11-07 | Papel de projeto (`ProjectMember.role`) só restringe o papel do workspace, nunca o eleva; SUPER_ADMIN passa sempre (`projectSubject()`). |
+| 2026-11-07 | Tintas de conteúdo (`terracota`, `salvia`, `ardosia`, `ocre`, `ameixa`, `grafite`) em `[data-ink]` no `globals.css`, expostas como `bg-ink`/`text-ink`; não são tokens de tema (os 7 tokens mantêm-se). |
+| 2026-11-07 | Perfil de demonstração do Owner passa a chamar-se «Leonardo Barreiras» (username `leo` mantém-se). |
+| 2026-11-07 | Exportação disponível nesta fase: Markdown (PDF/DOCX fiéis continuam na Fase 5). |
+| 2026-11-07 | Edição de documentos em texto simples (parágrafos por linha em branco) até ao TipTap da Fase 3. |
 
 ---
 

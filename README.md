@@ -135,14 +135,33 @@ npx prisma generate
 npm run dev                 # http://localhost:3000 → /login
 ```
 
-### Rotas (Fase 1B)
+Testes E2E (Playwright, sobre o build de produção):
 
-| Rota             | Descrição                                                                 |
-| ---------------- | ------------------------------------------------------------------------- |
-| `/`              | Redireciona para `/dashboard` (com sessão) ou `/login` (sem sessão)      |
-| `/login`         | Caneta SVG + modal (Entrar, Criar conta, Recuperar); `?vista=registo` ou `?vista=recuperar` |
-| `/dashboard`     | Destino pós-login: sessão, `<RoleGuard>` e matriz RBAC (rota protegida)  |
-| `/design-system` | Página de verificação do Design System (Fase 1A)                          |
+```bash
+npx playwright install chromium   # só na primeira vez
+npm run build && npm run test:e2e
+```
+
+### Rotas
+
+| Rota                                   | Descrição                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------- |
+| `/`                                    | Redireciona para `/dashboard` (com sessão) ou `/login` (sem sessão)      |
+| `/login`                               | Caneta SVG + modal (Entrar, Criar conta, Recuperar); `?vista=registo` ou `?vista=recuperar` |
+| `/dashboard`                           | Saudação, esforço do dia face à meta, páginas recentes, notas fixadas e projetos |
+| `/projects`                            | Hub de projetos em grelha ou lista editorial                             |
+| `/projects/[id]`                       | Projeto: árvore de documentos, notas associadas, membros e exportação    |
+| `/projects/[id]/pages/[pageId]`        | Página: leitura na fonte escolhida e edição (`?editar=1`)                 |
+| `/notes`                               | Mural de Notas Rápidas (`?nova=1`, `?projeto=<id>`, `?nota=<id>`)         |
+| `/calendar`                            | Pré-visualização mensal com esforço e páginas editadas (completo na Fase 4) |
+| `/settings`                            | 5 temas, fonte de leitura, meta diária e matriz RBAC ativa                |
+| `/design-system`                       | Página de verificação do Design System (Fase 1A)                          |
+
+Todas as rotas do workspace partilham o App Shell (Sidebar retrátil, Topbar contextual, Command Palette `⌘K` e `<AppFooter variant="statusbar" />`).
+
+### Dados locais (Fase 2)
+
+Projetos, páginas, notas, membros e preferências ficam em `.data/workspace.json` (ignorado pelo Git), criado com o seed editorial na primeira utilização. Para repor o seed: apagar a pasta `.data/` e reiniciar o servidor. O caminho pode ser mudado com `VELLUM_DATA_FILE`.
 
 ### Perfis de demonstração RBAC
 
@@ -150,20 +169,22 @@ Ativos em desenvolvimento (em produção só com `VELLUM_DEMO_AUTH=true`). Entra
 
 | Perfil        | Username      | Palavra-passe   | Papéis                      |
 | ------------- | ------------- | --------------- | --------------------------- |
-| Leo Barreiras | `leo`         | `Atelier-2026`  | `SUPER_ADMIN` · `OWNER`     |
+| Leonardo Barreiras | `leo`    | `Atelier-2026`  | `SUPER_ADMIN` · `OWNER`     |
 | Ana Silva     | `ana.silva`   | `Editora-2026`  | `USER` · `EDITOR`           |
 | Marta Rocha   | `marta.rocha` | `Revisora-2026` | `USER` · `COMMENTER`        |
 | Pedro Costa   | `pedro.costa` | `Leitor-2026`   | `USER` · `VIEWER`           |
 
-> O motor de sessão da Fase 1B guarda as contas em memória: contas criadas no registo desaparecem ao reiniciar o servidor. A persistência em PostgreSQL via Better-Auth chega na Fase 2.
+Com uma conta de demonstração, o seletor no topo da barra lateral troca de perfil em tempo real para testar a matriz RBAC.
+
+> O motor de sessão guarda as contas em memória: contas criadas no registo desaparecem ao reiniciar o servidor (os seus dados do workspace ficam no ficheiro local). A persistência em PostgreSQL via Better-Auth está planeada para a Fase 2B.
 
 ## Roadmap
 
 | Fase | Âmbito                                              | Estado        |
 | :--: | --------------------------------------------------- | ------------- |
 | 0    | Governação e fundação documental                    | ✅ Concluída  |
-| 1    | Fundação técnica (Next.js, temas, Prisma, login, App Shell)| ⏳ 1A e 1B concluídas |
-| 2    | Auth & RBAC · Workspace Engine                      | ○ Planeada    |
+| 1    | Fundação técnica (Next.js, temas, Prisma, login, App Shell)| ✅ 1A, 1B e 1C concluídas |
+| 2    | Auth & RBAC · Workspace Engine                      | ⏳ 2A concluída (workspace); 2B (Better-Auth + PostgreSQL) planeada |
 | 3    | Editor Rico · Estúdio Mermaid                       | ○ Planeada    |
 | 4    | Calendário · Telemetria & Dashboard                 | ○ Planeada    |
 | 5    | Exportação Fiel · Sincronização · Lançamento        | ○ Planeada    |
