@@ -16,3 +16,14 @@ test("gaveta de navegação no telemóvel", async ({ page }) => {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
 });
+
+test("documento no telemóvel: Folha A4 escalada sem deslocamento horizontal", async ({ page }) => {
+  await loginAs(page, PROFILES.leo);
+  await page.goto("/projects/prj-arquitetura/documents/doc-visao-geral");
+  await expect(page.getByTestId("a4-sheet")).toBeVisible();
+  await expect(page.getByRole("toolbar", { name: "Formatação do documento" })).toBeVisible();
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  expect(overflow).toBeLessThanOrEqual(1);
+  const main = await page.locator("#conteudo").evaluate((el) => el.scrollWidth - el.clientWidth);
+  expect(main).toBeLessThanOrEqual(1);
+});

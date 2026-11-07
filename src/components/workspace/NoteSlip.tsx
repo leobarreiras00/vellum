@@ -47,7 +47,9 @@ export function NoteSlip({ note, compact = false, actions, highlight = false, cl
       <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-ink" />
       <div className={cn("px-4 pb-3", compact ? "pt-3.5" : "pt-4")}>
         <div className="flex items-start gap-2">
-          <h3 className={cn("min-w-0 flex-1 font-serif font-normal leading-snug", compact ? "text-base" : "text-[17px]")}>
+          <h3
+            className={cn("min-w-0 flex-1 font-serif font-normal leading-snug", compact ? "text-base" : "text-[17px]")}
+          >
             {note.title || <span className="italic text-muted">Sem título</span>}
           </h3>
           {note.isPinned && (

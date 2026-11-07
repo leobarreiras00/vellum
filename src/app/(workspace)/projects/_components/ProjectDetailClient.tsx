@@ -35,7 +35,10 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
   const subject = subjectFor(projectId);
   const autoCreated = useRef(false);
 
-  const docs = useMemo(() => snapshot.documents.filter((d) => d.projectId === projectId), [snapshot.documents, projectId]);
+  const docs = useMemo(
+    () => snapshot.documents.filter((d) => d.projectId === projectId),
+    [snapshot.documents, projectId],
+  );
   const notes = snapshot.notes.filter((n) => n.projectId === projectId);
   const members = (project?.members ?? [])
     .map((pm) => snapshot.members.find((m) => m.userId === pm.userId))
@@ -89,7 +92,9 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
           <ProjectGlyph icon={project.icon} color={project.color} size="lg" />
           <InkTag color={project.color}>{INK_LABELS[project.color]}</InkTag>
         </div>
-        <h1 className="mt-5 max-w-3xl text-4xl font-normal leading-tight tracking-tight md:text-[44px]">{project.name}</h1>
+        <h1 className="mt-5 max-w-3xl text-4xl font-normal leading-tight tracking-tight md:text-[44px]">
+          {project.name}
+        </h1>
         {project.description && (
           <p className="mt-3 max-w-prose font-serif text-lg italic leading-snug text-muted">{project.description}</p>
         )}
@@ -149,7 +154,8 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
         <div className="mt-3 flex items-center gap-3 text-xs text-muted">
           <AvatarStack people={members} currentUserId={user?.userId} />
           <span>
-            {members.length} {members.length === 1 ? "membro" : "membros"} · editado {relativeTime(project.lastEditedAt)}
+            {members.length} {members.length === 1 ? "membro" : "membros"} · editado{" "}
+            {relativeTime(project.lastEditedAt)}
           </span>
         </div>
       </header>

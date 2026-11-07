@@ -53,13 +53,7 @@ export function AvatarStack({ people, max = 4, size = "sm", currentUserId, class
   return (
     <span className={cn("flex items-center gap-0.5", className)}>
       {visible.map((p) => (
-        <Avatar
-          key={p.userId}
-          initials={p.initials}
-          name={p.name}
-          size={size}
-          highlight={p.userId === currentUserId}
-        />
+        <Avatar key={p.userId} initials={p.initials} name={p.name} size={size} highlight={p.userId === currentUserId} />
       ))}
       {rest > 0 && (
         <span

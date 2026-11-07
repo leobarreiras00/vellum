@@ -60,9 +60,7 @@ export function SettingsClient() {
     });
   }
 
-  const restricted = snapshot.projects
-    .map((p) => ({ project: p, role: roleIn(p.id) }))
-    .filter((r) => r.role !== role);
+  const restricted = snapshot.projects.map((p) => ({ project: p, role: roleIn(p.id) })).filter((r) => r.role !== role);
   const goalSeconds = prefs.dailyGoalMinutes * 60;
   const progress = Math.min(1, snapshot.effort.todaySeconds / goalSeconds);
 
@@ -129,7 +127,11 @@ export function SettingsClient() {
                 role="radio"
                 aria-checked={selected}
                 disabled={isPending}
-                onClick={() => run(() => updatePreferencesAction({ readingFont: font }), { success: `Fonte de leitura: ${meta.label}.` })}
+                onClick={() =>
+                  run(() => updatePreferencesAction({ readingFont: font }), {
+                    success: `Fonte de leitura: ${meta.label}.`,
+                  })
+                }
                 className={cn(
                   "rounded-xl border bg-elevated p-5 text-left transition-[border-color,box-shadow] duration-200",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",

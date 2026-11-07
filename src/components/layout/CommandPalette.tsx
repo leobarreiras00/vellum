@@ -137,7 +137,15 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
       ["Definições", routes.settings, Settings2],
     ];
     for (const [label, href, Icon] of nav) {
-      items.push({ id: `nav-${href}`, group: "Navegação", label, hint: href, icon: iconOf(Icon), haystack: label, run: go(href) });
+      items.push({
+        id: `nav-${href}`,
+        group: "Navegação",
+        label,
+        hint: href,
+        icon: iconOf(Icon),
+        haystack: label,
+        run: go(href),
+      });
     }
 
     for (const p of snapshot.projects) {
@@ -287,7 +295,13 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               <kbd>Esc</kbd>
             </div>
 
-            <div ref={listRef} id={listboxId} role="listbox" aria-label="Resultados" className="max-h-[min(420px,55vh)] overflow-y-auto p-1.5">
+            <div
+              ref={listRef}
+              id={listboxId}
+              role="listbox"
+              aria-label="Resultados"
+              className="max-h-[min(420px,55vh)] overflow-y-auto p-1.5"
+            >
               {results.length === 0 && (
                 <p className="px-3 py-8 text-center font-serif text-base italic text-muted">
                   Nada encontrado para «{query}».
@@ -318,12 +332,20 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                     >
                       <span className="grid w-5 shrink-0 place-items-center">{item.icon}</span>
                       <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                      {item.selected && <Check aria-label="Ativo" className="size-3.5 text-accent-primary" strokeWidth={2} />}
-                      {item.hint && <span className="hidden max-w-[40%] truncate text-xs text-muted sm:block">{item.hint}</span>}
+                      {item.selected && (
+                        <Check aria-label="Ativo" className="size-3.5 text-accent-primary" strokeWidth={2} />
+                      )}
+                      {item.hint && (
+                        <span className="hidden max-w-[40%] truncate text-xs text-muted sm:block">{item.hint}</span>
+                      )}
                       {active ? (
                         <CornerDownLeft aria-hidden="true" className="size-3.5 shrink-0 text-muted" strokeWidth={1.5} />
                       ) : (
-                        <ArrowRight aria-hidden="true" className="size-3.5 shrink-0 text-transparent" strokeWidth={1.5} />
+                        <ArrowRight
+                          aria-hidden="true"
+                          className="size-3.5 shrink-0 text-transparent"
+                          strokeWidth={1.5}
+                        />
                       )}
                     </div>
                   </div>

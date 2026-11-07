@@ -20,12 +20,15 @@ import path from "node:path";
 
 import type { SessionUser } from "@/lib/auth";
 import { ForbiddenError, assertCan, canDeleteDocument, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
+import { docToMarkdown, docToPlainText, type DocContent } from "@/lib/document-content";
 import { countWords } from "@/lib/utils";
 import { buildSeed } from "@/lib/workspace-seed";
 import {
   initialsOf,
   lisbonDay,
   projectSubject,
+  type CommentKind,
+  type DocumentCommentRecord,
   type DocumentRecord,
   type NoteInput,
   type ProjectInput,
@@ -49,7 +52,11 @@ interface StoreState {
 }
 
 const globalForStore = globalThis as unknown as { vellumWorkspaceStore?: StoreState };
-const state: StoreState = (globalForStore.vellumWorkspaceStore ??= { data: null, loading: null, queue: Promise.resolve() });
+const state: StoreState = (globalForStore.vellumWorkspaceStore ??= {
+  data: null,
+  loading: null,
+  queue: Promise.resolve(),
+});
 
 function isStoreData(value: unknown): value is StoreData {
   if (!value || typeof value !== "object") return false;
@@ -63,8 +70,8 @@ async function load(): Promise<StoreData> {
     try {
       const parsed: unknown = JSON.parse(await readFile(DATA_FILE, "utf8"));
       if (isStoreData(parsed)) {
-        state.data = parsed;
-        return parsed;
+        state.data = upgrade(parsed);
+        return state.data;
       }
       // Formato desconhecido: guarda uma cópia e recomeça a partir do seed.
       await writeFile(`${DATA_FILE}.invalido-${Date.now()}`, JSON.stringify(parsed)).catch(() => undefined);
@@ -83,6 +90,16 @@ async function load(): Promise<StoreData> {
   } finally {
     state.loading = null;
   }
+}
+
+/** Completa ficheiros gravados por versões anteriores (Fase 2A) com os campos da Fase 3. */
+function upgrade(data: StoreData): StoreData {
+  data.comments ??= [];
+  for (const doc of data.documents) {
+    doc.contentJson ??= null;
+    doc.version ??= 1;
+  }
+  return data;
 }
 
 function persist(): Promise<void> {
@@ -206,6 +223,14 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
   );
   const notes = data.notes.filter((n) => n.workspaceId === workspaceId && !n.deletedAt);
   const logs = data.effortLogs.filter((l) => l.workspaceId === workspaceId);
+  const liveDocIds = new Set(documents.map((d) => d.id));
+  const comments = data.comments.filter(
+    (c) => c.workspaceId === workspaceId && !c.deletedAt && liveDocIds.has(c.documentId),
+  );
+  const effortByDoc = new Map<string, number>();
+  for (const log of logs) {
+    if (log.documentId) effortByDoc.set(log.documentId, (effortByDoc.get(log.documentId) ?? 0) + log.activeSeconds);
+  }
 
   const people = new Map(data.people.map((p) => [p.id, p]));
   const members = data.memberships
@@ -240,7 +265,10 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
       .sort((a, b) => a.position - b.position)
       .map(({ deletedAt: _d, workspaceId: _w, ...project }) => {
         const docs = documents.filter((d) => d.projectId === project.id);
-        const lastEditedAt = docs.reduce((latest, d) => (d.updatedAt > latest ? d.updatedAt : latest), project.updatedAt);
+        const lastEditedAt = docs.reduce(
+          (latest, d) => (d.updatedAt > latest ? d.updatedAt : latest),
+          project.updatedAt,
+        );
         return {
           ...project,
           effortSeconds: logs.filter((l) => l.projectId === project.id).reduce((sum, l) => sum + l.activeSeconds, 0),
@@ -252,10 +280,13 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
       }),
     documents: documents
       .sort((a, b) => a.position - b.position)
-      .map(({ deletedAt: _d, workspaceId: _w, ...doc }) => doc),
+      .map(({ deletedAt: _d, workspaceId: _w, ...doc }) => ({ ...doc, effortSeconds: effortByDoc.get(doc.id) ?? 0 })),
     notes: notes
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .map(({ deletedAt: _d, workspaceId: _w, ...note }) => note),
+    comments: comments
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      .map(({ deletedAt: _d, workspaceId: _w, ...comment }) => comment),
     preferences: data.preferences[user.userId] ?? defaultPreferences(user),
     effort: { todaySeconds, byDay },
     generatedAt: now(),
@@ -374,7 +405,12 @@ interface DocumentCreate {
   plainText: string;
 }
 
-function insertDocument(data: StoreData, user: SessionUser, workspaceId: string, input: DocumentCreate): DocumentRecord {
+function insertDocument(
+  data: StoreData,
+  user: SessionUser,
+  workspaceId: string,
+  input: DocumentCreate,
+): DocumentRecord {
   const project = liveProject(data, workspaceId, input.projectId);
   assertCan(subjectIn(user, project), "document:create");
   if (input.parentId) {
@@ -395,6 +431,8 @@ function insertDocument(data: StoreData, user: SessionUser, workspaceId: string,
     title: input.title || "Sem título",
     summary: input.summary,
     plainText: input.plainText,
+    contentJson: null,
+    version: 1,
     wordCount: countWords(input.plainText),
     position: nextPosition(siblings),
     createdAt: timestamp,
@@ -422,10 +460,104 @@ export async function updateDocument(
     doc.title = input.title;
     doc.summary = input.summary;
     doc.plainText = input.plainText;
+    // Texto simples substitui o conteúdo rico: o editor volta a derivá-lo.
+    doc.contentJson = null;
     doc.wordCount = countWords(input.plainText);
+    bumpVersion(doc, user);
     doc.lastEditedById = user.userId;
     doc.updatedAt = now();
     touchProject(project);
+  });
+}
+
+/** Nova versão quando muda a pessoa ou passaram mais de 10 minutos desde a última gravação. */
+const VERSION_SESSION_MS = 10 * 60 * 1000;
+function bumpVersion(doc: DocumentRecord, user: SessionUser) {
+  const idle = Date.now() - new Date(doc.updatedAt).getTime() > VERSION_SESSION_MS;
+  if (idle || doc.lastEditedById !== user.userId) doc.version = (doc.version ?? 1) + 1;
+}
+
+/** Gravação automática do Editor Rico: título, descrição e JSON ProseMirror. */
+export async function saveDocumentContent(
+  user: SessionUser,
+  input: { id: string; title: string; summary: string; contentJson: DocContent },
+): Promise<{ version: number; wordCount: number; updatedAt: string }> {
+  return mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const doc = liveDocument(data, workspaceId, input.id);
+    const project = liveProject(data, workspaceId, doc.projectId);
+    assertCan(subjectIn(user, project), "document:edit");
+    const plainText = docToPlainText(input.contentJson);
+    bumpVersion(doc, user);
+    doc.title = input.title || "Sem título";
+    doc.summary = input.summary;
+    doc.contentJson = input.contentJson;
+    doc.plainText = plainText;
+    doc.wordCount = countWords(plainText);
+    doc.lastEditedById = user.userId;
+    doc.updatedAt = now();
+    touchProject(project);
+    return { version: doc.version, wordCount: doc.wordCount, updatedAt: doc.updatedAt };
+  });
+}
+
+/* ==========================================================================
+   Comentários e anotações editoriais
+   ========================================================================== */
+
+export async function addComment(
+  user: SessionUser,
+  input: { documentId: string; kind: CommentKind; quote: string; body: string },
+): Promise<DocumentCommentRecord> {
+  return mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const doc = liveDocument(data, workspaceId, input.documentId);
+    assertCan(subjectIn(user, liveProject(data, workspaceId, doc.projectId)), "document:comment");
+    const comment: DocumentCommentRecord = {
+      id: newId("com"),
+      workspaceId,
+      documentId: doc.id,
+      authorId: user.userId,
+      kind: input.kind,
+      quote: input.quote,
+      body: input.body,
+      resolvedAt: null,
+      resolvedById: null,
+      createdAt: now(),
+      deletedAt: null,
+    };
+    data.comments.push(comment);
+    return comment;
+  });
+}
+
+function liveComment(data: StoreData, workspaceId: string, commentId: string) {
+  const comment = data.comments.find((c) => c.id === commentId && c.workspaceId === workspaceId && !c.deletedAt);
+  if (!comment) throw new NotFoundError();
+  const doc = liveDocument(data, workspaceId, comment.documentId);
+  return { comment, project: liveProject(data, workspaceId, doc.projectId) };
+}
+
+/** Resolver/reabrir: autor do comentário ou quem pode editar o documento. */
+export async function setCommentResolved(user: SessionUser, commentId: string, resolved: boolean): Promise<void> {
+  await mutate((data) => {
+    const { comment, project } = liveComment(data, workspaceIdFor(data, user), commentId);
+    const subject = subjectIn(user, project);
+    assertCan(subject, "document:comment");
+    if (comment.authorId !== user.userId) assertCan(subject, "document:edit");
+    comment.resolvedAt = resolved ? now() : null;
+    comment.resolvedById = resolved ? user.userId : null;
+  });
+}
+
+/** Eliminar: o próprio autor, ou quem pode eliminar documentos do projeto. */
+export async function deleteComment(user: SessionUser, commentId: string): Promise<void> {
+  await mutate((data) => {
+    const { comment, project } = liveComment(data, workspaceIdFor(data, user), commentId);
+    const subject = subjectIn(user, project);
+    assertCan(subject, "document:comment");
+    if (comment.authorId !== user.userId) assertCan(subject, "document:delete");
+    comment.deletedAt = now();
   });
 }
 
@@ -546,7 +678,8 @@ function documentMarkdown(doc: DocumentRecord, depth: number): string {
   const heading = "#".repeat(Math.min(depth, 6));
   const parts = [`${heading} ${doc.title}`];
   if (doc.summary) parts.push(`*${doc.summary}*`);
-  if (doc.plainText.trim()) parts.push(doc.plainText.trim());
+  const body = doc.contentJson ? docToMarkdown(doc.contentJson) : doc.plainText;
+  if (body.trim()) parts.push(body.trim());
   return parts.join("\n\n");
 }
 

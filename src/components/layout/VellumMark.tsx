@@ -31,9 +31,7 @@ export function VellumMark({ className, glyphOnly = false }: VellumMarkProps) {
         <path d="M9 11.5l2.6 5.5 3.4-7.5" strokeWidth={1.6} />
       </svg>
       {!glyphOnly && (
-        <span className="font-serif text-[1.15em] font-medium leading-none tracking-[-0.02em]">
-          Vellum
-        </span>
+        <span className="font-serif text-[1.15em] font-medium leading-none tracking-[-0.02em]">Vellum</span>
       )}
     </span>
   );

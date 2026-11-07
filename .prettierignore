@@ -1,0 +1,13 @@
+.next/
+node_modules/
+.data/
+test-results/
+playwright-report/
+coverage/
+package-lock.json
+next-env.d.ts
+*.md
+.github/
+prisma/
+.claude/
+_para-mover-claude/

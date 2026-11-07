@@ -15,7 +15,13 @@ import { cn } from "@/lib/utils";
 import { INK_COLORS, INK_LABELS, type InkColor } from "@/lib/workspace-types";
 
 export function InkDot({ color, className }: { color: InkColor; className?: string }) {
-  return <span data-ink={color} aria-hidden="true" className={cn("inline-block size-2 shrink-0 rounded-full bg-ink", className)} />;
+  return (
+    <span
+      data-ink={color}
+      aria-hidden="true"
+      className={cn("inline-block size-2 shrink-0 rounded-full bg-ink", className)}
+    />
+  );
 }
 
 export function InkTag({ color, children, className }: { color: InkColor; children: ReactNode; className?: string }) {

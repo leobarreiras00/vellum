@@ -15,7 +15,10 @@ export const PROFILES = {
 export async function loginAs(page: Page, name: string) {
   await page.addInitScript(() => window.sessionStorage.setItem("vellum:intro-seen", "1"));
   await page.goto("/login");
-  await page.getByRole("button", { name: new RegExp(name) }).first().click();
+  await page
+    .getByRole("button", { name: new RegExp(name) })
+    .first()
+    .click();
   await page.waitForURL("**/dashboard");
   await page.locator("[data-shell-ready]").waitFor();
   await expect(page.getByRole("heading", { level: 1 })).toContainText(name.split(" ")[0]!);

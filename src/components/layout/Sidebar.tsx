@@ -92,6 +92,7 @@ export function Sidebar(props: SidebarProps) {
       {/* Desktop */}
       <motion.aside
         aria-label="Navegação do workspace"
+        data-print="hide"
         initial={false}
         animate={{ width: collapsed ? WIDTH_COLLAPSED : WIDTH_OPEN }}
         transition={reduce ? { duration: 0 } : { duration: 0.28, ease: EASE_EDITORIAL }}
@@ -117,6 +118,7 @@ export function Sidebar(props: SidebarProps) {
             />
             <motion.aside
               aria-label="Navegação do workspace"
+              data-print="hide"
               className="absolute inset-y-0 left-0 w-[min(300px,86vw)] border-r border-subtle bg-surface shadow-sheet"
               initial={reduce ? { opacity: 0 } : { x: "-100%" }}
               animate={reduce ? { opacity: 1 } : { x: 0 }}
@@ -151,7 +153,9 @@ function SidebarContent({
   return (
     <div className={cn("flex h-full flex-col", isMobile ? "w-full" : "w-[272px]")}>
       {/* Topo: monograma + recolher */}
-      <div className={cn("flex h-12 shrink-0 items-center", collapsed ? "justify-center" : "justify-between pl-4 pr-2")}>
+      <div
+        className={cn("flex h-12 shrink-0 items-center", collapsed ? "justify-center" : "justify-between pl-4 pr-2")}
+      >
         {!collapsed && (
           <Link
             href="/dashboard"
@@ -220,7 +224,10 @@ function SidebarContent({
                   )}
                 >
                   {active && !collapsed && (
-                    <span aria-hidden="true" className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent-primary" />
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent-primary"
+                    />
                   )}
                   <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.5} />
                   <span className={cn(collapsed && "sr-only")}>{item.label}</span>
@@ -232,7 +239,9 @@ function SidebarContent({
       </nav>
 
       {/* Árvore de projetos */}
-      <div className={cn("min-h-0 flex-1 overflow-y-auto border-t border-subtle pb-4 pt-3", collapsed ? "px-2" : "px-3")}>
+      <div
+        className={cn("min-h-0 flex-1 overflow-y-auto border-t border-subtle pb-4 pt-3", collapsed ? "px-2" : "px-3")}
+      >
         {collapsed ? (
           <ul className="space-y-1">
             {snapshot.projects.map((project) => (
@@ -310,7 +319,9 @@ function ProfileSwitcher({
   );
 
   if (profiles.length === 0) {
-    return <div className={cn("flex items-center gap-2.5 rounded-lg p-1.5", collapsed && "justify-center")}>{card}</div>;
+    return (
+      <div className={cn("flex items-center gap-2.5 rounded-lg p-1.5", collapsed && "justify-center")}>{card}</div>
+    );
   }
 
   function switchTo(profileId: string, close: () => void) {
@@ -347,7 +358,9 @@ function ProfileSwitcher({
           )}
         >
           {card}
-          {!collapsed && <ChevronsUpDown aria-hidden="true" className="size-3.5 shrink-0 text-muted" strokeWidth={1.5} />}
+          {!collapsed && (
+            <ChevronsUpDown aria-hidden="true" className="size-3.5 shrink-0 text-muted" strokeWidth={1.5} />
+          )}
           <span className="sr-only">Trocar de perfil RBAC</span>
         </button>
       )}
@@ -364,7 +377,13 @@ function ProfileSwitcher({
                 aria-current={current ? "true" : undefined}
                 className={cn("items-start", current && "bg-surface")}
               >
-                <Avatar initials={profile.initials} name={profile.name} size="sm" highlight={current} className="mt-0.5" />
+                <Avatar
+                  initials={profile.initials}
+                  name={profile.name}
+                  size="sm"
+                  highlight={current}
+                  className="mt-0.5"
+                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium">{profile.name}</span>
                   <span className="mt-0.5 block text-[11px] leading-snug text-muted">{profile.blurb}</span>

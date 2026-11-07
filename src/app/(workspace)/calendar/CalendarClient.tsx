@@ -47,7 +47,9 @@ export function CalendarClient() {
   ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const monthLabel = new Intl.DateTimeFormat("pt-PT", { month: "long", year: "numeric", timeZone: "UTC" }).format(first);
+  const monthLabel = new Intl.DateTimeFormat("pt-PT", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+    first,
+  );
   const monthEffort = Object.entries(snapshot.effort.byDay)
     .filter(([day]) => day.startsWith(`${cursor.year}-${pad(cursor.month)}`))
     .reduce((sum, [, s]) => sum + s, 0);
@@ -56,7 +58,11 @@ export function CalendarClient() {
   const move = (delta: number) =>
     setCursor((c) => {
       const m = c.month + delta;
-      return m < 1 ? { year: c.year - 1, month: 12 } : m > 12 ? { year: c.year + 1, month: 1 } : { year: c.year, month: m };
+      return m < 1
+        ? { year: c.year - 1, month: 12 }
+        : m > 12
+          ? { year: c.year + 1, month: 1 }
+          : { year: c.year, month: m };
     });
 
   return (
@@ -64,7 +70,9 @@ export function CalendarClient() {
       <header className="flex flex-wrap items-end justify-between gap-6">
         <div>
           <p className="eyebrow">Pré-visualização · calendário completo na Fase 4</p>
-          <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight first-letter:uppercase">{monthLabel}</h1>
+          <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight first-letter:uppercase">
+            {monthLabel}
+          </h1>
           <p className="nums mt-2 font-serif text-lg italic text-muted">
             {formatDuration(monthEffort)} de esforço focado este mês
           </p>
@@ -104,7 +112,10 @@ export function CalendarClient() {
                   const edits = editsByDay.get(key) ?? [];
                   const isToday = key === todayKey;
                   return (
-                    <td key={col} className={cn("h-28 border border-subtle p-1.5 align-top", isToday ? "bg-elevated" : "bg-canvas")}>
+                    <td
+                      key={col}
+                      className={cn("h-28 border border-subtle p-1.5 align-top", isToday ? "bg-elevated" : "bg-canvas")}
+                    >
                       <div className="flex items-center justify-between">
                         <span
                           className={cn(
@@ -116,7 +127,10 @@ export function CalendarClient() {
                         </span>
                         {seconds > 0 && (
                           <span
-                            className={cn("nums font-mono text-[10.5px]", seconds >= goal ? "text-accent-primary" : "text-muted")}
+                            className={cn(
+                              "nums font-mono text-[10.5px]",
+                              seconds >= goal ? "text-accent-primary" : "text-muted",
+                            )}
                             title={seconds >= goal ? "Meta diária cumprida" : "Esforço focado"}
                           >
                             {formatDuration(seconds)}
@@ -138,7 +152,9 @@ export function CalendarClient() {
                             </li>
                           );
                         })}
-                        {edits.length > 2 && <li className="nums px-1 text-[10.5px] text-muted">+{edits.length - 2} páginas</li>}
+                        {edits.length > 2 && (
+                          <li className="nums px-1 text-[10.5px] text-muted">+{edits.length - 2} páginas</li>
+                        )}
                       </ul>
                     </td>
                   );

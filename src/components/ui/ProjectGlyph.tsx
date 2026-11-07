@@ -48,7 +48,11 @@ export function ProjectGlyph({ icon, color, size = "md", className }: ProjectGly
     <span
       data-ink={color}
       aria-hidden="true"
-      className={cn("grid shrink-0 place-items-center border border-ink/25 bg-ink/[0.08] text-ink", SIZES[size], className)}
+      className={cn(
+        "grid shrink-0 place-items-center border border-ink/25 bg-ink/[0.08] text-ink",
+        SIZES[size],
+        className,
+      )}
     >
       <Icon strokeWidth={1.5} />
     </span>

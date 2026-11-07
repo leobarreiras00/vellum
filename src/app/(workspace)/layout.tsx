@@ -31,7 +31,8 @@ export default async function WorkspaceLayout({ children }: { children: ReactNod
           id: p.id,
           name: p.name,
           initials: initialsOf(p.name),
-          role: effectiveRole({ userId: p.id, platformRole: p.platformRole, workspaceRole: p.workspaceRole }) ?? "VIEWER",
+          role:
+            effectiveRole({ userId: p.id, platformRole: p.platformRole, workspaceRole: p.workspaceRole }) ?? "VIEWER",
           tag: demoRoleTag(p),
           blurb: p.blurb,
         }))

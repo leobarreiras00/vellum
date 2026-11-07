@@ -66,7 +66,12 @@ export function Popover({
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>
-      {trigger({ "aria-expanded": open, "aria-controls": panelId, "aria-haspopup": role, onClick: () => setOpen((v) => !v) })}
+      {trigger({
+        "aria-expanded": open,
+        "aria-controls": panelId,
+        "aria-haspopup": role,
+        onClick: () => setOpen((v) => !v),
+      })}
       <AnimatePresence>
         {open && (
           <motion.div

@@ -20,7 +20,14 @@
 import type { ReactNode } from "react";
 
 import { useAuth } from "@/context/AuthContext";
-import { hasAnyRole, hasPermission, type EffectiveRole, type Permission, type PlatformRole, type RbacSubject } from "@/lib/rbac";
+import {
+  hasAnyRole,
+  hasPermission,
+  type EffectiveRole,
+  type Permission,
+  type PlatformRole,
+  type RbacSubject,
+} from "@/lib/rbac";
 
 interface RoleGuardProps {
   /** Papéis aceites. SUPER_ADMIN passa sempre, salvo `strict`. */

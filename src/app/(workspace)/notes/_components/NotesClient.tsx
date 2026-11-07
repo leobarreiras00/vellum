@@ -45,9 +45,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
   const { user } = useAuth();
   const { snapshot, run, can, isPending } = useWorkspace();
   const [query, setQuery] = useState("");
-  const [projectFilter, setProjectFilter] = useState<string>(
-    initialProject && !startComposing ? initialProject : "",
-  );
+  const [projectFilter, setProjectFilter] = useState<string>(initialProject && !startComposing ? initialProject : "");
   const [editing, setEditing] = useState<NoteView | null>(null);
   const [converting, setConverting] = useState<NoteView | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -106,13 +104,22 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
             })
           }
         >
-          {note.isPinned ? <PinOff aria-hidden="true" strokeWidth={1.5} /> : <Pin aria-hidden="true" strokeWidth={1.5} />}
+          {note.isPinned ? (
+            <PinOff aria-hidden="true" strokeWidth={1.5} />
+          ) : (
+            <Pin aria-hidden="true" strokeWidth={1.5} />
+          )}
         </Button>
         <Button variant="ghost" size="icon-sm" aria-label="Editar nota" title="Editar" onClick={() => setEditing(note)}>
           <PenLine aria-hidden="true" strokeWidth={1.5} />
         </Button>
         {!note.documentId && (
-          <Button variant="ghost" size="sm" onClick={() => setConverting(note)} title="Converter em Documento de Projeto">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setConverting(note)}
+            title="Converter em Documento de Projeto"
+          >
             <FileOutput aria-hidden="true" strokeWidth={1.5} />
             Converter
           </Button>
@@ -153,8 +160,8 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
             permission="document:edit"
             fallback={
               <p className="flex items-start gap-2 rounded-xl border border-dashed border-subtle p-4 text-sm text-muted">
-                <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} />O seu papel permite ler o
-                mural, mas não criar ou editar notas.
+                <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} />O seu papel permite ler
+                o mural, mas não criar ou editar notas.
               </p>
             }
           >
@@ -163,7 +170,11 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
 
           <div className="space-y-3 rounded-xl border border-subtle bg-surface/50 p-4">
             <div className="relative">
-              <Search aria-hidden="true" className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted" strokeWidth={1.5} />
+              <Search
+                aria-hidden="true"
+                className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
+                strokeWidth={1.5}
+              />
               <Input
                 ref={searchRef}
                 type="search"
@@ -177,7 +188,11 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
             </div>
             <div>
               <Label htmlFor="notes-project-filter">Projeto</Label>
-              <Select id="notes-project-filter" value={projectFilter} onChange={(e) => setProjectFilter(e.target.value)}>
+              <Select
+                id="notes-project-filter"
+                value={projectFilter}
+                onChange={(e) => setProjectFilter(e.target.value)}
+              >
                 <option value="">Todos os projetos</option>
                 <option value={NO_PROJECT}>Sem projeto</option>
                 {snapshot.projects.map((p) => (
@@ -216,7 +231,10 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
             </section>
           )}
           {rest.length > 0 && (
-            <section aria-labelledby="notes-rest" className={cn(pinned.length > 0 && "mt-6 border-t border-subtle pt-5")}>
+            <section
+              aria-labelledby="notes-rest"
+              className={cn(pinned.length > 0 && "mt-6 border-t border-subtle pt-5")}
+            >
               <p id="notes-rest" className="eyebrow mb-3">
                 {pinned.length > 0 ? "Restantes" : "Todas as notas"}
               </p>
@@ -247,7 +265,9 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [color, setColor] = useState<InkColor>("terracota");
-  const [projectId, setProjectId] = useState(defaultProject && projects.some((p) => p.id === defaultProject) ? defaultProject : "");
+  const [projectId, setProjectId] = useState(
+    defaultProject && projects.some((p) => p.id === defaultProject) ? defaultProject : "",
+  );
   const [isPinned, setPinned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -423,7 +443,13 @@ function NoteEditorDialog({ note, onClose }: { note: NoteView | null; onClose: (
         </div>
         <div>
           <Label htmlFor={`${formId}-c`}>Conteúdo</Label>
-          <Textarea id={`${formId}-c`} value={content} onChange={(e) => setContent(e.target.value)} maxLength={4000} className="min-h-40" />
+          <Textarea
+            id={`${formId}-c`}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            maxLength={4000}
+            className="min-h-40"
+          />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -468,7 +494,8 @@ function ConvertDialog({ note, onClose }: { note: NoteView | null; onClose: () =
 
   useEffect(() => {
     if (!note) return;
-    const preferred = note.projectId && projects.some((p) => p.id === note.projectId) ? note.projectId : projects[0]?.id;
+    const preferred =
+      note.projectId && projects.some((p) => p.id === note.projectId) ? note.projectId : projects[0]?.id;
     setProjectId(preferred ?? "");
   }, [note]);
 

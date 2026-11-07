@@ -10,24 +10,9 @@
  */
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import {
-  DEFAULT_THEME,
-  THEMES,
-  THEME_STORAGE_KEY,
-  isThemeId,
-  type ThemeId,
-  type ThemeMeta,
-} from "@/lib/themes";
+import { DEFAULT_THEME, THEMES, THEME_STORAGE_KEY, isThemeId, type ThemeId, type ThemeMeta } from "@/lib/themes";
 
 interface ThemeContextValue {
   theme: ThemeId;

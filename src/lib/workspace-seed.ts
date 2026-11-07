@@ -8,6 +8,8 @@
  * esforço dos últimos 21 dias. As datas são relativas ao momento do seed para
  * que o atelier pareça sempre vivo.
  */
+import { docToPlainText } from "@/lib/document-content";
+import { architectureOverviewContent } from "@/lib/workspace-seed-content";
 import { DEMO_PROFILES, DEMO_WORKSPACE_NAME } from "@/lib/demo-profiles";
 import { countWords } from "@/lib/utils";
 import type {
@@ -444,7 +446,8 @@ export function buildSeed(now = Date.now()): StoreData {
     const walk = (pages: SeedPage[], parentId: string | null) => {
       pages.forEach((page, position) => {
         const docId = `doc-${page.key}`;
-        const plainText = page.body.join("\n\n");
+        const contentJson = page.key === "visao-geral" ? architectureOverviewContent(page.body) : null;
+        const plainText = contentJson ? docToPlainText(contentJson) : page.body.join("\n\n");
         const updated = now - page.age * DAY - (position + 1) * 2 * HOUR;
         lastEdit = Math.max(lastEdit, updated);
         documents.push({
@@ -457,6 +460,8 @@ export function buildSeed(now = Date.now()): StoreData {
           title: page.title,
           summary: page.summary,
           plainText,
+          contentJson,
+          version: page.editedBy ? 3 : 2,
           wordCount: countWords(plainText),
           position,
           createdAt: iso(now - (p.createdDaysAgo - position) * DAY),
@@ -542,6 +547,34 @@ export function buildSeed(now = Date.now()): StoreData {
     projects,
     documents,
     notes,
+    comments: [
+      {
+        id: "com-seed-1",
+        workspaceId: DEMO_WORKSPACE_ID,
+        documentId: "doc-visao-geral",
+        authorId: MARTA,
+        kind: "suggestion",
+        quote: "um módulo nunca importa ficheiros internos de outro módulo",
+        body: "Sugiro acrescentar um exemplo concreto de importação proibida — ajuda quem chega agora ao projeto.",
+        resolvedAt: null,
+        resolvedById: null,
+        createdAt: iso(now - 5 * HOUR),
+        deletedAt: null,
+      },
+      {
+        id: "com-seed-2",
+        workspaceId: DEMO_WORKSPACE_ID,
+        documentId: "doc-visao-geral",
+        authorId: ANA,
+        kind: "question",
+        quote: "Figura 1",
+        body: "O diagrama deve mostrar também o refresh do instantâneo depois da ação?",
+        resolvedAt: null,
+        resolvedById: null,
+        createdAt: iso(now - 2 * HOUR),
+        deletedAt: null,
+      },
+    ],
     effortLogs,
     preferences: Object.fromEntries(
       DEMO_PROFILES.map((p) => [p.id, { theme: p.theme, dailyGoalMinutes: 240, readingFont: "serif" as const }]),

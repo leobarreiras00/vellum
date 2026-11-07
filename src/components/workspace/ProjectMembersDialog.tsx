@@ -36,7 +36,9 @@ export function ProjectMembersDialog({ open, projectId, onClose }: ProjectMember
   const canManage = Boolean(project) && can("project:manage", projectId);
   const formId = useId();
 
-  const candidates = project ? snapshot.members.filter((m) => !project.members.some((pm) => pm.userId === m.userId)) : [];
+  const candidates = project
+    ? snapshot.members.filter((m) => !project.members.some((pm) => pm.userId === m.userId))
+    : [];
   const [newMember, setNewMember] = useState("");
   const [newRole, setNewRole] = useState<WorkspaceRole>("EDITOR");
 
@@ -71,7 +73,11 @@ export function ProjectMembersDialog({ open, projectId, onClose }: ProjectMember
     : snapshot.members.map((person) => ({
         person,
         projectRole: person.role,
-        effective: effectiveRole({ userId: person.userId, platformRole: person.platformRole, workspaceRole: person.role }),
+        effective: effectiveRole({
+          userId: person.userId,
+          platformRole: person.platformRole,
+          workspaceRole: person.role,
+        }),
       }));
 
   return (
@@ -113,7 +119,12 @@ export function ProjectMembersDialog({ open, projectId, onClose }: ProjectMember
             <tr key={person.userId} className="border-b border-subtle/70 last:border-0">
               <td className="py-2.5 pr-3">
                 <span className="flex items-center gap-2.5">
-                  <Avatar initials={person.initials} name={person.name} size="md" highlight={person.userId === user?.userId} />
+                  <Avatar
+                    initials={person.initials}
+                    name={person.name}
+                    size="md"
+                    highlight={person.userId === user?.userId}
+                  />
                   <span className="min-w-0">
                     <span className="block truncate text-primary">
                       {person.name}

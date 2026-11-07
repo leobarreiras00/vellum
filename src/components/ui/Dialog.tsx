@@ -32,7 +32,17 @@ const SIZES = {
   lg: "w-[min(720px,calc(100vw-2rem))]",
 };
 
-export function Dialog({ open, onClose, title, eyebrow, description, footer, children, className, size = "md" }: DialogProps) {
+export function Dialog({
+  open,
+  onClose,
+  title,
+  eyebrow,
+  description,
+  footer,
+  children,
+  className,
+  size = "md",
+}: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const descriptionId = useId();

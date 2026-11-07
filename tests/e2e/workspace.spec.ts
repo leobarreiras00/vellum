@@ -86,18 +86,27 @@ test("Projetos: criar projeto, criar página e subpágina, persistir após recar
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Ensaio de Tipografia Portuguesa");
 
   await page.getByRole("button", { name: "Novo documento" }).click();
-  await page.getByPlaceholder("Sem título").fill("Capítulo I · Os tipógrafos de Lisboa");
-  await page.getByLabel("Texto").fill("Primeiro parágrafo do capítulo.\n\nSegundo parágrafo com mais palavras.");
-  await page.getByRole("button", { name: "Guardar página" }).click();
+  await page.waitForURL(/\/documents\/.+\?editar=1/);
+  // Documento novo: o título vem focado e selecionado.
+  await expect(page.getByTestId("doc-title")).toBeFocused();
+  await page.keyboard.type("Capítulo I · Os tipógrafos de Lisboa");
+  await page.locator(".ProseMirror").click();
+  await page.keyboard.type("Primeiro parágrafo do capítulo.");
+  await page.keyboard.press("Enter");
+  await page.keyboard.type("Segundo parágrafo com mais palavras.");
+  await expect(page.getByTestId("doc-words")).toHaveText("9");
+  await expect(page.locator('[data-save-state="saved"]')).toBeVisible();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Capítulo I · Os tipógrafos de Lisboa");
-  await expect(page.getByText("9 palavras", { exact: true }).first()).toBeVisible();
-  await expect(page).not.toHaveURL(/editar=1/);
 
   await page.getByRole("button", { name: "Nova subpágina", exact: true }).click();
-  await page.getByPlaceholder("Sem título").fill("Secção 1.1 · Oficinas");
+  await page.waitForURL(/\/documents\/.+\?editar=1/);
+  await expect(page.getByTestId("doc-title")).toBeFocused();
+  await page.keyboard.type("Secção 1.1 · Oficinas");
   await page.keyboard.press("Control+s");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Secção 1.1 · Oficinas");
-  await expect(page).not.toHaveURL(/editar=1/);
+  await expect(page.locator('[data-save-state="saved"]')).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Caminho do documento" })).toContainText(
+    "Capítulo I · Os tipógrafos de Lisboa",
+  );
 
   await page.reload();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Secção 1.1 · Oficinas");
@@ -114,7 +123,10 @@ test("Notas Rápidas: criar, fixar, pesquisar e converter em documento", async (
   await page.getByLabel("Título da nota").fill("Glossário de termos editoriais");
   await page.getByLabel("Conteúdo da nota").fill("Mancha gráfica, entrelinha, medida, viúvas e órfãs.");
   await page.getByRole("radio", { name: "Sálvia" }).first().click();
-  await page.getByLabel("Projeto", { exact: true }).first().selectOption({ label: "Investigação UX & Sistemas Editoriais" });
+  await page
+    .getByLabel("Projeto", { exact: true })
+    .first()
+    .selectOption({ label: "Investigação UX & Sistemas Editoriais" });
   await page.getByRole("button", { name: "Fixar no topo" }).first().click();
   await page.getByRole("button", { name: "Guardar nota" }).click();
   await expect(page.getByRole("article")).toHaveCount(7);
@@ -153,6 +165,7 @@ test("RBAC: Comentador, Leitor e restrição por projeto", async ({ page }) => {
   // Pedro Costa — Leitor: sem Exportar.
   await switchProfile(page, PROFILES.pedro);
   await page.goto("/projects/prj-arquitetura/pages/doc-visao-geral");
+  await page.waitForURL("**/documents/doc-visao-geral");
   await expect(page.locator("header [data-role]").first()).toHaveText(/Leitor/);
   await expect(page.getByTestId("topbar-export")).toHaveCount(0);
   await expect(page.getByText("Modo de leitura")).toBeVisible();
@@ -187,7 +200,10 @@ test("Gestão de membros pelo Proprietário", async ({ page }) => {
 test("Definições: tema, fonte de leitura e meta diária persistem", async ({ page }) => {
   await loginAs(page, PROFILES.leo);
   await page.goto("/settings");
-  await page.getByRole("main").getByRole("radio", { name: /Papel Sálvia/ }).click();
+  await page
+    .getByRole("main")
+    .getByRole("radio", { name: /Papel Sálvia/ })
+    .click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "sage-paper");
   await page.getByRole("radio", { name: /Plus Jakarta Sans/ }).click();
   await expect(page.getByRole("radio", { name: /Plus Jakarta Sans/ })).toHaveAttribute("aria-checked", "true");

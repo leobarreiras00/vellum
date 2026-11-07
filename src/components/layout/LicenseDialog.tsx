@@ -82,10 +82,10 @@ export function LicenseDialog({ className, children }: LicenseDialogProps) {
 
           <div className="overflow-y-auto px-7 py-6 text-sm leading-relaxed">
             <p className="font-serif text-[17px] leading-[1.6] text-primary">
-              O Vellum, incluindo código-fonte, design, marca, identidade visual, documentação, arquitetura e
-              temas, é propriedade exclusiva de <strong className="font-medium">Leonardo Barreiras (Leo Barreiras)</strong>.
-              Este repositório é público apenas para <em>visualização e portefólio</em> e não constitui uma licença
-              de código aberto.
+              O Vellum, incluindo código-fonte, design, marca, identidade visual, documentação, arquitetura e temas, é
+              propriedade exclusiva de <strong className="font-medium">Leonardo Barreiras (Leo Barreiras)</strong>. Este
+              repositório é público apenas para <em>visualização e portefólio</em> e não constitui uma licença de código
+              aberto.
             </p>
 
             <section className="mt-6">

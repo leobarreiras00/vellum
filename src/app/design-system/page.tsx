@@ -72,13 +72,17 @@ export default function DesignSystemPage() {
         {/* I. Tipografia */}
         <Section numeral="I" title="Tipografia editorial" dek="Três vozes, nunca uma quarta.">
           <div className="divide-y divide-subtle border-y border-subtle">
-            <Specimen family="Newsreader" variable="--font-serif" role="Títulos, cabeçalhos de documentos, logótipo, destaques">
+            <Specimen
+              family="Newsreader"
+              variable="--font-serif"
+              role="Títulos, cabeçalhos de documentos, logótipo, destaques"
+            >
               <p className="font-serif text-4xl leading-tight tracking-tight">
                 Cadernos, secções e folhas <em>que respiram</em>.
               </p>
               <p className="mt-3 max-w-prose font-serif text-[17px] leading-[1.65] text-muted">
-                «A forma de uma página é parte do seu argumento.» Corpo de documento a 17px, entrelinha 1,65 e
-                medida de 68 caracteres.
+                «A forma de uma página é parte do seu argumento.» Corpo de documento a 17px, entrelinha 1,65 e medida de
+                68 caracteres.
               </p>
             </Specimen>
 
@@ -121,7 +125,11 @@ export default function DesignSystemPage() {
               </dl>
             </Specimen>
 
-            <Specimen family="JetBrains Mono" variable="--font-mono" role="Mermaid, atalhos de teclado, metadados técnicos">
+            <Specimen
+              family="JetBrains Mono"
+              variable="--font-mono"
+              role="Mermaid, atalhos de teclado, metadados técnicos"
+            >
               <pre className="ligatures-none max-w-xl overflow-x-auto rounded-lg border border-subtle bg-surface px-4 py-3 font-mono text-[13px] leading-[1.6] text-primary">
                 <code>{`flowchart LR\n  Nota --> Página --> Folha\n  Folha --> PDF & DOCX`}</code>
               </pre>
@@ -137,16 +145,30 @@ export default function DesignSystemPage() {
         </Section>
 
         {/* II. Temas */}
-        <Section numeral="II" title="Os cinco temas" dek="Lista fechada. Escolha um papel; a interface inteira muda consigo.">
+        <Section
+          numeral="II"
+          title="Os cinco temas"
+          dek="Lista fechada. Escolha um papel; a interface inteira muda consigo."
+        >
           <ThemeGallery />
         </Section>
 
         {/* III. Tokens */}
-        <Section numeral="III" title="Tokens semânticos" dek="Os componentes conhecem o papel da cor, nunca o seu valor.">
+        <Section
+          numeral="III"
+          title="Tokens semânticos"
+          dek="Os componentes conhecem o papel da cor, nunca o seu valor."
+        >
           <ul className="divide-y divide-subtle border-y border-subtle">
             {TOKENS.map((t) => (
-              <li key={t.name} className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 py-3 sm:grid-cols-[auto_14rem_10rem_1fr]">
-                <span aria-hidden="true" className={`size-7 rounded-lg border border-subtle shadow-paper ${t.className}`} />
+              <li
+                key={t.name}
+                className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1 py-3 sm:grid-cols-[auto_14rem_10rem_1fr]"
+              >
+                <span
+                  aria-hidden="true"
+                  className={`size-7 rounded-lg border border-subtle shadow-paper ${t.className}`}
+                />
                 <code className="font-mono text-xs text-primary">{t.name}</code>
                 <code className="hidden font-mono text-xs text-muted sm:block">{t.utility}</code>
                 <span className="col-start-2 text-xs text-muted sm:col-start-auto">{t.role}</span>
@@ -186,12 +208,7 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section
-      className={cn(
-        "grid gap-8 border-t border-subtle py-14",
-        !wide && "md:grid-cols-[12rem_1fr] md:gap-12",
-      )}
-    >
+    <section className={cn("grid gap-8 border-t border-subtle py-14", !wide && "md:grid-cols-[12rem_1fr] md:gap-12")}>
       <div>
         <p className="font-mono text-xs text-accent-primary">{numeral}.</p>
         <h2 className="mt-2 text-2xl leading-snug">{title}</h2>

@@ -13,18 +13,13 @@
 
 import { ArrowUpRight, FileText, Timer, Type } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { useEffect, useState } from "react";
 
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { LicenseDialog } from "@/components/layout/LicenseDialog";
 import { ThemeSwatches } from "@/components/layout/ThemeSwatches";
 import { VellumMark } from "@/components/layout/VellumMark";
-import {
-  PAGE_MODES,
-  PAGE_MODE_LABELS,
-  PAGE_MODE_STORAGE_KEY,
-  type PageMode,
-} from "@/lib/page-mode";
+import { PAGE_MODES, PAGE_MODE_LABELS, type PageMode } from "@/lib/page-mode";
+import { usePageMode } from "@/lib/use-page-mode";
 import {
   APP_VERSION,
   COPYRIGHT_YEAR,
@@ -117,9 +112,7 @@ function FullFooter({ className }: FullFooterProps) {
       </div>
 
       <div className="border-t border-subtle">
-        <p className="mx-auto max-w-6xl px-6 py-5 text-xs leading-relaxed text-muted md:px-12">
-          {COPYRIGHT_FULL}
-        </p>
+        <p className="mx-auto max-w-6xl px-6 py-5 text-xs leading-relaxed text-muted md:px-12">{COPYRIGHT_FULL}</p>
       </div>
     </footer>
   );
@@ -141,29 +134,12 @@ function StatusbarFooter({
   pageMode: controlledMode,
   onPageModeChange,
 }: StatusbarFooterProps) {
-  const [uncontrolledMode, setUncontrolledMode] = useState<PageMode>("A4");
+  const [uncontrolledMode, setUncontrolledMode] = usePageMode();
   const pageMode = controlledMode ?? uncontrolledMode;
 
-  // Modo não controlado: lembra a última escolha.
-  useEffect(() => {
-    if (controlledMode) return;
-    try {
-      const stored = window.localStorage.getItem(PAGE_MODE_STORAGE_KEY);
-      if (stored === "A4" || stored === "FLUID") setUncontrolledMode(stored);
-    } catch {
-      // Armazenamento indisponível.
-    }
-  }, [controlledMode]);
-
+  // Modo não controlado: preferência partilhada com o documento aberto.
   function changeMode(mode: PageMode) {
-    if (!controlledMode) {
-      setUncontrolledMode(mode);
-      try {
-        window.localStorage.setItem(PAGE_MODE_STORAGE_KEY, mode);
-      } catch {
-        // Armazenamento indisponível.
-      }
-    }
+    if (!controlledMode) setUncontrolledMode(mode);
     onPageModeChange?.(mode);
   }
 
@@ -171,6 +147,7 @@ function StatusbarFooter({
     <footer
       role="contentinfo"
       aria-label="Barra de estado"
+      data-print="hide"
       className={cn(
         "flex h-[30px] items-center gap-4 whitespace-nowrap border-t border-subtle bg-surface px-3 font-sans text-[11px] text-muted",
         className,
@@ -237,9 +214,7 @@ function TelemetryIndicator({ isActive }: { isActive: boolean }) {
           <span className="size-1.5 rounded-full border border-muted" />
         )}
       </span>
-      <span className={cn(isActive ? "text-primary" : "text-muted")}>
-        {isActive ? "Esforço Ativo" : "Em Pausa"}
-      </span>
+      <span className={cn(isActive ? "text-primary" : "text-muted")}>{isActive ? "Esforço Ativo" : "Em Pausa"}</span>
     </span>
   );
 }

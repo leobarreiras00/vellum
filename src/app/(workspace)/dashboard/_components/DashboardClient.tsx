@@ -79,7 +79,10 @@ export function DashboardClient({ greeting, today }: { greeting: string; today: 
                     {formatDuration(snapshot.effort.todaySeconds)}
                   </span>
                   <span className="mt-3 block h-1 overflow-hidden rounded-full bg-surface" aria-hidden="true">
-                    <span className="block h-full rounded-full bg-accent-primary" style={{ width: `${progress * 100}%` }} />
+                    <span
+                      className="block h-full rounded-full bg-accent-primary"
+                      style={{ width: `${progress * 100}%` }}
+                    />
                   </span>
                   <span className="nums mt-1.5 block text-xs text-muted">
                     {Math.round(progress * 100)}% da meta de {formatDuration(goalSeconds)}
@@ -131,7 +134,10 @@ export function DashboardClient({ greeting, today }: { greeting: string; today: 
             id="dash-notes"
             title="Notas fixadas"
             action={
-              <Link href={routes.notes} className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent-primary">
+              <Link
+                href={routes.notes}
+                className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent-primary"
+              >
                 Ver mural <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.5} />
               </Link>
             }
@@ -178,7 +184,8 @@ export function DashboardClient({ greeting, today }: { greeting: string; today: 
                 <span className="min-w-0">
                   <span className="block truncate font-serif text-[17px] text-primary">{project.name}</span>
                   <span className="nums block text-xs text-muted">
-                    {project.pageCount} páginas · {project.noteCount} notas · editado {relativeTime(project.lastEditedAt)}
+                    {project.pageCount} páginas · {project.noteCount} notas · editado{" "}
+                    {relativeTime(project.lastEditedAt)}
                   </span>
                 </span>
                 <span className="hidden h-1 overflow-hidden rounded-full bg-surface md:block" aria-hidden="true">
@@ -188,7 +195,9 @@ export function DashboardClient({ greeting, today }: { greeting: string; today: 
                     style={{ width: `${(project.effortSeconds / totalEffort) * 100}%` }}
                   />
                 </span>
-                <span className="nums text-right font-mono text-xs text-primary">{hoursLabel(project.effortSeconds)}</span>
+                <span className="nums text-right font-mono text-xs text-primary">
+                  {hoursLabel(project.effortSeconds)}
+                </span>
               </Link>
             </li>
           ))}

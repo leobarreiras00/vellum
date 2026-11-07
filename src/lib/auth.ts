@@ -41,8 +41,7 @@ export interface SessionUser extends RbacSubject {
 }
 
 export type AuthResult<T = undefined> =
-  | ({ ok: true } & (T extends undefined ? object : { data: T }))
-  | { ok: false; error: string };
+  ({ ok: true } & (T extends undefined ? object : { data: T })) | { ok: false; error: string };
 
 /* ==========================================================================
    Armazenamento em memória (sobrevive a recargas do servidor de dev)
@@ -309,11 +308,7 @@ export async function requestPasswordReset(identifier: string): Promise<AuthResu
 
 const INVALID_CODE = "Código inválido ou expirado. Peça um novo código.";
 
-export async function confirmPasswordReset(
-  identifier: string,
-  code: string,
-  password: string,
-): Promise<AuthResult> {
+export async function confirmPasswordReset(identifier: string, code: string, password: string): Promise<AuthResult> {
   await ensureSeeded();
   const user = findByIdentifier(identifier);
   if (!user) return { ok: false, error: INVALID_CODE };

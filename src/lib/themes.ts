@@ -8,13 +8,7 @@
  */
 import { z } from "zod";
 
-export const THEME_IDS = [
-  "warm-cream",
-  "sage-paper",
-  "nordic-slate",
-  "sand-dune",
-  "dark-espresso",
-] as const;
+export const THEME_IDS = ["warm-cream", "sage-paper", "nordic-slate", "sand-dune", "dark-espresso"] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
 

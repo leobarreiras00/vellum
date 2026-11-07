@@ -3,7 +3,7 @@
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
-**Estado atual:** Fases 1C e 2A concluídas (App Shell + Workspace Engine) · Próximo passo: Fase 2B (Better-Auth + PostgreSQL) ou Fase 3 (Editor Rico)
+**Estado atual:** Fase 3 concluída (Editor Rico, Folha A4, Estúdio Mermaid, comentários) + ferramentas de qualidade (ESLint, Prettier, Vitest, CI) · Próximo passo: Fase 2B (PostgreSQL + Better-Auth) ou Fase 4 (Calendário + Telemetria)
 **Última atualização:** 2026-11-07
 
 ---
@@ -95,22 +95,43 @@
 - [ ] Convites por email e gestão de membros do workspace
 - [ ] Pesquisa full-text PT no servidor (hoje é no cliente, sobre o instantâneo)
 
-### Transitado da Fase 1C (não pedido nesta entrega)
+### Transitado da Fase 1C
 
-- [ ] ESLint, Prettier e Vitest (o script `lint` será adicionado aqui)
+- [x] ESLint 9 (flat config `eslint.config.mjs`, `next/core-web-vitals` + `next/typescript`, sem `any`) — `npm run lint` (0 erros; 5 avisos `exhaustive-deps` antigos)
+- [x] Prettier (`.prettierrc.json`, largura 120) aplicado a todo o código — `npm run format` / `format:check`
+- [x] Vitest (`vitest.config.ts`, `tests/unit/`): 23 testes (RBAC, conteúdo ProseMirror ↔ texto/Markdown, kit Mermaid) — `npm test`; `npm run check` corre tudo
+- [x] Pipeline CI em `.github/workflows/ci.yml`: lint, typecheck, formatação, Vitest; depois build + Playwright (Chromium)
 - [ ] Converter o fluxo E2E da Fase 1B (login, registo, recuperação) em testes Playwright
-- [ ] Pipeline CI (lint, typecheck, testes)
 
 ## Fase 3 — Módulo 3 (Editor Rico + Estúdio Mermaid)
 
-- [ ] Integração TipTap v2 com blocos base
-- [ ] Menu `/` e arrastar blocos (Modo Bloco)
-- [ ] Modo Documento paginado (A4/Letter, margens, cabeçalhos/rodapés)
+### Fase 3A — Editor Gráfico (Word + Notion), Modo Folha A4 e Estúdio Mermaid ✅ CONCLUÍDA (2026-11-07)
+
+- [x] Rota `src/app/(workspace)/projects/[projectId]/documents/[docId]/page.tsx` (sessão + `findDocument` no servidor, `notFound()`); `/pages/[pageId]` antigo faz `permanentRedirect`; `routes.page()` aponta para `/documents/`
+- [x] `DocumentEditorClient.tsx`: RBAC estrito com o papel efetivo do projeto — Proprietário/Editor editam tudo; Comentador tem corpo só de leitura, gaveta de comentários aberta e Exportar; Leitor tem leitura limpa sem barra nem exportação
+- [x] `DocumentHeader.tsx`: breadcrumb (projeto + páginas-mãe), título editável em Newsreader (`contenteditable="plaintext-only"`, continua a ser `<h1>`), descrição/sumário executivo, metadados `tabular-nums` (palavras, leitura, esforço investido, autor, versão, última edição) e indicador de gravação automática
+- [x] Gravação automática (900 ms, ⌘S força, grava ao sair, aviso `beforeunload`) via `saveDocumentContentAction` (Zod `docContentSchema` → `assertCan("document:edit")`); o servidor deriva `plainText`, palavras e versão
+- [x] `DocumentCanvas.tsx`: Modo Folha A4 (210mm × ≥297mm, margens de 20mm, `bg-elevated`, borda capilar, `shadow-sheet` sobre `bg-canvas`), régua milimétrica com margens, cantos de margem e guias «Quebra de página · N» a cada 297mm; escala por CSS `zoom` em ecrãs estreitos; Modo Fluido (68ch). Preferência partilhada com a barra de estado (`src/lib/use-page-mode.ts`)
+- [x] `VellumEditor.tsx` (TipTap v2.27): StarterKit, TextStyle + `TextStyleKit` (família, tamanho 10–36pt, cor), sublinhado clássico/colorido, realce multicor, alinhamento, tarefas, tabelas redimensionáveis, `Callout` (nota/destaque/atenção), `MermaidNode`, placeholder e menu `/` (`SlashCommand` + `SlashMenu`, 13 blocos)
+- [x] `RichWordToolbar.tsx`: desfazer/refazer, fonte (Newsreader/Plus Jakarta/JetBrains Mono) e tamanho, B I U S, estilos de sublinhado, paleta curada de cor e realce (Carvão, Terracota, Verde Sálvia, Azul Ardósia, Ocre Âmbar, Carmim — variáveis `--doc-ink-*`/`--doc-mark-*` com versão Espresso), alinhamentos, H1–H3, listas, checklist, citação, callouts, tabela (grelha 6×6 + linhas/colunas/cabeçalho/unir/eliminar), divisória e «Inserir Diagrama Mermaid»
+- [x] `MermaidStudioBlock.tsx` + `mermaid-renderer.ts`: Mermaid 11 com `securityLevel: "strict"`, `htmlLabels: false`, tema `base` com as cores do tema ativo (re-renderiza ao trocar de tema), fila de renderização e SVG sanitizado com DOMPurify; Vista Diagrama (zoom −/+/100%, legenda), Vista Dividida (código com numeração de linhas + pré-visualização ao vivo) e Ecrã Inteiro (Esc fecha); em leitura só diagrama, zoom e ecrã inteiro
+- [x] `MermaidGuidePanel.tsx` «Como gerar ou importar»: 6 templates com 1 clique, guia de sintaxe PT-PT copiável/inserível (nós, setas, sub-grupos), importação de `.mmd`/`.txt` (≤100 KB) ou código colado (aceita blocos ```mermaid), assistente de prompt para IA (`buildMermaidPrompt`)
+- [x] Erros amigáveis (`explainMermaidError` em `src/lib/mermaid-kit.ts`): linha, excerto, sugestão e «a mostrar a última versão válida», com a linha destacada no editor de código
+- [x] `CommentsDrawer.tsx`: comentários, sugestões editoriais e questões com excerto citado da seleção; resolver/reabrir (autor ou quem edita) e eliminar (autor ou Proprietário); Server Actions com `assertCan("document:comment")`
+- [x] Exportar no documento: Markdown fiel ao JSON (`docToMarkdown`: títulos, listas, checklists, tabelas, callouts, ```mermaid) e «PDF · Imprimir Folha A4» (CSS de impressão: só a folha, `@page` A4 com margens de 20mm, rodapé de direitos reservados, diagramas e tabelas sem quebra)
+- [x] Modelo: `DocumentRecord.contentJson` + `version`, `DocumentCommentRecord`, `DocumentView.effortSeconds`; ficheiros `.data/workspace.json` antigos são atualizados ao carregar; seed com documento rico («Visão geral da arquitetura»: callout, Mermaid, tabela, checklist) e 2 comentários
+- [x] Validado: `tsc --noEmit`, `next build` (sem cache), Vitest 23/23, Playwright 15/15 (4 novos: editor, Folha A4/Fluido, Estúdio Mermaid, RBAC do documento; + documento no telemóvel), revisão visual em `warm-cream` e `dark-espresso`, desktop e Pixel 7
+
+### Fase 3B — pendente
+
+- [ ] Pega de arrasto à esquerda de cada bloco e conversão de tipo de bloco (Modo Bloco completo)
+- [ ] Paginação real (blocos distribuídos por folhas), cabeçalhos/rodapés e numeração de páginas
 - [ ] Estilos de parágrafo nomeados e índice automático
-- [ ] Tabelas, imagens, callouts, código com realce
-- [ ] Estúdio Mermaid com pré-visualização em tempo real
-- [ ] Auto-guardar, histórico de versões e restauro
-- [ ] Comentários e menções
+- [ ] Imagens e código com realce de sintaxe
+- [ ] Histórico de versões com restauro (hoje só o número da versão)
+- [ ] Comentários ancorados ao texto (marks) e menções
+- [ ] Atualização da página quando outra pessoa grava (hoje última gravação ganha)
+- [ ] Exportação PDF no servidor via Playwright e DOCX (Fase 5)
 
 ## Fase 4 — Módulo 4 (Calendário + Notificações) + Módulo 5 (Telemetria & Dashboard)
 
@@ -161,6 +182,14 @@
 | 2026-11-07 | Perfil de demonstração do Owner passa a chamar-se «Leonardo Barreiras» (username `leo` mantém-se). |
 | 2026-11-07 | Exportação disponível nesta fase: Markdown (PDF/DOCX fiéis continuam na Fase 5). |
 | 2026-11-07 | Edição de documentos em texto simples (parágrafos por linha em branco) até ao TipTap da Fase 3. |
+| 2026-11-07 | Fase 3: TipTap **v2.27** (como no CLAUDE.md), não a v3. Fonte de verdade `contentJson`; `plainText`/palavras derivados no servidor. Os attrs do ProseMirror são clonados para JSON simples antes da Server Action. |
+| 2026-11-07 | Cores, fontes e tamanhos no JSON só como chaves fechadas (`terracota`, `serif`, `14pt`…), validadas ao renderizar: nenhum CSS arbitrário entra no documento. Paleta do editor em `--doc-ink-*`/`--doc-mark-*` (cores de conteúdo, não tokens de tema). |
+| 2026-11-07 | Documentos passam a `/projects/[id]/documents/[docId]`; `/pages/` redireciona. |
+| 2026-11-07 | Modo A4/Fluido é preferência de apresentação por pessoa (localStorage), partilhada com a barra de estado; não é gravado no documento. |
+| 2026-11-07 | Versão do documento sobe quando muda a pessoa que edita ou passaram > 10 min desde a última gravação (não a cada gravação automática). |
+| 2026-11-07 | Comentários: resolver = autor ou `document:edit`; eliminar = autor ou `document:delete`. |
+| 2026-11-07 | PDF nesta fase = impressão do navegador da Folha A4 (`@page` A4, margens 20mm); PDF no servidor via Playwright fica para a Fase 5. |
+| 2026-11-07 | ESLint 9 com flat config (o `next lint` está descontinuado); Prettier aplicado a todo o código numa só passagem. |
 
 ---
 

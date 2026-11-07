@@ -11,11 +11,12 @@ export const routes = {
   calendar: "/calendar",
   settings: "/settings",
   project: (projectId: string) => `/projects/${projectId}`,
-  page: (projectId: string, documentId: string) => `/projects/${projectId}/pages/${documentId}`,
+  /** Documento no Editor Rico (Fase 3). `/pages/` antigo redireciona para aqui. */
+  page: (projectId: string, documentId: string) => `/projects/${projectId}/documents/${documentId}`,
 };
 
 /** Lê o contexto (projeto/documento) a partir do caminho atual. */
 export function parseWorkspacePath(pathname: string): { projectId: string | null; documentId: string | null } {
-  const match = pathname.match(/^\/projects\/([^/]+)(?:\/pages\/([^/]+))?/);
+  const match = pathname.match(/^\/projects\/([^/]+)(?:\/(?:documents|pages)\/([^/]+))?/);
   return { projectId: match?.[1] ?? null, documentId: match?.[2] ?? null };
 }

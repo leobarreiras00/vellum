@@ -16,15 +16,19 @@ import { FORBIDDEN_MESSAGE, ForbiddenError } from "@/lib/rbac";
 import {
   NotFoundError,
   ValidationError,
+  addComment,
   convertNoteToDocument,
   createDocument,
   createNote,
   createProject,
+  deleteComment,
   deleteDocument,
   deleteNote,
   deleteProject,
   exportMarkdown,
   getWorkspaceSnapshot,
+  saveDocumentContent,
+  setCommentResolved,
   setProjectMember,
   updateDocument,
   updateNote,
@@ -32,6 +36,8 @@ import {
   updateProject,
 } from "@/lib/workspace-store";
 import {
+  commentInputSchema,
+  documentContentSaveSchema,
   documentCreateSchema,
   documentUpdateSchema,
   noteInputSchema,
@@ -114,6 +120,28 @@ export async function deleteDocumentAction(documentId: unknown) {
   return run((user) => deleteDocument(user, idSchema.parse(documentId)));
 }
 
+/** Gravação automática do Editor Rico (JSON ProseMirror validado por Zod). */
+export async function saveDocumentContentAction(input: unknown) {
+  return run((user) => saveDocumentContent(user, documentContentSaveSchema.parse(input)));
+}
+
+/* Comentários e anotações -------------------------------------------------- */
+
+export async function addCommentAction(input: unknown) {
+  return run(async (user) => {
+    const comment = await addComment(user, commentInputSchema.parse(input));
+    return { id: comment.id };
+  });
+}
+
+export async function setCommentResolvedAction(commentId: unknown, resolved: unknown) {
+  return run((user) => setCommentResolved(user, idSchema.parse(commentId), z.boolean().parse(resolved)));
+}
+
+export async function deleteCommentAction(commentId: unknown) {
+  return run((user) => deleteComment(user, idSchema.parse(commentId)));
+}
+
 /* Notas rápidas ----------------------------------------------------------- */
 
 export async function createNoteAction(input: unknown) {
@@ -157,4 +185,3 @@ const exportSchema = z.object({ kind: z.enum(["document", "project"]), id: idSch
 export async function exportMarkdownAction(input: unknown) {
   return run((user) => exportMarkdown(user, exportSchema.parse(input)));
 }
-

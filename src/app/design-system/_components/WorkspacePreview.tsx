@@ -102,8 +102,7 @@ function DocumentBody() {
       <p className="mt-1 font-serif text-lg italic text-muted">Sobre escrever devagar e exportar sem perdas.</p>
       <p className="mt-6 font-serif text-[17px] leading-[1.65] text-primary">{SAMPLE_TEXT}</p>
       <p className="mt-4 font-serif text-[17px] leading-[1.65] text-primary">
-        Cada página é uma folha. Cada folha tem margens, ritmo e silêncio. A interface recua para que o texto
-        avance.
+        Cada página é uma folha. Cada folha tem margens, ritmo e silêncio. A interface recua para que o texto avance.
       </p>
     </>
   );

@@ -36,7 +36,11 @@ export function Toaster() {
             )}
           >
             {toast.tone === "error" ? (
-              <CircleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.5} />
+              <CircleAlert
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0 text-accent-primary"
+                strokeWidth={1.5}
+              />
             ) : (
               <span aria-hidden="true" className="mt-[7px] size-1.5 shrink-0 rounded-full bg-accent-primary" />
             )}

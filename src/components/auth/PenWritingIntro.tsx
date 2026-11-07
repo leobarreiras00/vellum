@@ -307,8 +307,17 @@ function FountainPenNib() {
       {/* Sombra de contacto quente sob a ponta */}
       <ellipse cx={1} cy={1.5} rx={3.2} ry={1.2} className="fill-primary" opacity={0.12} />
       {/* Corpo da caneta (carvão), cortado pelo enquadramento */}
-      <path d="M -10.5 -66 L -10.5 -118 Q -10.5 -124 -4.5 -124 L 4.5 -124 Q 10.5 -124 10.5 -118 L 10.5 -66 Z" className="fill-primary" />
-      <path d="M -6.5 -70 L -6.5 -118" className="stroke-elevated" strokeWidth={1.1} strokeLinecap="round" opacity={0.28} />
+      <path
+        d="M -10.5 -66 L -10.5 -118 Q -10.5 -124 -4.5 -124 L 4.5 -124 Q 10.5 -124 10.5 -118 L 10.5 -66 Z"
+        className="fill-primary"
+      />
+      <path
+        d="M -6.5 -70 L -6.5 -118"
+        className="stroke-elevated"
+        strokeWidth={1.1}
+        strokeLinecap="round"
+        opacity={0.28}
+      />
       {/* Anel de ouro */}
       <rect x={-11.5} y={-68} width={23} height={4.5} rx={1.2} className="fill-accent-primary" />
       <rect x={-11.5} y={-68} width={23} height={1.2} rx={0.6} className="fill-elevated" opacity={0.35} />
@@ -329,7 +338,14 @@ function FountainPenNib() {
       <path d="M 0 -0.6 L 0 -24" className="stroke-primary" strokeWidth={0.8} strokeLinecap="round" />
       <circle cx={0} cy={-26.5} r={2.1} className="fill-primary" />
       {/* Brilho do metal */}
-      <path d="M -5.6 -30 C -5 -20 -2.6 -10 -0.9 -4" fill="none" className="stroke-elevated" strokeWidth={0.9} strokeLinecap="round" opacity={0.45} />
+      <path
+        d="M -5.6 -30 C -5 -20 -2.6 -10 -0.9 -4"
+        fill="none"
+        className="stroke-elevated"
+        strokeWidth={0.9}
+        strokeLinecap="round"
+        opacity={0.45}
+      />
       {/* Gota de tinta na ponta */}
       <circle cx={0} cy={-0.4} r={0.9} className="fill-primary" />
     </g>

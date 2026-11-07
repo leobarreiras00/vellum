@@ -20,13 +20,13 @@
   /* 1. warm-cream — Creme Quente (padrão) */
   :root,
   [data-theme="warm-cream"] {
-    --bg-canvas: #FAF7F2;
-    --bg-surface: #F2ECE1;
-    --bg-elevated: #FFFDF9;
-    --text-primary: #1C1B18;
-    --text-muted: #6E6A63;
-    --accent-primary: #C85A32;
-    --border-subtle: #E4DDD0;
+    --bg-canvas: #faf7f2;
+    --bg-surface: #f2ece1;
+    --bg-elevated: #fffdf9;
+    --text-primary: #1c1b18;
+    --text-muted: #6e6a63;
+    --accent-primary: #c85a32;
+    --border-subtle: #e4ddd0;
     --bg-canvas-rgb: 250 247 242;
     --bg-surface-rgb: 242 236 225;
     --bg-elevated-rgb: 255 253 249;
@@ -42,13 +42,13 @@
 
   /* 2. sage-paper — Papel Sálvia */
   [data-theme="sage-paper"] {
-    --bg-canvas: #F4F6F3;
-    --bg-surface: #E8EDE6;
-    --bg-elevated: #FAFCFA;
-    --text-primary: #1A211B;
-    --text-muted: #5C665E;
-    --accent-primary: #3B6E52;
-    --border-subtle: #D8E0D5;
+    --bg-canvas: #f4f6f3;
+    --bg-surface: #e8ede6;
+    --bg-elevated: #fafcfa;
+    --text-primary: #1a211b;
+    --text-muted: #5c665e;
+    --accent-primary: #3b6e52;
+    --border-subtle: #d8e0d5;
     --bg-canvas-rgb: 244 246 243;
     --bg-surface-rgb: 232 237 230;
     --bg-elevated-rgb: 250 252 250;
@@ -64,13 +64,13 @@
 
   /* 3. nordic-slate — Ardósia Nórdica */
   [data-theme="nordic-slate"] {
-    --bg-canvas: #F3F5F8;
-    --bg-surface: #E6E9EF;
-    --bg-elevated: #FAFBFD;
+    --bg-canvas: #f3f5f8;
+    --bg-surface: #e6e9ef;
+    --bg-elevated: #fafbfd;
     --text-primary: #161920;
-    --text-muted: #5A6270;
-    --accent-primary: #2B5B84;
-    --border-subtle: #D5DAE2;
+    --text-muted: #5a6270;
+    --accent-primary: #2b5b84;
+    --border-subtle: #d5dae2;
     --bg-canvas-rgb: 243 245 248;
     --bg-surface-rgb: 230 233 239;
     --bg-elevated-rgb: 250 251 253;
@@ -86,13 +86,13 @@
 
   /* 4. sand-dune — Duna de Areia */
   [data-theme="sand-dune"] {
-    --bg-canvas: #F7F3EB;
-    --bg-surface: #EDE5D5;
-    --bg-elevated: #FCF9F4;
-    --text-primary: #24201A;
-    --text-muted: #70675A;
-    --accent-primary: #B06D3B;
-    --border-subtle: #DFD5C3;
+    --bg-canvas: #f7f3eb;
+    --bg-surface: #ede5d5;
+    --bg-elevated: #fcf9f4;
+    --text-primary: #24201a;
+    --text-muted: #70675a;
+    --accent-primary: #b06d3b;
+    --border-subtle: #dfd5c3;
     --bg-canvas-rgb: 247 243 235;
     --bg-surface-rgb: 237 229 213;
     --bg-elevated-rgb: 252 249 244;
@@ -109,12 +109,12 @@
   /* 5. dark-espresso — Espresso Escuro */
   [data-theme="dark-espresso"] {
     --bg-canvas: #181615;
-    --bg-surface: #221F1D;
-    --bg-elevated: #2A2624;
-    --text-primary: #EAE5DF;
-    --text-muted: #9A928A;
-    --accent-primary: #D97757;
-    --border-subtle: #332E2A;
+    --bg-surface: #221f1d;
+    --bg-elevated: #2a2624;
+    --text-primary: #eae5df;
+    --text-muted: #9a928a;
+    --accent-primary: #d97757;
+    --border-subtle: #332e2a;
     --bg-canvas-rgb: 24 22 21;
     --bg-surface-rgb: 34 31 29;
     --bg-elevated-rgb: 42 38 36;
@@ -134,19 +134,81 @@
   [data-ink] {
     --ink-rgb: 92 88 82;
   }
-  [data-ink="terracota"] { --ink-rgb: 166 76 42; }
-  [data-ink="salvia"] { --ink-rgb: 56 102 76; }
-  [data-ink="ardosia"] { --ink-rgb: 50 84 124; }
-  [data-ink="ocre"] { --ink-rgb: 134 98 28; }
-  [data-ink="ameixa"] { --ink-rgb: 116 64 96; }
-  [data-ink="grafite"] { --ink-rgb: 84 80 74; }
+  [data-ink="terracota"] {
+    --ink-rgb: 166 76 42;
+  }
+  [data-ink="salvia"] {
+    --ink-rgb: 56 102 76;
+  }
+  [data-ink="ardosia"] {
+    --ink-rgb: 50 84 124;
+  }
+  [data-ink="ocre"] {
+    --ink-rgb: 134 98 28;
+  }
+  [data-ink="ameixa"] {
+    --ink-rgb: 116 64 96;
+  }
+  [data-ink="grafite"] {
+    --ink-rgb: 84 80 74;
+  }
 
-  [data-theme="dark-espresso"] [data-ink="terracota"], [data-theme="dark-espresso"][data-ink="terracota"] { --ink-rgb: 226 138 104; }
-  [data-theme="dark-espresso"] [data-ink="salvia"], [data-theme="dark-espresso"][data-ink="salvia"] { --ink-rgb: 136 184 152; }
-  [data-theme="dark-espresso"] [data-ink="ardosia"], [data-theme="dark-espresso"][data-ink="ardosia"] { --ink-rgb: 138 172 212; }
-  [data-theme="dark-espresso"] [data-ink="ocre"], [data-theme="dark-espresso"][data-ink="ocre"] { --ink-rgb: 216 180 102; }
-  [data-theme="dark-espresso"] [data-ink="ameixa"], [data-theme="dark-espresso"][data-ink="ameixa"] { --ink-rgb: 200 152 184; }
-  [data-theme="dark-espresso"] [data-ink="grafite"], [data-theme="dark-espresso"][data-ink="grafite"] { --ink-rgb: 172 164 154; }
+  [data-theme="dark-espresso"] [data-ink="terracota"],
+  [data-theme="dark-espresso"][data-ink="terracota"] {
+    --ink-rgb: 226 138 104;
+  }
+  [data-theme="dark-espresso"] [data-ink="salvia"],
+  [data-theme="dark-espresso"][data-ink="salvia"] {
+    --ink-rgb: 136 184 152;
+  }
+  [data-theme="dark-espresso"] [data-ink="ardosia"],
+  [data-theme="dark-espresso"][data-ink="ardosia"] {
+    --ink-rgb: 138 172 212;
+  }
+  [data-theme="dark-espresso"] [data-ink="ocre"],
+  [data-theme="dark-espresso"][data-ink="ocre"] {
+    --ink-rgb: 216 180 102;
+  }
+  [data-theme="dark-espresso"] [data-ink="ameixa"],
+  [data-theme="dark-espresso"][data-ink="ameixa"] {
+    --ink-rgb: 200 152 184;
+  }
+  [data-theme="dark-espresso"] [data-ink="grafite"],
+  [data-theme="dark-espresso"][data-ink="grafite"] {
+    --ink-rgb: 172 164 154;
+  }
+
+  /* Paleta curada do Editor Rico (cor de texto, realce e sublinhado colorido).
+     Cores de conteúdo como as tintas: harmónicas, sem néon, AA sobre as folhas
+     dos 4 temas claros e aclaradas no Espresso Escuro. */
+  :root {
+    --doc-ink-carvao: #2b2a26;
+    --doc-ink-terracota: #c85a32;
+    --doc-ink-salvia: #3b6e52;
+    --doc-ink-ardosia: #2b5b84;
+    --doc-ink-ambar: #94650f;
+    --doc-ink-carmim: #9e2b3a;
+    --doc-mark-carvao: rgba(43, 42, 38, 0.1);
+    --doc-mark-terracota: rgba(200, 90, 50, 0.16);
+    --doc-mark-salvia: rgba(59, 110, 82, 0.16);
+    --doc-mark-ardosia: rgba(43, 91, 132, 0.14);
+    --doc-mark-ambar: rgba(214, 160, 52, 0.26);
+    --doc-mark-carmim: rgba(158, 43, 58, 0.13);
+  }
+  [data-theme="dark-espresso"] {
+    --doc-ink-carvao: #eae5df;
+    --doc-ink-terracota: #e28a68;
+    --doc-ink-salvia: #8cc0a0;
+    --doc-ink-ardosia: #8db2d8;
+    --doc-ink-ambar: #d9b062;
+    --doc-ink-carmim: #e0808c;
+    --doc-mark-carvao: rgba(234, 229, 223, 0.14);
+    --doc-mark-terracota: rgba(226, 138, 104, 0.26);
+    --doc-mark-salvia: rgba(140, 192, 160, 0.22);
+    --doc-mark-ardosia: rgba(141, 178, 216, 0.22);
+    --doc-mark-ambar: rgba(217, 176, 98, 0.26);
+    --doc-mark-carmim: rgba(224, 128, 140, 0.22);
+  }
 
   /* Textura de papel velino: feTurbulence com opacidade 0.02 */
   :root {
@@ -289,6 +351,262 @@
     border-radius: 2px;
   }
 
+  /* ========================================================================
+     Editor Rico (Fase 3) — ver .claude/skills/document-print-craft.md
+     ======================================================================== */
+
+  /* Folha A4 do editor: 210mm × ≥297mm, margens editoriais de 20mm */
+  .doc-sheet-a4 {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 20mm;
+  }
+
+  .vellum-prose {
+    @apply font-serif text-[17px] leading-[1.65] text-primary;
+    hanging-punctuation: first;
+    font-optical-sizing: auto;
+  }
+  .vellum-prose[data-reading-font="sans"] {
+    @apply font-sans text-base leading-[1.7];
+  }
+  .vellum-prose .ProseMirror {
+    outline: none;
+    min-height: 12rem;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+  }
+  .vellum-prose .ProseMirror > * + * {
+    margin-top: 0.85em;
+  }
+  .vellum-prose p {
+    text-wrap: pretty;
+  }
+  .vellum-prose h1,
+  .vellum-prose h2,
+  .vellum-prose h3 {
+    @apply font-serif font-normal tracking-tight;
+    margin-top: 1.4em;
+  }
+  .vellum-prose h1 {
+    @apply text-[30px] leading-tight;
+  }
+  .vellum-prose h2 {
+    @apply text-2xl leading-snug;
+  }
+  .vellum-prose h3 {
+    @apply text-xl leading-snug;
+  }
+  .vellum-prose strong {
+    font-weight: 600;
+  }
+  .vellum-prose u {
+    text-underline-offset: 0.16em;
+  }
+  .vellum-prose mark {
+    border-radius: 2px;
+    padding: 0 0.08em;
+    color: inherit;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .vellum-prose ul:not([data-mermaid-block] *),
+  .vellum-prose ol:not([data-mermaid-block] *) {
+    padding-left: 1.4em;
+  }
+  .vellum-prose ul:not([data-mermaid-block] *) {
+    list-style: disc;
+  }
+  .vellum-prose ol:not([data-mermaid-block] *) {
+    list-style: decimal;
+  }
+  .vellum-prose li:not([data-mermaid-block] *)::marker {
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .vellum-prose li:not([data-mermaid-block] *) > p {
+    margin: 0.15em 0;
+  }
+  .vellum-prose ul[data-type="taskList"] {
+    list-style: none;
+    padding-left: 0.1em;
+  }
+  .vellum-prose ul[data-type="taskList"] li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6em;
+  }
+  .vellum-prose ul[data-type="taskList"] li > label {
+    margin-top: 0.32em;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .vellum-prose ul[data-type="taskList"] li > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .vellum-prose ul[data-type="taskList"] input[type="checkbox"] {
+    width: 1em;
+    height: 1em;
+    accent-color: var(--accent-primary);
+    cursor: pointer;
+  }
+  .vellum-prose ul[data-type="taskList"] li[data-checked="true"] > div {
+    color: var(--text-muted);
+    text-decoration: line-through;
+    text-decoration-color: rgb(var(--text-muted-rgb) / 0.6);
+  }
+  .vellum-prose blockquote:not([data-mermaid-block] *) {
+    border-left: 2px solid rgb(var(--accent-primary-rgb) / 0.55);
+    padding-left: 1.1em;
+    font-style: italic;
+    color: rgb(var(--text-primary-rgb) / 0.86);
+  }
+  .vellum-prose .vellum-callout {
+    position: relative;
+    border: 1px solid var(--border-subtle);
+    border-left-width: 3px;
+    border-radius: 6px;
+    background: rgb(var(--bg-surface-rgb) / 0.7);
+    padding: 0.85em 1.1em 0.85em 1.1em;
+  }
+  .vellum-prose .vellum-callout::before {
+    @apply font-sans text-[10.5px] font-medium uppercase tracking-[0.14em];
+    display: block;
+    margin-bottom: 0.35em;
+    color: var(--text-muted);
+    content: "Nota editorial";
+  }
+  .vellum-prose .vellum-callout[data-callout="nota"] {
+    border-left-color: var(--doc-ink-ardosia);
+  }
+  .vellum-prose .vellum-callout[data-callout="destaque"] {
+    border-left-color: var(--accent-primary);
+  }
+  .vellum-prose .vellum-callout[data-callout="destaque"]::before {
+    content: "Destaque";
+  }
+  .vellum-prose .vellum-callout[data-callout="aviso"] {
+    border-left-color: var(--doc-ink-ambar);
+  }
+  .vellum-prose .vellum-callout[data-callout="aviso"]::before {
+    content: "Atenção";
+  }
+  .vellum-prose .vellum-callout > * + * {
+    margin-top: 0.6em;
+  }
+  .vellum-prose code:not([data-mermaid-block] *) {
+    @apply rounded bg-surface px-1 py-0.5 font-mono text-[0.84em];
+  }
+  .vellum-prose pre:not([data-mermaid-block] *) {
+    @apply overflow-x-auto rounded-lg border border-subtle bg-surface px-4 py-3 font-mono text-[13px] leading-[1.6];
+    font-variant-ligatures: none;
+  }
+  .vellum-prose pre code:not([data-mermaid-block] *) {
+    background: none;
+    padding: 0;
+    font-size: inherit;
+  }
+  .vellum-prose hr {
+    border: 0;
+    margin: 2em auto;
+    width: 30%;
+    border-top: 1px solid var(--border-subtle);
+    position: relative;
+    overflow: visible;
+  }
+  .vellum-prose hr::after {
+    content: "§";
+    position: absolute;
+    left: 50%;
+    top: -0.72em;
+    transform: translateX(-50%);
+    padding: 0 0.6em;
+    background: var(--bg-elevated);
+    color: var(--text-muted);
+    font-size: 0.8em;
+  }
+  .vellum-prose .tableWrapper {
+    overflow-x: auto;
+    margin: 1.2em 0;
+  }
+  .vellum-prose table {
+    @apply w-full font-sans text-sm;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+  .vellum-prose th,
+  .vellum-prose td {
+    position: relative;
+    border: 1px solid var(--border-subtle);
+    padding: 0.45em 0.7em;
+    vertical-align: top;
+    text-align: left;
+  }
+  .vellum-prose th {
+    @apply bg-surface font-medium;
+  }
+  .vellum-prose td > p,
+  .vellum-prose th > p {
+    margin: 0;
+  }
+  .vellum-prose .selectedCell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: var(--selection);
+    pointer-events: none;
+  }
+  .vellum-prose .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: rgb(var(--accent-primary-rgb) / 0.5);
+    pointer-events: none;
+  }
+  .vellum-prose.resize-cursor {
+    cursor: col-resize;
+  }
+  .vellum-prose .ProseMirror p.is-editor-empty:first-child::before,
+  .vellum-prose .ProseMirror .is-empty::before {
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    color: rgb(var(--text-muted-rgb) / 0.6);
+    font-style: italic;
+  }
+  .vellum-prose .ProseMirror-selectednode > [data-mermaid-block] {
+    outline: 2px solid rgb(var(--accent-primary-rgb) / 0.5);
+    outline-offset: 3px;
+  }
+  .vellum-prose .ProseMirror-gapcursor::after {
+    border-top-color: var(--text-primary);
+  }
+
+  /* Campos editáveis do cabeçalho (título e descrição) */
+  [data-placeholder][contenteditable]:empty::before {
+    content: attr(data-placeholder);
+    color: rgb(var(--text-muted-rgb) / 0.55);
+    pointer-events: none;
+  }
+
+  /* O Estúdio Mermaid é interface, não prosa: anula a tipografia do documento */
+  .vellum-prose [data-mermaid-block] {
+    font-size: 14px;
+    line-height: 1.5;
+    white-space: normal;
+  }
+
+  /* SVG Mermaid sanitizado */
+  .mermaid-canvas svg {
+    display: block;
+    margin: 0 auto;
+    height: auto;
+  }
+
   /* Diálogo nativo com entrada editorial */
   .dialog-editorial {
     @apply m-auto max-h-[85dvh] w-[min(640px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-subtle bg-elevated p-0 text-primary shadow-sheet;
@@ -359,12 +677,53 @@
 
 @page {
   size: A4;
-  margin: 0;
+  margin: 20mm 0;
 }
 
 @media print {
+  html,
+  body {
+    background: #fff !important; /* única exceção autorizada: papel real */
+  }
+
   body::before {
     display: none;
+  }
+
+  /* O App Shell deixa de recortar a página: só o documento é impresso. */
+  [data-shell-ready] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  #conteudo {
+    overflow: visible !important;
+  }
+
+  .doc-sheet-a4 {
+    width: auto !important;
+    min-height: 0 !important;
+    padding: 0 20mm !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    zoom: 1 !important;
+  }
+
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+
+  thead {
+    display: table-header-group;
   }
 
   .sheet-a4 {

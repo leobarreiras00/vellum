@@ -28,8 +28,7 @@ import {
 } from "@/lib/auth-schemas";
 
 export type ActionResult<TFields, TData = undefined> =
-  | { ok: true; data: TData; redirectTo?: string }
-  | { ok: false; error?: string; fieldErrors?: FieldErrors<TFields> };
+  { ok: true; data: TData; redirectTo?: string } | { ok: false; error?: string; fieldErrors?: FieldErrors<TFields> };
 
 const DEFAULT_REDIRECT = "/dashboard";
 
@@ -44,10 +43,7 @@ function safeRedirect(next: unknown): string {
 
 type LoginFields = { identifier: string; password: string };
 
-export async function loginAction(
-  input: unknown,
-  next?: string,
-): Promise<ActionResult<LoginFields, SessionUser>> {
+export async function loginAction(input: unknown, next?: string): Promise<ActionResult<LoginFields, SessionUser>> {
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: fieldErrors(parsed.error) };
   const result = await signIn(parsed.data.identifier, parsed.data.password);
@@ -73,9 +69,7 @@ export async function registerAction(input: unknown): Promise<ActionResult<Regis
   const result = await register(parsed.data);
   if (!result.ok) {
     const field = result.error.includes("username") ? "username" : result.error.includes("email") ? "email" : null;
-    return field
-      ? { ok: false, fieldErrors: { [field]: result.error } }
-      : { ok: false, error: result.error };
+    return field ? { ok: false, fieldErrors: { [field]: result.error } } : { ok: false, error: result.error };
   }
   return { ok: true, data: result.data, redirectTo: DEFAULT_REDIRECT };
 }

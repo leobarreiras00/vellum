@@ -78,7 +78,10 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const people = snapshot.members.filter((m) => memberIds.includes(m.userId));
 
   return (
-    <header className="flex h-12 shrink-0 items-center gap-3 border-b border-subtle bg-canvas/95 px-3 md:px-5">
+    <header
+      data-print="hide"
+      className="flex h-12 shrink-0 items-center gap-3 border-b border-subtle bg-canvas/95 px-3 md:px-5"
+    >
       <button
         type="button"
         onClick={onOpenMobileNav}

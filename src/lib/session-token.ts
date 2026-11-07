@@ -56,13 +56,10 @@ function fromBase64Url(value: string): Uint8Array<ArrayBuffer> {
 let keyPromise: Promise<CryptoKey> | null = null;
 
 function getKey(): Promise<CryptoKey> {
-  keyPromise ??= crypto.subtle.importKey(
-    "raw",
-    encoder.encode(getSecret()),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"],
-  );
+  keyPromise ??= crypto.subtle.importKey("raw", encoder.encode(getSecret()), { name: "HMAC", hash: "SHA-256" }, false, [
+    "sign",
+    "verify",
+  ]);
   return keyPromise;
 }
 
@@ -80,12 +77,7 @@ export async function verifySession(token: string | undefined | null): Promise<S
   const [body, signature] = token.split(".");
   if (!body || !signature) return null;
   try {
-    const valid = await crypto.subtle.verify(
-      "HMAC",
-      await getKey(),
-      fromBase64Url(signature),
-      encoder.encode(body),
-    );
+    const valid = await crypto.subtle.verify("HMAC", await getKey(), fromBase64Url(signature), encoder.encode(body));
     if (!valid) return null;
     const parsed = payloadSchema.safeParse(JSON.parse(decoder.decode(fromBase64Url(body))));
     if (!parsed.success) return null;

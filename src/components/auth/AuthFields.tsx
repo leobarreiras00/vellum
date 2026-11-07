@@ -9,7 +9,14 @@
 "use client";
 
 import { Eye, EyeOff, Loader2 } from "lucide-react";
-import { forwardRef, useId, useState, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from "react";
+import {
+  forwardRef,
+  useId,
+  useState,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from "react";
 
 import { passwordStrength } from "@/lib/auth-schemas";
 import { cn } from "@/lib/utils";
@@ -133,7 +140,13 @@ export function StrengthMeter({ password }: { password: string }) {
             key={step}
             className={cn(
               "h-[3px] flex-1 rounded-full transition-colors duration-200 ease-editorial",
-              score >= step ? (score <= 1 ? "bg-accent-primary" : score === 2 ? "bg-accent-primary/70" : "bg-primary") : "bg-subtle",
+              score >= step
+                ? score <= 1
+                  ? "bg-accent-primary"
+                  : score === 2
+                    ? "bg-accent-primary/70"
+                    : "bg-primary"
+                : "bg-subtle",
             )}
           />
         ))}

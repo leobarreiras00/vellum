@@ -4,7 +4,14 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import { ChevronDown } from "lucide-react";
-import { forwardRef, type InputHTMLAttributes, type LabelHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import {
+  forwardRef,
+  type InputHTMLAttributes,
+  type LabelHTMLAttributes,
+  type ReactNode,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+} from "react";
 
 import { cn } from "@/lib/utils";
 

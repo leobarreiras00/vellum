@@ -10,6 +10,7 @@
  */
 import { z } from "zod";
 
+import { docContentSchema, type DocContent } from "@/lib/document-content";
 import { ROLE_RANK, WORKSPACE_ROLES, type PlatformRole, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
 import { THEME_IDS, type ThemeId } from "@/lib/themes";
 
@@ -116,8 +117,12 @@ export interface DocumentRecord {
   title: string;
   /** Descrição curta ("dek") mostrada nas listagens. */
   summary: string;
-  /** Texto simples; parágrafos separados por linha em branco (o TipTap chega na Fase 3). */
+  /** Texto simples derivado do conteúdo (pesquisa, contagem de palavras). */
   plainText: string;
+  /** JSON ProseMirror do editor rico (Fase 3); `null` em documentos só com texto simples. */
+  contentJson: DocContent | null;
+  /** Versão editorial: sobe a cada nova sessão de edição (outra pessoa ou > 10 min). */
+  version: number;
   wordCount: number;
   position: number;
   createdAt: string;
@@ -138,6 +143,31 @@ export interface QuickNoteRecord {
   isPinned: boolean;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
+}
+
+export const COMMENT_KINDS = ["comment", "suggestion", "question"] as const;
+export type CommentKind = (typeof COMMENT_KINDS)[number];
+
+export const COMMENT_KIND_LABELS: Record<CommentKind, string> = {
+  comment: "Comentário",
+  suggestion: "Sugestão editorial",
+  question: "Questão",
+};
+
+/** Comentário ou anotação editorial sobre um documento (gaveta lateral). */
+export interface DocumentCommentRecord {
+  id: string;
+  workspaceId: string;
+  documentId: string;
+  authorId: string;
+  kind: CommentKind;
+  /** Excerto do texto a que se refere (seleção no momento do comentário). */
+  quote: string;
+  body: string;
+  resolvedAt: string | null;
+  resolvedById: string | null;
+  createdAt: string;
   deletedAt: string | null;
 }
 
@@ -169,6 +199,7 @@ export interface StoreData {
   projects: ProjectRecord[];
   documents: DocumentRecord[];
   notes: QuickNoteRecord[];
+  comments: DocumentCommentRecord[];
   effortLogs: EffortLogRecord[];
   preferences: Record<string, UserPreferences>;
 }
@@ -194,7 +225,11 @@ export interface ProjectView extends Omit<ProjectRecord, "deletedAt" | "workspac
   lastEditedAt: string;
 }
 
-export type DocumentView = Omit<DocumentRecord, "deletedAt" | "workspaceId">;
+export interface DocumentView extends Omit<DocumentRecord, "deletedAt" | "workspaceId"> {
+  /** Esforço total registado neste documento (todas as pessoas), em segundos. */
+  effortSeconds: number;
+}
+export type CommentView = Omit<DocumentCommentRecord, "deletedAt" | "workspaceId">;
 export type NoteView = Omit<QuickNoteRecord, "deletedAt" | "workspaceId">;
 
 export interface WorkspaceSnapshot {
@@ -203,6 +238,7 @@ export interface WorkspaceSnapshot {
   projects: ProjectView[];
   documents: DocumentView[];
   notes: NoteView[];
+  comments: CommentView[];
   preferences: UserPreferences;
   /** Esforço do utilizador atual: total de hoje e por dia (AAAA-MM-DD, Europa/Lisboa). */
   effort: { todaySeconds: number; byDay: Record<string, number> };
@@ -245,6 +281,20 @@ export const documentUpdateSchema = z.object({
   plainText: z.string().max(100_000),
 });
 
+export const documentContentSaveSchema = z.object({
+  id,
+  title: z.string().trim().max(120),
+  summary: z.string().trim().max(240),
+  contentJson: docContentSchema,
+});
+
+export const commentInputSchema = z.object({
+  documentId: id,
+  kind: z.enum(COMMENT_KINDS),
+  quote: z.string().trim().max(600).default(""),
+  body: z.string().trim().min(1, "Escreva o comentário.").max(2000, "Máximo de 2000 caracteres."),
+});
+
 export const noteInputSchema = z.object({
   title: z.string().trim().max(100, "Máximo de 100 caracteres.").default(""),
   content: z.string().trim().max(4000, "Máximo de 4000 caracteres.").default(""),
@@ -257,7 +307,11 @@ export type NoteInput = z.infer<typeof noteInputSchema>;
 export const preferencesInputSchema = z
   .object({
     theme: z.enum(THEME_IDS),
-    dailyGoalMinutes: z.number().int().min(15, "Mínimo de 15 minutos.").max(16 * 60, "Máximo de 16 horas."),
+    dailyGoalMinutes: z
+      .number()
+      .int()
+      .min(15, "Mínimo de 15 minutos.")
+      .max(16 * 60, "Máximo de 16 horas."),
     readingFont: z.enum(READING_FONTS),
   })
   .partial();

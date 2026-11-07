@@ -147,7 +147,10 @@ export function AuthModal({ demoProfiles, next, initialView = "login" }: AuthMod
                 prefill={prefill}
                 onBack={() => go("login")}
                 onDone={(identifier) =>
-                  go("login", { identifier, notice: "Palavra-passe atualizada. Já pode entrar com a nova palavra-passe." })
+                  go("login", {
+                    identifier,
+                    notice: "Palavra-passe atualizada. Já pode entrar com a nova palavra-passe.",
+                  })
                 }
               />
             )}
@@ -436,7 +439,11 @@ function RegisterView() {
                   selected ? "border-primary/60 shadow-paper" : "border-subtle hover:border-primary/25",
                 )}
               >
-                <span data-theme={t.id} aria-hidden="true" className="block overflow-hidden rounded-md border border-subtle">
+                <span
+                  data-theme={t.id}
+                  aria-hidden="true"
+                  className="block overflow-hidden rounded-md border border-subtle"
+                >
                   <span className="block h-5 bg-canvas" />
                   <span className="flex h-4 items-center gap-1 bg-surface px-1.5">
                     <span className="size-1.5 rounded-full bg-accent-primary" />
@@ -487,7 +494,9 @@ function ResetView({ prefill, onBack, onDone }: ResetViewProps) {
   const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [errors, setErrors] = useState<FieldErrors<{ identifier: string; code: string; password: string; confirm: string }>>({});
+  const [errors, setErrors] = useState<
+    FieldErrors<{ identifier: string; code: string; password: string; confirm: string }>
+  >({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const reduced = useReducedMotion();
@@ -566,12 +575,10 @@ function ResetView({ prefill, onBack, onDone }: ResetViewProps) {
           ) : (
             <form onSubmit={confirmReset} noValidate className="space-y-4">
               <FormNotice tone="info">
-                Se existir uma conta para <span className="font-medium">«{identifier.trim()}»</span>, enviámos um código de 6
-                algarismos. Expira em 15 minutos.
+                Se existir uma conta para <span className="font-medium">«{identifier.trim()}»</span>, enviámos um código
+                de 6 algarismos. Expira em 15 minutos.
               </FormNotice>
-              {demoCode && (
-                <DemoCodeSlip code={demoCode} onUse={() => setCode(demoCode)} />
-              )}
+              {demoCode && <DemoCodeSlip code={demoCode} onUse={() => setCode(demoCode)} />}
               {formError && <FormNotice>{formError}</FormNotice>}
               <TextField
                 label="Código de recuperação"
@@ -618,7 +625,11 @@ function ResetView({ prefill, onBack, onDone }: ResetViewProps) {
       </AnimatePresence>
 
       <div className="border-t border-subtle pt-4">
-        <button type="button" onClick={step === 2 ? () => setStep(1) : onBack} className={cn(linkButton, "inline-flex items-center gap-1.5")}>
+        <button
+          type="button"
+          onClick={step === 2 ? () => setStep(1) : onBack}
+          className={cn(linkButton, "inline-flex items-center gap-1.5")}
+        >
           <ArrowLeft aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
           {step === 2 ? "Usar outra conta" : "Voltar a iniciar sessão"}
         </button>
@@ -636,16 +647,15 @@ function StepRule({ step }: { step: 1 | 2 }) {
       ].map(({ n, label }, i) => (
         <li key={n} className="flex flex-1 items-center gap-2">
           <span
-            className={cn(
-              "nums font-mono text-[11px]",
-              step >= n ? "text-accent-primary" : "text-muted",
-            )}
+            className={cn("nums font-mono text-[11px]", step >= n ? "text-accent-primary" : "text-muted")}
             aria-current={step === n ? "step" : undefined}
           >
             {String(n).padStart(2, "0")}
           </span>
           <span className={cn("text-xs", step === n ? "font-medium text-primary" : "text-muted")}>{label}</span>
-          {i === 0 && <span aria-hidden="true" className={cn("h-px flex-1", step === 2 ? "bg-accent-primary/50" : "bg-subtle")} />}
+          {i === 0 && (
+            <span aria-hidden="true" className={cn("h-px flex-1", step === 2 ? "bg-accent-primary/50" : "bg-subtle")} />
+          )}
         </li>
       ))}
     </ol>

@@ -160,7 +160,9 @@ export function ProjectFormDialog({ open, projectId, onClose }: ProjectFormDialo
                       onClick={() => setIcon(value)}
                       className={cn(
                         "grid size-8 place-items-center rounded-lg border transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
-                        selected ? "border-ink/50 bg-ink/[0.1] text-ink" : "border-subtle text-muted hover:text-primary",
+                        selected
+                          ? "border-ink/50 bg-ink/[0.1] text-ink"
+                          : "border-subtle text-muted hover:text-primary",
                       )}
                     >
                       <Icon aria-hidden="true" className="size-4" strokeWidth={1.5} />

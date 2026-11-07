@@ -11,14 +11,7 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { exportMarkdownAction, updatePreferencesAction } from "@/app/(workspace)/actions";
 import { AppFooter } from "@/components/layout/AppFooter";
