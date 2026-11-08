@@ -156,7 +156,7 @@ export async function cropAvatar(src: string, zoom: number, offsetX: number, off
   if (!ctx) throw new Error("O navegador não permite processar imagens.");
   ctx.imageSmoothingQuality = "high";
   ctx.drawImage(img, sx, sy, side, side, 0, 0, AVATAR_SIDE, AVATAR_SIDE);
-  const webp = canvas.toDataURL("image/webp", 0.86);
+  const webp = canvas.toDataURL("image/webp", 0.85);
   return webp.startsWith("data:image/webp") ? webp : canvas.toDataURL("image/jpeg", 0.88);
 }
 

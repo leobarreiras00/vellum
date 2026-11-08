@@ -560,7 +560,7 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
       </div>
 
       {canComment && drawerOpen && (
-        <div className="fixed inset-y-0 right-0 z-40 w-[min(360px,92vw)] shadow-sheet xl:sticky xl:top-0 xl:z-auto xl:h-[calc(100dvh-78px)] xl:w-[340px] xl:shrink-0 xl:shadow-none">
+        <div className="fixed inset-y-0 right-0 z-[60] w-[min(360px,92vw)] shadow-sheet xl:sticky xl:top-0 xl:z-auto xl:h-[calc(100dvh-78px)] xl:w-[340px] xl:shrink-0 xl:shadow-none">
           <CommentsDrawer
             documentId={doc.id}
             subject={subject}

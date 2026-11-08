@@ -12,6 +12,7 @@ import { ThemeGallery } from "@/app/design-system/_components/ThemeGallery";
 import { WorkspacePreview } from "@/app/design-system/_components/WorkspacePreview";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { APP_VERSION, cn } from "@/lib/utils";
+import { InstitutionalBanner } from "@/components/wallpapers/GeometricBackground";
 
 const TOKENS = [
   { name: "--bg-canvas", className: "bg-canvas", utility: "bg-canvas", role: "Fundo geral — a mesa" },
@@ -37,29 +38,27 @@ export default function DesignSystemPage() {
     <div className="flex min-h-dvh flex-col">
       <DesignSystemNav />
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 md:px-12">
-        {/* Abertura */}
-        <section className="grid gap-10 py-16 md:grid-cols-[1fr_auto] md:items-end md:py-24">
-          <div>
-            <p className="eyebrow">Verificação do Design System · Fase 1A</p>
-            <h1 className="mt-5 max-w-3xl text-5xl leading-[1.05] tracking-tight md:text-7xl">
-              O papel antes <em className="text-accent-primary">da tinta</em>.
-            </h1>
-            <p className="mt-6 max-w-prose text-base leading-relaxed text-muted">
-              Fundação visual do Vellum: três famílias tipográficas com papéis estritos, cinco temas fechados sobre
-              papel velino e o rodapé de assinatura que acompanha cada ecrã.
-            </p>
-          </div>
-          <dl className="grid grid-cols-2 gap-x-8 gap-y-2 font-mono text-[11px] text-muted md:text-right">
-            <dt>Linguagem</dt>
-            <dd className="text-primary">Tactile Editorial Atelier</dd>
-            <dt>Versão</dt>
-            <dd className="nums text-primary">v{APP_VERSION}</dd>
-            <dt>Idioma</dt>
-            <dd className="text-primary">pt-PT</dd>
-          </dl>
-        </section>
+      {/* Abertura sobre o fundo geométrico; as especificações seguem em papel limpo. */}
+      <InstitutionalBanner>
+        <p className="eyebrow">Verificação do Design System · Fase 1A</p>
+        <h1 className="mt-5 max-w-3xl text-5xl leading-[1.05] tracking-tight md:text-6xl">
+          O papel antes <em className="text-accent-primary">da tinta</em>.
+        </h1>
+        <p className="mt-6 max-w-prose text-base leading-relaxed text-muted">
+          Fundação visual do Vellum: três famílias tipográficas com papéis estritos, cinco temas fechados sobre papel
+          velino, oito fundos geométricos e o rodapé de assinatura que acompanha cada ecrã.
+        </p>
+        <dl className="mt-6 grid grid-cols-[auto_1fr] gap-x-8 gap-y-1 font-mono text-[11px] text-muted">
+          <dt>Linguagem</dt>
+          <dd className="text-primary">Tactile Editorial Atelier</dd>
+          <dt>Versão</dt>
+          <dd className="nums text-primary">v{APP_VERSION}</dd>
+          <dt>Idioma</dt>
+          <dd className="text-primary">pt-PT</dd>
+        </dl>
+      </InstitutionalBanner>
 
+      <main className="mx-auto w-full max-w-6xl flex-1 px-6 pt-16 md:px-12">
         {/* I. Tipografia */}
         <Section numeral="I" id="tipografia" title="Tipografia editorial" dek="Três vozes, nunca uma quarta.">
           <div className="divide-y divide-subtle border-y border-subtle">

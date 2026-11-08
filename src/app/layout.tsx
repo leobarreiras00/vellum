@@ -7,6 +7,7 @@ import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { WallpaperProvider } from "@/components/providers/WallpaperProvider";
 import { SupportModalHost } from "@/components/support/SupportModal";
 import { AuthProvider } from "@/context/AuthContext";
 import { getSession } from "@/lib/auth";
@@ -85,10 +86,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <ThemeProvider>
-          <AuthProvider initialUser={session}>
-            {children}
-            <SupportModalHost />
-          </AuthProvider>
+          <WallpaperProvider>
+            <AuthProvider initialUser={session}>
+              {children}
+              <SupportModalHost />
+            </AuthProvider>
+          </WallpaperProvider>
         </ThemeProvider>
       </body>
     </html>

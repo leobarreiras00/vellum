@@ -3,7 +3,8 @@
  * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
- * Caneta SVG → Modal de autenticação → <AppFooter variant="full" />.
+ * Wallpaper geométrico → Caneta SVG → Modal de autenticação (Liquid Glass) →
+ * <AppFooter variant="compact" /> fixo na base do ecrã.
  * Com sessão válida, redireciona para /dashboard.
  */
 import type { Metadata } from "next";
@@ -50,7 +51,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     : [];
 
   return (
-    <PenWritingIntro footer={<AppFooter variant="full" />}>
+    <PenWritingIntro footer={<AppFooter variant="compact" />}>
       <AuthModal
         demoProfiles={demoProfiles}
         next={next}

@@ -18,10 +18,12 @@ import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useShell } from "@/components/layout/ShellContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { openProfile, useCurrentAvatar } from "@/components/profile/ProfileModal";
-import { Avatar, AvatarStack } from "@/components/ui/Avatar";
+import { AvatarStack } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Popover, PopoverItem } from "@/components/ui/Popover";
 import { RoleBadge } from "@/components/ui/RoleBadge";
+import { UserAvatar } from "@/components/ui/UserAvatar";
+import { WallpaperPicker } from "@/components/wallpapers/GeometricBackground";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { ROLE_LABELS, canExportDocument, effectiveRole } from "@/lib/rbac";
@@ -78,12 +80,13 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const canExport = canExportDocument(subject);
 
   const memberIds = project ? project.members.map((m) => m.userId) : snapshot.members.map((m) => m.userId);
-  const people = snapshot.members.filter((m) => memberIds.includes(m.userId));
+  // A própria pessoa aparece só uma vez: no botão de perfil, à direita.
+  const people = snapshot.members.filter((m) => memberIds.includes(m.userId) && m.userId !== user?.userId);
 
   return (
     <header
       data-print="hide"
-      className="liquid-glass-bar relative z-10 flex h-12 shrink-0 items-center gap-3 border-b border-subtle px-3 md:px-5"
+      className="liquid-glass-bar relative z-50 flex h-12 shrink-0 items-center gap-3 border-b border-subtle px-3 md:px-5"
     >
       <button
         type="button"
@@ -144,7 +147,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
               : "O seu papel efetivo"
           }
         />
-        <AvatarStack people={people} max={4} currentUserId={user?.userId} className="hidden lg:flex" />
+        {people.length > 0 && <AvatarStack people={people} max={4} className="hidden lg:flex" />}
 
         <Button
           variant="ghost"
@@ -198,7 +201,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
             data-testid="topbar-profile"
             className="rounded-full transition-transform duration-150 ease-editorial focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas active:scale-[0.97]"
           >
-            <Avatar initials={user.initials} name={user.name} src={avatar} size="sm" className="size-7" />
+            <UserAvatar user={{ name: user.name, initials: user.initials, avatarUrl: avatar }} size="sm" />
           </button>
         )}
       </div>
@@ -213,40 +216,57 @@ function ThemeMenu() {
   return (
     <Popover
       label="Tema"
-      role="menu"
+      role="dialog"
       align="end"
-      panelClassName="w-64"
+      panelClassName="w-[19rem]"
       trigger={(props) => (
-        <Button variant="ghost" size="icon-sm" aria-label="Mudar de tema" title="Tema" {...props}>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label="Mudar de tema"
+          title="Tema"
+          data-testid="topbar-theme"
+          {...props}
+        >
           <Palette aria-hidden="true" strokeWidth={1.6} />
         </Button>
       )}
     >
       {(close) => (
         <div>
-          <p className="eyebrow px-2.5 pb-1.5 pt-1">Papel de fundo</p>
-          {themes.map((t) => (
-            <PopoverItem
-              key={t.id}
-              role="menuitemradio"
-              aria-checked={t.id === theme}
-              onClick={() => {
-                chooseTheme(t.id);
-                close();
-              }}
-            >
-              <span
-                data-theme={t.id}
-                aria-hidden="true"
-                className="relative grid size-5 shrink-0 place-items-center overflow-hidden rounded-full border border-subtle bg-canvas"
+          <p className="eyebrow px-2.5 pb-1.5 pt-1" id="theme-menu-paper">
+            Papel de fundo
+          </p>
+          <div role="menu" aria-labelledby="theme-menu-paper">
+            {themes.map((t) => (
+              <PopoverItem
+                key={t.id}
+                role="menuitemradio"
+                aria-checked={t.id === theme}
+                onClick={() => {
+                  chooseTheme(t.id);
+                  close();
+                }}
               >
-                <span className="absolute inset-x-0 bottom-0 h-1/2 bg-surface" />
-                <span className="relative size-1.5 rounded-full bg-accent-primary" />
-              </span>
-              <span className="flex-1">{t.label}</span>
-              {t.id === theme && <Check aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={2} />}
-            </PopoverItem>
-          ))}
+                <span
+                  data-theme={t.id}
+                  aria-hidden="true"
+                  className="relative grid size-5 shrink-0 place-items-center overflow-hidden rounded-full border border-subtle bg-canvas"
+                >
+                  <span className="absolute inset-x-0 bottom-0 h-1/2 bg-surface" />
+                  <span className="relative size-1.5 rounded-full bg-accent-primary" />
+                </span>
+                <span className="flex-1">{t.label}</span>
+                {t.id === theme && (
+                  <Check aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={2} />
+                )}
+              </PopoverItem>
+            ))}
+          </div>
+          <div className="mt-1.5 border-t border-subtle px-2.5 pb-1.5 pt-2.5">
+            <p className="eyebrow pb-2">Fundo geométrico</p>
+            <WallpaperPicker compact showIntensity />
+          </div>
         </div>
       )}
     </Popover>

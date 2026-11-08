@@ -13,7 +13,7 @@ import { Check, MessageSquareText, Quote, RotateCcw, Trash2, X } from "lucide-re
 import { useId, useState } from "react";
 
 import { addCommentAction, deleteCommentAction, setCommentResolvedAction } from "@/app/(workspace)/actions";
-import { Avatar } from "@/components/ui/Avatar";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Button } from "@/components/ui/Button";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { longDate, relativeTime } from "@/lib/format";
@@ -75,10 +75,12 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
       >
         <div className="flex items-center gap-2">
           {author && (
-            <Avatar
-              initials={author.initials}
-              name={author.name}
-              src={"avatar" in author ? (author.avatar as string | null) : null}
+            <UserAvatar
+              user={{
+                name: author.name,
+                initials: author.initials,
+                avatarUrl: "avatar" in author ? (author.avatar as string | null) : null,
+              }}
               size="xs"
             />
           )}

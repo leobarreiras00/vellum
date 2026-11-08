@@ -29,8 +29,8 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
   {
     id: "demo-leo",
     name: "Leonardo Barreiras",
-    username: "leo",
-    email: "leo@vellum.local",
+    username: "leonardo_barreiras",
+    email: "leonardo@vellum.pt",
     password: "Atelier-2026",
     platformRole: "SUPER_ADMIN",
     workspaceRole: "OWNER",

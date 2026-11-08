@@ -4,9 +4,12 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Abre-se a partir do avatar ou do nome (Sidebar e Topbar) com `openProfile()`.
- * Fotografia PNG/JPEG/WEBP até 2 MB, recorte quadrado 1:1 com zoom e
- * arrastamento, pré-visualização circular, saída 256×256 (Canvas). O servidor
- * volta a validar o tipo pelos bytes e o tamanho. Campos com rótulos visíveis,
+ * Fotografia PNG/JPEG/WEBP até 2 MB: ao escolher, é logo redimensionada em
+ * Canvas para 256×256 WEBP (qualidade 0,85) e mostrada no círculo; o
+ * enquadramento pode ser ajustado (zoom e arrasto). Tudo é gravado ao clicar
+ * em «Guardar perfil»: a fotografia vai para a base de dados (user_profile) e
+ * para o AuthContext + localStorage (nunca para o cookie). O servidor volta a
+ * validar o tipo pelos bytes e o tamanho. Campos com rótulos visíveis,
  * alinhados na horizontal (ux-forms-psychology).
  */
 "use client";
@@ -22,10 +25,10 @@ import {
 } from "@/app/(workspace)/actions";
 import { useShell } from "@/components/layout/ShellContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/Field";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { avatarFileError, cropAvatar, readAsDataUrl } from "@/lib/image-tools";
@@ -60,11 +63,19 @@ export function ProfileModalHost() {
   );
 }
 
-/** Fotografia do utilizador atual, a partir do instantâneo (atualiza-se em todo o lado). */
+/**
+ * Fotografia do utilizador atual. A base de dados (instantâneo do workspace) é a
+ * fonte de verdade; o AuthContext + localStorage guardam a cópia global.
+ */
 export function useCurrentAvatar(): string | null {
-  const { user } = useAuth();
+  const { user, avatarUrl, setAvatarUrl } = useAuth();
   const { snapshot } = useWorkspace();
-  return snapshot.members.find((m) => m.userId === user?.userId)?.avatar ?? snapshot.profile.avatar ?? null;
+  const member = snapshot.members.find((m) => m.userId === user?.userId);
+  const server = member ? (member.avatar ?? snapshot.profile.avatar ?? null) : undefined;
+  useEffect(() => {
+    if (server !== undefined && server !== avatarUrl) setAvatarUrl(server);
+  }, [server, avatarUrl, setAvatarUrl]);
+  return server !== undefined ? server : avatarUrl;
 }
 
 /* ==========================================================================
@@ -72,7 +83,7 @@ export function useCurrentAvatar(): string | null {
    ========================================================================== */
 
 function ProfileForm() {
-  const { user, setUser } = useAuth();
+  const { user, setUser, setAvatarUrl } = useAuth();
   const { snapshot, run } = useWorkspace();
   const avatar = useCurrentAvatar();
   const ids = {
@@ -96,6 +107,8 @@ function ProfileForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saved, setSaved] = useState(false);
   const [pending, start] = useTransition();
+  /** Fotografia por gravar: `undefined` = sem alterações; `null` = remover. */
+  const [draftAvatar, setDraftAvatar] = useState<string | null | undefined>(undefined);
 
   if (!user) return null;
 
@@ -113,6 +126,15 @@ function ProfileForm() {
     }
     setErrors({});
     start(async () => {
+      if (draftAvatar !== undefined) {
+        const photo = await run(() => updateAvatarAction(draftAvatar), { silent: true });
+        if (!photo.ok) {
+          setErrors({ avatar: photo.error ?? "Não foi possível guardar a fotografia. Tente de novo." });
+          return;
+        }
+        setAvatarUrl(draftAvatar);
+        setDraftAvatar(undefined);
+      }
       const result = await run(() => updateProfileAction(values), { silent: true });
       if (!result.ok) {
         setErrors(result.fieldErrors ?? { form: result.error });
@@ -131,12 +153,13 @@ function ProfileForm() {
       <AvatarEditor
         initials={user.initials}
         name={user.name}
-        avatar={avatar}
-        onSave={(dataUrl) =>
-          run(() => updateAvatarAction(dataUrl), {
-            success: dataUrl ? "Fotografia atualizada." : "Fotografia removida.",
-          })
-        }
+        avatar={draftAvatar !== undefined ? draftAvatar : avatar}
+        dirty={draftAvatar !== undefined}
+        saveError={errors.avatar}
+        onChange={(dataUrl) => {
+          setSaved(false);
+          setDraftAvatar(dataUrl === avatar ? undefined : dataUrl);
+        }}
       />
 
       <div className="min-w-0 space-y-8">
@@ -238,7 +261,7 @@ function ProfileForm() {
                 Perfil guardado
               </span>
             )}
-            <Button type="submit" variant="primary" disabled={pending}>
+            <Button type="submit" variant="primary" disabled={pending} data-testid="profile-save">
               {pending ? "A guardar…" : "Guardar perfil"}
             </Button>
           </div>
@@ -294,16 +317,24 @@ function AvatarEditor({
   initials,
   name,
   avatar,
-  onSave,
+  dirty,
+  saveError,
+  onChange,
 }: {
   initials: string;
   name: string;
+  /** O que se vê no círculo: a fotografia gravada ou a que está por gravar. */
   avatar: string | null;
-  onSave: (dataUrl: string | null) => Promise<unknown>;
+  dirty: boolean;
+  saveError?: string;
+  onChange: (dataUrl: string | null) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const zoomId = useId();
-  const [source, setSource] = useState<{ src: string; w: number; h: number } | null>(null);
+  /** Imagem original escolhida (para reenquadrar) e se o recorte está aberto. */
+  const [original, setOriginal] = useState<{ src: string; w: number; h: number } | null>(null);
+  const [framing, setFraming] = useState(false);
+  const source = framing ? original : null;
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [error, setError] = useState<string | null>(null);
@@ -321,9 +352,13 @@ function AvatarEditor({
     const src = await readAsDataUrl(file);
     const img = new Image();
     img.onload = () => {
-      setSource({ src, w: img.naturalWidth, h: img.naturalHeight });
+      setOriginal({ src, w: img.naturalWidth, h: img.naturalHeight });
       setZoom(1);
       setOffset({ x: 0, y: 0 });
+      // Pré-visualização imediata: recorte central 256×256 WEBP no círculo.
+      cropAvatar(src, 1, 0, 0)
+        .then(onChange)
+        .catch(() => setError("Não foi possível processar a fotografia neste navegador."));
     };
     img.onerror = () => setError("Não foi possível ler esta imagem. Experimente outro ficheiro.");
     img.src = src;
@@ -374,8 +409,8 @@ function AvatarEditor({
     setBusy(true);
     try {
       const dataUrl = await cropAvatar(source.src, zoom, offset.x, offset.y);
-      await onSave(dataUrl);
-      setSource(null);
+      onChange(dataUrl);
+      setFraming(false);
     } catch {
       setError("Não foi possível processar a fotografia neste navegador.");
     } finally {
@@ -431,19 +466,19 @@ function AvatarEditor({
             />
           </div>
           <div className="mt-3 flex gap-2">
-            <Button size="sm" variant="primary" onClick={apply} disabled={busy} data-testid="avatar-apply">
-              {busy ? "A guardar…" : "Aplicar"}
+            <Button size="sm" variant="secondary" onClick={apply} disabled={busy} data-testid="avatar-apply">
+              {busy ? "A recortar…" : "Aplicar enquadramento"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={() => setSource(null)} disabled={busy}>
+            <Button size="sm" variant="ghost" onClick={() => setFraming(false)} disabled={busy}>
               Cancelar
             </Button>
           </div>
         </>
       ) : (
         <>
-          <div className="mt-3 flex items-end gap-3">
-            <Avatar initials={initials} name={name} src={avatar} size="xl" className="rounded-full" />
-            {avatar && <Avatar initials={initials} name={name} src={avatar} size="md" className="rounded-md" />}
+          <div className="mt-3 flex items-end gap-3" data-testid="avatar-preview">
+            <UserAvatar user={{ name, initials, avatarUrl: avatar }} size="xl" />
+            {avatar && <UserAvatar user={{ name, initials, avatarUrl: avatar }} size="md" />}
           </div>
           <div className="mt-4 flex flex-wrap justify-center gap-2 md:justify-start">
             <Button size="sm" variant="secondary" onClick={() => fileRef.current?.click()}>
@@ -452,18 +487,29 @@ function AvatarEditor({
               ) : (
                 <Upload aria-hidden="true" strokeWidth={1.6} />
               )}
-              {avatar ? "Trocar" : "Carregar fotografia"}
+              {avatar ? "Trocar fotografia" : "Carregar fotografia"}
             </Button>
+            {avatar && original && dirty && (
+              <Button size="sm" variant="ghost" onClick={() => setFraming(true)} data-testid="avatar-frame">
+                Ajustar enquadramento
+              </Button>
+            )}
             {avatar && (
-              <Button size="sm" variant="ghost" onClick={() => onSave(null)} data-testid="avatar-remove">
+              <Button size="sm" variant="ghost" onClick={() => onChange(null)} data-testid="avatar-remove">
                 <Trash2 aria-hidden="true" strokeWidth={1.6} />
-                Remover
+                Remover foto
               </Button>
             )}
           </div>
-          <p className="mt-2 text-[11px] leading-relaxed text-muted">
-            PNG, JPEG ou WEBP, até 2 MB. Fica guardada a 256×256.
-          </p>
+          {dirty ? (
+            <p role="status" className="mt-2 text-[11px] leading-relaxed text-warning" data-testid="avatar-dirty">
+              {avatar ? "Fotografia por guardar." : "Fotografia removida."} Clique em «Guardar perfil» para gravar.
+            </p>
+          ) : (
+            <p className="mt-2 text-[11px] leading-relaxed text-muted">
+              PNG, JPEG ou WEBP, até 2 MB. Fica guardada a 256×256.
+            </p>
+          )}
         </>
       )}
       <input
@@ -479,9 +525,9 @@ function AvatarEditor({
           e.target.value = "";
         }}
       />
-      {error && (
+      {(error ?? saveError) && (
         <p role="alert" className="mt-3 max-w-[220px] text-sm text-danger" data-testid="avatar-error">
-          {error}
+          {error ?? saveError}
         </p>
       )}
     </section>

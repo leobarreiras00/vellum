@@ -127,13 +127,15 @@ function MonthCell({
       data-selected={isSelected || undefined}
       onClick={select}
       className={cn(
-        "group relative cursor-pointer border border-subtle p-1.5 align-top transition-colors",
+        "group relative cursor-pointer border border-subtle align-top transition-colors",
+        metrics.pad,
+        metrics.text,
         outside ? "bg-surface/40" : isToday ? "bg-elevated" : "bg-canvas hover:bg-elevated/70",
         important && !outside && "bg-accent-primary/[0.035]",
         isSelected && "outline outline-2 -outline-offset-2 outline-accent-primary/60",
       )}
     >
-      <div className={cn("flex flex-col overflow-hidden", metrics.cell)}>
+      <div className={cn("flex flex-col overflow-hidden", metrics.cell)} data-testid="month-cell-body">
         <div className="flex items-center gap-1">
           <button
             type="button"
@@ -225,7 +227,7 @@ function MonthCell({
               )}
             >
               <NotebookPen aria-hidden="true" className="mt-[2px] size-2.5 shrink-0" strokeWidth={1.6} />
-              <span className={compact ? "line-clamp-1" : "line-clamp-2"}>{summary}</span>
+              <span className={metrics.noteLines}>{summary}</span>
             </p>
           )}
           {(prefs.legendDots && legendColors.length > 0) || progress.total > 0 ? (

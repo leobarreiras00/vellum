@@ -121,7 +121,7 @@ export function AuthModal({
   return (
     <section
       aria-labelledby="auth-title"
-      className="w-[min(440px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-subtle bg-elevated shadow-sheet"
+      className="liquid-glass w-[min(440px,calc(100vw-2rem))] overflow-hidden rounded-xl bg-elevated/[0.82] backdrop-blur-2xl"
     >
       {view !== "reset" && view !== "verify" && (
         <div role="tablist" aria-label="Acesso" className="grid grid-cols-2 border-b border-subtle">
@@ -209,14 +209,6 @@ export function AuthModal({
           >
             Contactar Suporte
           </button>
-          <span aria-hidden="true"> · </span>
-          <a href="/termos" className="hover:text-primary">
-            Termos
-          </a>
-          <span aria-hidden="true"> · </span>
-          <a href="/privacidade" className="hover:text-primary">
-            Privacidade
-          </a>
         </p>
       </div>
     </section>
@@ -317,7 +309,7 @@ function LoginView({ next, prefill, notice, demoProfiles, onForgot, onCodeSent }
           autoComplete="username"
           autoCapitalize="none"
           spellCheck={false}
-          placeholder="leo ou leo@vellum.local"
+          placeholder="leonardo_barreiras ou leonardo@vellum.pt"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           error={errors.identifier}

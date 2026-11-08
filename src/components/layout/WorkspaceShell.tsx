@@ -21,6 +21,8 @@ import { CommandPalette } from "@/components/layout/CommandPalette";
 import { ShellContext, type ShellContextValue } from "@/components/layout/ShellContext";
 import { ProfileModalHost } from "@/components/profile/ProfileModal";
 import { Sidebar, type SwitchableProfile } from "@/components/layout/Sidebar";
+import { useWallpaper } from "@/components/providers/WallpaperProvider";
+import { GeometricBackground } from "@/components/wallpapers/GeometricBackground";
 import { Topbar } from "@/components/layout/Topbar";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/Toaster";
@@ -46,6 +48,7 @@ interface WorkspaceShellProps {
 export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const wallpaper = useWallpaper();
   const { snapshot, run, notify } = useWorkspace();
   const { setTheme } = useTheme();
 
@@ -186,9 +189,14 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
             demoProfiles={demoProfiles}
             onProfileSwitched={() => router.refresh()}
           />
-          <div className="flex min-w-0 flex-1 flex-col">
+          <div className="relative flex min-w-0 flex-1 flex-col">
+            {/* Fundo geométrico escolhido pelo utilizador (Desligado · Subtil · Imersivo). */}
+            <GeometricBackground />
+            {wallpaper.intensity === "imersivo" && wallpaper.wallpaper !== "none" && (
+              <div aria-hidden="true" className="geo-veil pointer-events-none absolute inset-0" />
+            )}
             <Topbar onOpenMobileNav={() => setMobileOpen(true)} />
-            <main id="conteudo" tabIndex={-1} className="min-h-0 flex-1 overflow-y-auto focus:outline-none">
+            <main id="conteudo" tabIndex={-1} className="relative min-h-0 flex-1 overflow-y-auto focus:outline-none">
               {children}
             </main>
           </div>

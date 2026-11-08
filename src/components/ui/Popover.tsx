@@ -91,7 +91,8 @@ export function Popover({
             }
             transition={{ duration: 0.2, ease: EASE_EDITORIAL }}
             className={cn(
-              "liquid-glass absolute z-50 min-w-56 rounded-xl p-1.5",
+              // z-[100] e vidro mais opaco: fica sempre por cima da barra do editor, da régua e da folha A4.
+              "liquid-glass absolute z-[100] min-w-56 rounded-xl bg-elevated/90 p-1.5",
               side === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5",
               align === "start" ? "left-0" : "right-0",
               panelClassName,

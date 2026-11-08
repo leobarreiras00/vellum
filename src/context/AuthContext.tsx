@@ -40,6 +40,13 @@ interface AuthContextValue {
   role: EffectiveRole | null;
   /** Atualiza a sessão no cliente logo após entrar (antes do refresh do servidor). */
   setUser: (user: SessionUser | null) => void;
+  /**
+   * Fotografia de perfil (data URL 256×256 WEBP). A fonte de verdade é a base
+   * de dados (user_profile.avatar); aqui fica uma cópia no estado global e em
+   * localStorage. Nunca vai no cookie de sessão (limite de 4 KB).
+   */
+  avatarUrl: string | null;
+  setAvatarUrl: (avatarUrl: string | null) => void;
   can: (permission: Permission) => boolean;
   hasRole: (allowed: readonly (EffectiveRole | PlatformRole)[]) => boolean;
   logout: () => void;
@@ -47,6 +54,8 @@ interface AuthContextValue {
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+const avatarKey = (userId: string) => `vellum:avatar:${userId}`;
 
 interface AuthProviderProps {
   initialUser: SessionUser | null;
@@ -57,11 +66,40 @@ export function AuthProvider({ initialUser, children }: AuthProviderProps) {
   const router = useRouter();
   const [user, setUser] = useState<SessionUser | null>(initialUser);
   const [isLoggingOut, startLogout] = useTransition();
+  const [avatarUrl, setAvatarState] = useState<string | null>(null);
+  const userId = user?.userId ?? null;
 
   // A sessão do servidor é a fonte de verdade: sincroniza a cada navegação.
   useEffect(() => {
     setUser(initialUser);
   }, [initialUser]);
+
+  // Cópia local da fotografia: aparece logo, antes do instantâneo do servidor.
+  useEffect(() => {
+    if (!userId) {
+      setAvatarState(null);
+      return;
+    }
+    try {
+      setAvatarState(window.localStorage.getItem(avatarKey(userId)));
+    } catch {
+      setAvatarState(null);
+    }
+  }, [userId]);
+
+  const setAvatarUrl = useCallback(
+    (next: string | null) => {
+      setAvatarState(next);
+      if (!userId) return;
+      try {
+        if (next) window.localStorage.setItem(avatarKey(userId), next);
+        else window.localStorage.removeItem(avatarKey(userId));
+      } catch {
+        // Armazenamento cheio ou indisponível: a base de dados continua a ter a fotografia.
+      }
+    },
+    [userId],
+  );
 
   const can = useCallback((permission: Permission) => hasPermission(user, permission), [user]);
   const hasRole = useCallback(
@@ -83,12 +121,14 @@ export function AuthProvider({ initialUser, children }: AuthProviderProps) {
       status: user ? "authenticated" : "anonymous",
       role: user ? effectiveRole(user) : null,
       setUser,
+      avatarUrl,
+      setAvatarUrl,
       can,
       hasRole,
       logout,
       isLoggingOut,
     }),
-    [user, can, hasRole, logout, isLoggingOut],
+    [user, avatarUrl, setAvatarUrl, can, hasRole, logout, isLoggingOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

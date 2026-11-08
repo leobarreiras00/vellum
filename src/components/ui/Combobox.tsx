@@ -158,7 +158,7 @@ export function Combobox({
             transition={{ duration: 0.2, ease: EASE_EDITORIAL }}
             style={{ transformOrigin: align === "start" ? "top left" : "top right" }}
             className={cn(
-              "liquid-glass absolute top-full z-50 mt-1.5 w-64 rounded-xl p-1.5",
+              "liquid-glass absolute top-full z-[100] mt-1.5 w-64 rounded-xl p-1.5",
               align === "start" ? "left-0" : "right-0",
               panelClassName,
             )}

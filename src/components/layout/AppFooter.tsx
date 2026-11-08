@@ -4,7 +4,8 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Variantes:
- *  - "full"      → Login, Registo e páginas institucionais.
+ *  - "full"      → páginas institucionais (Termos, Privacidade).
+ *  - "compact"   → barra única de 48px fixa na base do ecrã (Login), em Liquid Glass.
  *  - "statusbar" → barra inferior de 30px do Workspace.
  *
  * O aviso de direitos reservados é obrigatório em ambas (CLAUDE.md §8).
@@ -20,6 +21,7 @@ import { LicenseDialog } from "@/components/layout/LicenseDialog";
 import { openSupport } from "@/components/support/SupportModal";
 import { ThemeSwatches } from "@/components/layout/ThemeSwatches";
 import { VellumMark } from "@/components/layout/VellumMark";
+import { WallpaperPicker } from "@/components/wallpapers/GeometricBackground";
 import { useOnline, usePendingSaves } from "@/lib/offline-queue";
 import {
   APP_VERSION,
@@ -52,16 +54,22 @@ type FullFooterProps = {
   className?: string;
 };
 
+type CompactFooterProps = {
+  variant: "compact";
+  className?: string;
+};
+
 type StatusbarFooterProps = {
   variant: "statusbar";
   className?: string;
   telemetry?: TelemetrySnapshot;
 };
 
-export type AppFooterProps = FullFooterProps | StatusbarFooterProps;
+export type AppFooterProps = FullFooterProps | CompactFooterProps | StatusbarFooterProps;
 
 export function AppFooter(props: AppFooterProps) {
   if (props.variant === "statusbar") return <StatusbarFooter {...props} />;
+  if (props.variant === "compact") return <CompactFooter {...props} />;
   return <FullFooter {...props} />;
 }
 
@@ -118,6 +126,65 @@ function FullFooter({ className }: FullFooterProps) {
         <p className="mx-auto max-w-6xl px-6 py-5 text-xs leading-relaxed text-muted md:px-12">{COPYRIGHT_FULL}</p>
       </div>
     </footer>
+  );
+}
+
+/* ==========================================================================
+   Variante "compact" (48px, fixa na base do ecrã)
+   ========================================================================== */
+
+function CompactFooter({ className }: CompactFooterProps) {
+  return (
+    <footer
+      data-testid="footer-compact"
+      className={cn(
+        "liquid-glass-bar fixed inset-x-0 bottom-0 z-40 border-t border-subtle bg-surface/85 font-sans text-xs text-muted md:h-12",
+        className,
+      )}
+    >
+      <div className="mx-auto flex min-h-12 max-w-[1600px] flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-2 md:h-full md:min-h-0 md:flex-nowrap md:px-6 md:py-0">
+        {/* Esquerda — marca e direitos reservados */}
+        <p className="flex min-w-0 items-center gap-2.5" title={COPYRIGHT_FULL}>
+          <VellumMark className="shrink-0 text-base" />
+          <span className="truncate">© {COPYRIGHT_YEAR} Leonardo Barreiras · Todos os direitos reservados.</span>
+        </p>
+
+        {/* Centro — cor do papel e fundo geométrico */}
+        <div className="hidden flex-1 items-center justify-center gap-3 lg:flex">
+          <span className="sr-only">Cor do papel</span>
+          <ThemeSwatches size="sm" />
+          <span aria-hidden="true" className="h-4 w-px bg-subtle" />
+          <span className="sr-only">Fundo geométrico</span>
+          <WallpaperPicker compact />
+        </div>
+
+        {/* Direita — licença e informação legal */}
+        <nav aria-label="Informação legal" className="ml-auto flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1">
+          <LicenseDialog className="text-xs" />
+          <Dot />
+          <Link href="/termos" className={legalLink} data-testid="footer-terms">
+            Termos e Condições
+          </Link>
+          <Dot />
+          <Link href="/privacidade" className={legalLink} data-testid="footer-privacy">
+            Privacidade (RGPD)
+          </Link>
+          <Dot />
+          <button type="button" onClick={() => openSupport()} className={legalLink} data-testid="footer-support">
+            <LifeBuoy aria-hidden="true" className="size-3" strokeWidth={1.6} />
+            Centro de Suporte
+          </button>
+        </nav>
+      </div>
+    </footer>
+  );
+}
+
+function Dot() {
+  return (
+    <span aria-hidden="true" className="text-muted/60">
+      ·
+    </span>
   );
 }
 

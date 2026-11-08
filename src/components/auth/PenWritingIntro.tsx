@@ -23,6 +23,8 @@ import { RotateCcw } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
+import { useWallpaper } from "@/components/providers/WallpaperProvider";
+import { GeometricBackground } from "@/components/wallpapers/GeometricBackground";
 import { EASE_EDITORIAL, cn } from "@/lib/utils";
 
 /* ==========================================================================
@@ -375,6 +377,22 @@ function EditorialGuides() {
 }
 
 /* ==========================================================================
+   Fundo: wallpaper geométrico (por omissão «Ondas Terracota & Âmbar»)
+   ========================================================================== */
+
+function LoginBackdrop() {
+  const { wallpaper } = useWallpaper();
+  if (wallpaper === "none") return <EditorialGuides />;
+  return (
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0" data-testid="login-wallpaper">
+      <GeometricBackground intensity="pleno" />
+      {/* Véu no topo: a assinatura a tinta lê-se sobre qualquer fundo. */}
+      <div className="absolute inset-x-0 top-0 h-[38vh] bg-gradient-to-b from-canvas/70 to-transparent" />
+    </div>
+  );
+}
+
+/* ==========================================================================
    Cena
    ========================================================================== */
 
@@ -449,7 +467,7 @@ export function PenWritingIntro({ children, footer }: PenWritingIntroProps) {
 
   return (
     <div className="relative flex min-h-dvh flex-col">
-      <EditorialGuides />
+      <LoginBackdrop />
 
       {/* Saltar introdução */}
       <AnimatePresence>
@@ -472,7 +490,8 @@ export function PenWritingIntro({ children, footer }: PenWritingIntroProps) {
       <main
         className={cn(
           "relative z-10 flex flex-1 flex-col items-center px-4",
-          isIntro ? "justify-center py-10" : "justify-start pb-16 pt-10 md:pt-14",
+          // O rodapé é fixo (48px): pb-16 mantém o conjunto centrado acima dele.
+          isIntro ? "justify-center pb-16 pt-10" : "justify-center pb-24 pt-10 md:pb-20",
         )}
       >
         <motion.div
@@ -519,7 +538,7 @@ export function PenWritingIntro({ children, footer }: PenWritingIntroProps) {
         {stage === "settled" && footer && (
           <motion.div
             key="footer"
-            className="relative z-10 bg-canvas"
+            className="relative z-40"
             initial={instant ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.4, ease: EASE_EDITORIAL, delay: instant ? 0 : 0.35 }}

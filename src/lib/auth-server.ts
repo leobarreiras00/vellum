@@ -261,11 +261,21 @@ async function seedDemoProfiles(auth: VellumAuth): Promise<void> {
   const ctx = await auth.$context;
   const adapter = ctx.adapter;
   for (const profile of DEMO_PROFILES) {
-    const existing = await adapter.findOne<{ id: string }>({
+    const existing = await adapter.findOne<{ id: string; username?: string | null; email: string }>({
       model: "user",
       where: [{ field: "id", value: profile.id }],
     });
-    if (existing) continue;
+    if (existing) {
+      // Perfis de demonstração antigos (ex.: «leo») passam ao username e email atuais.
+      if (existing.username !== profile.username || existing.email !== profile.email) {
+        await adapter.update({
+          model: "user",
+          where: [{ field: "id", value: profile.id }],
+          update: { username: profile.username, displayUsername: profile.username, email: profile.email },
+        });
+      }
+      continue;
+    }
     const now = new Date();
     await adapter.create({
       model: "user",

@@ -24,7 +24,7 @@ import {
 import Link from "next/link";
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 
-import { Avatar } from "@/components/ui/Avatar";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { clockTime, longDate, readingMinutes, relativeTime } from "@/lib/format";
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { routes } from "@/lib/workspace-routes";
@@ -154,10 +154,12 @@ export const DocumentHeader = forwardRef<DocumentHeaderHandle, DocumentHeaderPro
               <div className="flex items-center gap-1.5">
                 <dt className="sr-only">Autor</dt>
                 <dd className="flex items-center gap-1.5 text-primary">
-                  <Avatar
-                    initials={props.author.initials}
-                    name={props.author.name}
-                    src={"avatar" in props.author ? (props.author.avatar as string | null) : null}
+                  <UserAvatar
+                    user={{
+                      name: props.author.name,
+                      initials: props.author.initials,
+                      avatarUrl: "avatar" in props.author ? (props.author.avatar as string | null) : null,
+                    }}
                     size="xs"
                   />
                   {props.author.name}

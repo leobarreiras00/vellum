@@ -10,11 +10,11 @@
  */
 "use client";
 
-import { CalendarX2, ChevronLeft, ChevronRight, NotebookPen, Star } from "lucide-react";
+import { CalendarX2, Check, ChevronLeft, ChevronRight, NotebookPen, Star } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 
 import type { DayGridProps } from "@/components/calendar/MonthGrid";
-import { DEFAULT_CALENDAR_PREFS } from "@/components/calendar/useCalendarPrefs";
+import { DEFAULT_CALENDAR_PREFS, DENSITY_METRICS } from "@/components/calendar/useCalendarPrefs";
 import { InkDot } from "@/components/ui/Ink";
 import {
   dayLongLabel,
@@ -27,7 +27,7 @@ import {
   weekdayHeaders,
   weekdayLabel,
 } from "@/lib/calendar";
-import { checklistProgress, dayNoteSummary } from "@/lib/day-note-format";
+import { checklistProgress, dayNoteSummary, parseDayNote } from "@/lib/day-note-format";
 import { cn, formatDuration } from "@/lib/utils";
 
 export const AGENDA_FILTERS = ["todos", "notas", "eventos", "importantes"] as const;
@@ -68,6 +68,8 @@ export function AgendaView({
   onSelectDay,
 }: AgendaViewProps) {
   const listRef = useRef<HTMLOListElement>(null);
+  const density = prefs.density;
+  const metrics = DENSITY_METRICS[density];
 
   const facts = useMemo(() => {
     const map = new Map<string, { hasNote: boolean; hasEvents: boolean; important: boolean }>();
@@ -85,7 +87,8 @@ export function AgendaView({
 
   const counts: Record<AgendaFilter, number> = { todos: 0, notas: 0, eventos: 0, importantes: 0 };
   for (const f of facts.values()) {
-    if (f.hasNote || f.hasEvents || f.important) counts.todos += 1;
+    // «Todos» lista todos os dias do mês (ex.: 30 em novembro), com ou sem conteúdo.
+    counts.todos += 1;
     if (f.hasNote) counts.notas += 1;
     if (f.hasEvents) counts.eventos += 1;
     if (f.important) counts.importantes += 1;
@@ -171,7 +174,12 @@ export function AgendaView({
             </p>
           </div>
         ) : (
-          <ol ref={listRef} className="space-y-2.5" data-testid="agenda-days">
+          <ol
+            ref={listRef}
+            className={density === "compacta" ? "space-y-1" : density === "expandida" ? "space-y-3.5" : "space-y-2.5"}
+            data-testid="agenda-days"
+            data-density={density}
+          >
             {days.map((day) => {
               const events = eventsByDay.get(day) ?? [];
               const note = notes.get(day);
@@ -181,6 +189,68 @@ export function AgendaView({
               const seconds = effortByDay[day] ?? 0;
               const holiday = prefs.holidays ? holidays?.get(day) : undefined;
               const isSelected = day === selected;
+              if (density === "compacta") {
+                // Uma linha por dia: número, dia da semana, primeiro evento ou resumo da nota.
+                const first = events[0];
+                return (
+                  <li key={day} data-day={day}>
+                    <button
+                      type="button"
+                      onClick={() => onSelectDay(day)}
+                      aria-current={isSelected ? "date" : undefined}
+                      aria-label={dayLongLabel(day)}
+                      data-testid="agenda-card"
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-lg border text-left text-[13px] transition-[background-color,border-color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+                        metrics.card,
+                        isSelected
+                          ? "border-accent-primary/50 bg-elevated"
+                          : "border-subtle bg-canvas hover:border-muted/40 hover:bg-elevated/70",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "nums w-6 shrink-0 text-right font-serif text-base leading-none",
+                          day === today ? "text-accent-primary" : "text-primary",
+                        )}
+                      >
+                        {parseDayKey(day).day}
+                      </span>
+                      <span className="w-8 shrink-0 text-[10px] uppercase tracking-[0.14em] text-muted">
+                        {weekdayLabel(day).slice(0, 3)}
+                      </span>
+                      {f.important && (
+                        <Star
+                          aria-hidden="true"
+                          className="size-3 shrink-0 fill-current text-accent-primary"
+                          strokeWidth={1.6}
+                        />
+                      )}
+                      <span className="min-w-0 flex-1 truncate">
+                        {first ? (
+                          <>
+                            <span className="nums mr-2 text-[11px] text-muted">{timeRangeLabel(first)}</span>
+                            <span className="text-primary">{first.title}</span>
+                          </>
+                        ) : summary ? (
+                          <span className="font-serif text-muted">{summary}</span>
+                        ) : holiday ? (
+                          <span className="font-serif text-primary">{holiday.name}</span>
+                        ) : null}
+                      </span>
+                      {events.length > 1 && (
+                        <span className="nums shrink-0 text-[11px] text-muted">+{events.length - 1}</span>
+                      )}
+                      {progress.total > 0 && (
+                        <span className="nums shrink-0 text-[11px] text-muted">
+                          {progress.done}/{progress.total}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              }
+              const structured = density === "expandida" && note?.content ? parseDayNote(note.content) : null;
               return (
                 <li key={day} data-day={day}>
                   <button
@@ -190,7 +260,8 @@ export function AgendaView({
                     aria-label={dayLongLabel(day)}
                     data-testid="agenda-card"
                     className={cn(
-                      "grid w-full grid-cols-[56px_minmax(0,1fr)] gap-4 rounded-xl border px-4 py-3.5 text-left transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+                      "grid w-full grid-cols-[56px_minmax(0,1fr)] gap-4 rounded-xl border text-left transition-[background-color,border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+                      metrics.card,
                       isSelected
                         ? "border-accent-primary/50 bg-elevated shadow-paper"
                         : "border-subtle bg-canvas hover:border-muted/40 hover:bg-elevated/70",
@@ -268,10 +339,61 @@ export function AgendaView({
                         </span>
                       )}
 
-                      {summary ? (
+                      {structured && (structured.checklist.length > 0 || structured.keyPoints.length > 0) && (
+                        <span
+                          className="grid gap-3 border-t border-dashed border-subtle pt-2.5 sm:grid-cols-2"
+                          data-testid="agenda-expanded"
+                        >
+                          {structured.checklist.length > 0 && (
+                            <span className="block">
+                              <span className="eyebrow block">Checklist</span>
+                              <span className="mt-1 block space-y-0.5">
+                                {structured.checklist.map((item, k) => (
+                                  <span key={k} className="flex items-start gap-1.5 text-[13px]">
+                                    <span
+                                      aria-hidden="true"
+                                      className={cn(
+                                        "mt-[3px] grid size-3 shrink-0 place-items-center rounded-[3px] border",
+                                        item.done ? "border-success bg-success/10 text-success" : "border-subtle",
+                                      )}
+                                    >
+                                      {item.done && <Check className="size-2.5" strokeWidth={2} />}
+                                    </span>
+                                    <span className={item.done ? "text-muted line-through" : "text-primary"}>
+                                      {item.text}
+                                    </span>
+                                  </span>
+                                ))}
+                              </span>
+                            </span>
+                          )}
+                          {structured.keyPoints.length > 0 && (
+                            <span className="block">
+                              <span className="eyebrow block">Pontos-chave</span>
+                              <span className="mt-1 block space-y-0.5">
+                                {structured.keyPoints.map((point, k) => (
+                                  <span
+                                    key={k}
+                                    className="flex items-start gap-1.5 font-serif text-[13.5px] text-primary"
+                                  >
+                                    <span
+                                      aria-hidden="true"
+                                      className="mt-[7px] size-1 shrink-0 rounded-full bg-accent-primary"
+                                    />
+                                    {point}
+                                  </span>
+                                ))}
+                              </span>
+                            </span>
+                          )}
+                        </span>
+                      )}
+                      {summary && !(structured && !structured.log) ? (
                         <span className="flex items-start gap-1.5 border-t border-dashed border-subtle pt-1.5 font-serif text-[13.5px] leading-snug text-muted">
                           <NotebookPen aria-hidden="true" className="mt-[3px] size-3 shrink-0" strokeWidth={1.6} />
-                          <span className="line-clamp-2 flex-1">{summary}</span>
+                          <span className={cn("flex-1", density === "expandida" ? "line-clamp-3" : "line-clamp-1")}>
+                            {structured ? structured.log.replace(/\s+/g, " ") : summary}
+                          </span>
                           {progress.total > 0 && (
                             <span className="nums shrink-0 text-[11px]">
                               {progress.done}/{progress.total}
@@ -279,7 +401,8 @@ export function AgendaView({
                           )}
                         </span>
                       ) : (
-                        events.length === 0 && (
+                        events.length === 0 &&
+                        !structured && (
                           <span className="block font-serif text-sm text-muted">
                             Página em branco · escreva a nota do dia.
                           </span>

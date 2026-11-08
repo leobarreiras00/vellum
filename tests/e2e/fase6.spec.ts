@@ -45,7 +45,7 @@ test("Entrada: Termos, Privacidade e Contactar Suporte; nome do autor correto", 
 
   await page.goto("/termos");
   await expect(page.getByRole("heading", { level: 1, name: "Termos e Condições" })).toBeVisible();
-  await expect(page.getByText("Modelo a rever por jurista.")).toBeVisible();
+  await expect(page.getByText("Modelo a rever por jurista.")).toHaveCount(0);
   await page.goto("/privacidade");
   await expect(page.getByRole("heading", { level: 1, name: "Política de Privacidade" })).toBeVisible();
   await expect(page.getByText(/Regulamento \(UE\) 2016\/679/)).toBeVisible();
@@ -76,14 +76,18 @@ test("Perfil: abre do avatar, recusa ficheiros inválidos, recorta e mostra a fo
     .setInputFiles({ name: "grande.png", mimeType: "image/png", buffer: Buffer.alloc(2 * 1024 * 1024 + 10) });
   await expect(dialog.getByTestId("avatar-error")).toContainText("O limite é 2 MB");
 
-  // Válido: recorte com zoom e aplicar.
+  // Válido: pré-visualização imediata no círculo, enquadramento com zoom, gravado com «Guardar perfil».
   await dialog
     .getByTestId("avatar-file")
     .setInputFiles({ name: "eu.png", mimeType: "image/png", buffer: await pngBytes(page) });
+  await expect(dialog.getByTestId("avatar-preview").locator('img[data-avatar="photo"]').first()).toBeVisible();
+  await expect(dialog.getByTestId("avatar-dirty")).toBeVisible();
+  await dialog.getByTestId("avatar-frame").click();
   await expect(dialog.getByTestId("avatar-crop")).toBeVisible();
   await dialog.getByLabel("Zoom").fill("1.6");
   await dialog.getByTestId("avatar-apply").click();
-  await expect(page.getByRole("status").filter({ hasText: "Fotografia atualizada." })).toBeVisible();
+  await dialog.getByRole("button", { name: "Guardar perfil" }).click();
+  await expect(dialog.getByText("Perfil guardado")).toBeVisible();
   await expect(page.getByTestId("topbar-profile").locator('img[data-avatar="photo"]')).toBeVisible();
   await expect(page.getByTestId("open-profile").locator('img[data-avatar="photo"]')).toBeVisible();
   const size = await page
@@ -98,8 +102,9 @@ test("Perfil: abre do avatar, recusa ficheiros inválidos, recorta e mostra a fo
   await dialog.getByRole("button", { name: "Guardar perfil" }).click();
   await expect(dialog.getByText("Perfil guardado")).toBeVisible();
 
-  // Remover volta ao monograma.
+  // Remover volta ao monograma (depois de guardar).
   await dialog.getByTestId("avatar-remove").click();
+  await dialog.getByRole("button", { name: "Guardar perfil" }).click();
   await expect(page.getByTestId("topbar-profile").locator("img")).toHaveCount(0);
 });
 
@@ -170,29 +175,18 @@ test("Editor: Tab recua sem sair da folha, ⌘F localiza e substitui, imagens co
   await expect(page.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
 });
 
-test("Capas ilustradas: gerador local, galeria curada e coleção nas Definições", async ({ page }) => {
+test("Capas geométricas: 7 composições, variação e capa gravada", async ({ page }) => {
   await loginAs(page, PROFILES.leo);
   await page.goto("/projects/prj-arquitetura");
   await page.getByTestId("cover-add").click();
   const studio = page.getByRole("dialog", { name: /Capa de/ });
-  await expect(studio.getByTestId("illustration-provider")).toHaveText("Gerador local (sem IA externa)");
-  await studio.getByLabel("Descrição em português").fill("ponte sobre o rio ao amanhecer");
-  await studio.getByRole("radio", { name: "Xilogravura" }).click();
-  await studio.getByTestId("illustration-generate-button").click();
+  const list = studio.getByRole("list", { name: "Capas geométricas" });
+  await expect(list.getByRole("listitem")).toHaveCount(7);
+  await studio.getByTestId("cover-wallpaper-sage-topography").click();
+  await studio.getByTestId("cover-variant").click();
   await expect(studio.getByRole("img", { name: "Pré-visualização da capa" })).toBeVisible();
-  await studio.getByRole("tab", { name: "Galeria" }).click();
-  await expect(studio.getByRole("list", { name: "Galeria curada" }).getByRole("listitem")).toHaveCount(12);
-  await studio.getByRole("button", { name: /Fases da lua/ }).click();
   await studio.getByTestId("cover-save").click();
   await expect(page.getByTestId("cover-banner")).toBeVisible();
-
-  await page.goto("/settings");
-  const collections = page.getByTestId("illustration-collections");
-  await expect(collections.getByRole("radio")).toHaveCount(6);
-  await collections.getByRole("radio", { name: /Atlas Celestial/ }).click();
-  await expect(collections.getByRole("radio", { name: /Atlas Celestial/ })).toHaveAttribute("aria-checked", "true");
-  await page.goto("/dashboard");
-  await expect(page.getByTestId("atelier-vignette").getByRole("img", { name: /Atlas Celestial/ })).toBeVisible();
 });
 
 test("Design System: voltar ao Atelier e nenhum botão morto", async ({ page }) => {

@@ -404,6 +404,20 @@
     }
   }
 
+  /* Wallpapers geométricos: no tema escuro, os claros escurecem para não ofuscar. */
+  [data-theme="dark-espresso"] .geo-bg:not([data-wallpaper-dark]) {
+    filter: brightness(0.42) saturate(0.85);
+  }
+  /* Véu de leitura sobre o wallpaper: o texto do workspace fica sempre AA. */
+  .geo-veil {
+    background: linear-gradient(
+      180deg,
+      rgb(var(--bg-canvas-rgb) / 0.55),
+      rgb(var(--bg-canvas-rgb) / 0.2) 40%,
+      rgb(var(--bg-canvas-rgb) / 0.35)
+    );
+  }
+
   /* Skeleton com shimmer creme quente (ux-forms-psychology §5) */
   .skeleton {
     position: relative;

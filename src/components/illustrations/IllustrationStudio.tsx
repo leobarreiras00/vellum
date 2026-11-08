@@ -3,43 +3,36 @@
  * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
- * Três caminhos para a capa de um projeto ou documento:
- *  1. Gerar — descrição em português + coleção + estilo → ilustração SVG
- *     procedimental (local, sem chaves). Se ILLUSTRATION_API_URL estiver
- *     configurado no servidor, tenta primeiro o serviço externo.
- *  2. Galeria — 12 capas curadas.
- *  3. Carregar — imagem própria, comprimida no navegador e validada no servidor.
+ * Dois caminhos para a capa de um projeto ou documento:
+ *  1. Geométricos — os 7 wallpapers premium (src/lib/geometric-wallpapers.ts),
+ *     com «Gerar variação» de ângulo/cor. Substituem as ilustrações antigas,
+ *     que continuam a ser mostradas nas capas já gravadas.
+ *  2. Carregar — imagem própria, comprimida no navegador e validada no servidor.
  */
 "use client";
 
-import { Check, RefreshCw, Sparkles, Trash2, Upload } from "lucide-react";
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import { Check, Shuffle, Trash2, Upload } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
-import { generateIllustrationAction, illustrationProviderAction, setCoverAction } from "@/app/(workspace)/actions";
+import { setCoverAction } from "@/app/(workspace)/actions";
 import { IllustrationArt } from "@/components/illustrations/IllustrationArt";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { Label, Select, Textarea } from "@/components/ui/Field";
+import { WallpaperThumb } from "@/components/wallpapers/GeometricBackground";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { WALLPAPERS, freshVariant } from "@/lib/geometric-wallpapers";
 import { compressImage } from "@/lib/image-tools";
-import {
-  COVER_UPLOAD_MAX_DATA_URL,
-  CURATED_COVERS,
-  ILLUSTRATION_COLLECTIONS,
-  ILLUSTRATION_STYLES,
-  freshSeed,
-  type CoverSpec,
-  type IllustrationCollection,
-  type IllustrationStyle,
-} from "@/lib/illustrations";
+import { COVER_UPLOAD_MAX_DATA_URL, type CoverSpec, type WallpaperCover } from "@/lib/illustrations";
 import { cn } from "@/lib/utils";
 
-type Tab = "gerar" | "galeria" | "carregar";
+type Tab = "geometricos" | "carregar";
 const TABS: Array<[Tab, string]> = [
-  ["gerar", "Gerar"],
-  ["galeria", "Galeria"],
+  ["geometricos", "Geométricos"],
   ["carregar", "Carregar"],
 ];
+
+/** Capa por omissão de um projeto/documento sem capa: as ondas terracota. */
+export const DEFAULT_COVER: WallpaperCover = { type: "wallpaper", wallpaper: "sequoia-amber", variant: 0 };
 
 export function IllustrationStudio({
   open,
@@ -56,13 +49,13 @@ export function IllustrationStudio({
   title: string;
   current: CoverSpec | null;
 }) {
-  const { run, snapshot } = useWorkspace();
-  const [tab, setTab] = useState<Tab>("gerar");
-  const [draft, setDraft] = useState<CoverSpec | null>(current);
+  const { run } = useWorkspace();
+  const [tab, setTab] = useState<Tab>("geometricos");
+  const [draft, setDraft] = useState<CoverSpec | null>(current ?? DEFAULT_COVER);
   const [pending, start] = useTransition();
 
   useEffect(() => {
-    if (open) setDraft(current);
+    if (open) setDraft(current ?? DEFAULT_COVER);
   }, [open, current]);
 
   function save(spec: CoverSpec | null) {
@@ -78,7 +71,7 @@ export function IllustrationStudio({
     <Dialog
       open={open}
       onClose={onClose}
-      eyebrow="Estúdio de ilustração"
+      eyebrow="Estúdio de capas"
       title={`Capa de «${title}»`}
       size="lg"
       footer={
@@ -134,10 +127,7 @@ export function IllustrationStudio({
             )}
           </div>
 
-          {tab === "gerar" && (
-            <GeneratePanel defaultCollection={snapshot.profile.illustrationTheme} title={title} onDraft={setDraft} />
-          )}
-          {tab === "galeria" && <GalleryPanel selected={draft} onPick={setDraft} />}
+          {tab === "geometricos" && <GeometricPanel selected={draft} onPick={setDraft} />}
           {tab === "carregar" && <UploadPanel onDraft={setDraft} />}
         </div>
       )}
@@ -145,148 +135,50 @@ export function IllustrationStudio({
   );
 }
 
-function GeneratePanel({
-  defaultCollection,
-  title,
-  onDraft,
-}: {
-  defaultCollection: IllustrationCollection;
-  title: string;
-  onDraft: (spec: CoverSpec) => void;
-}) {
-  const ids = { prompt: useId(), collection: useId() };
-  const [prompt, setPrompt] = useState(title === "Sem título" ? "" : title);
-  const [collection, setCollection] = useState<IllustrationCollection>(defaultCollection);
-  const [style, setStyle] = useState<IllustrationStyle>("gravura");
-  const [provider, setProvider] = useState("Gerador local (sem IA externa)");
-  const [note, setNote] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
-
-  useEffect(() => {
-    void illustrationProviderAction().then((r) => r.ok && setProvider(r.data.label));
-  }, []);
-
-  function generate() {
-    setError(null);
-    setNote(null);
-    if (prompt.trim().length < 3) {
-      setError("Descreva a ilustração (pelo menos 3 caracteres).");
-      return;
-    }
-    const local: CoverSpec = { type: "generated", collection, style, prompt: prompt.trim(), seed: freshSeed() };
-    start(async () => {
-      const result = await generateIllustrationAction({ prompt: prompt.trim(), style, collection });
-      if (result.ok && result.data.external && "spec" in result.data) {
-        onDraft(result.data.spec);
-        return;
-      }
-      if (result.ok && result.data.external && "error" in result.data) setNote(result.data.error);
-      onDraft(local);
-    });
-  }
-
+function GeometricPanel({ selected, onPick }: { selected: CoverSpec | null; onPick: (spec: CoverSpec) => void }) {
+  const current = selected?.type === "wallpaper" ? selected : null;
   return (
-    <div className="space-y-4" data-testid="illustration-generate">
-      <div>
-        <Label htmlFor={ids.prompt}>Descrição em português</Label>
-        <Textarea
-          id={ids.prompt}
-          rows={2}
-          maxLength={200}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          placeholder="ex.: ramo de oliveira com folhas, ponte sobre o rio, lua cheia e estrelas"
-          aria-invalid={!!error}
-        />
-        {error && (
-          <p role="alert" className="mt-1 text-xs text-danger">
-            {error}
-          </p>
-        )}
-      </div>
-      <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-        <div>
-          <Label htmlFor={ids.collection}>Coleção</Label>
-          <Select
-            id={ids.collection}
-            value={collection}
-            onChange={(e) => setCollection(e.target.value as IllustrationCollection)}
-          >
-            {ILLUSTRATION_COLLECTIONS.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.label}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <fieldset>
-          <legend className="mb-1.5 text-xs font-medium text-primary">Estilo</legend>
-          <div role="radiogroup" aria-label="Estilo" className="flex flex-wrap gap-1.5">
-            {ILLUSTRATION_STYLES.map((s) => (
+    <div className="space-y-3" data-testid="cover-geometric">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4" aria-label="Capas geométricas">
+        {WALLPAPERS.filter((w) => w.id !== "none").map((w) => {
+          const active = current?.wallpaper === w.id;
+          return (
+            <li key={w.id}>
               <button
-                key={s.id}
                 type="button"
-                role="radio"
-                aria-checked={style === s.id}
-                onClick={() => setStyle(s.id)}
+                onClick={() => onPick({ type: "wallpaper", wallpaper: w.id, variant: 0 })}
+                aria-pressed={active}
+                data-testid={`cover-wallpaper-${w.id}`}
                 className={cn(
-                  "h-9 rounded-lg border px-3 text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary active:scale-[0.97]",
-                  style === s.id
-                    ? "border-accent-primary/60 bg-accent-primary/10 text-primary"
-                    : "border-subtle text-muted hover:text-primary",
+                  "block w-full overflow-hidden rounded-lg border text-left transition-[border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary active:scale-[0.97] active:duration-0",
+                  active ? "border-accent-primary/70 shadow-paper" : "border-subtle hover:border-muted/40",
                 )}
               >
-                {s.label}
+                <WallpaperThumb id={w.id} variant={active ? current.variant : 0} className="aspect-[16/10]" />
+                <span className="block truncate px-2 py-1.5 text-xs text-primary">{w.label}</span>
               </button>
-            ))}
-          </div>
-        </fieldset>
-      </div>
+            </li>
+          );
+        })}
+      </ul>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-xs text-muted" data-testid="illustration-provider">
-          {provider}
-          {note && <span className="block text-warning">{note}</span>}
+        <p className="text-xs text-muted">
+          {current
+            ? `${WALLPAPERS.find((w) => w.id === current.wallpaper)?.blurb ?? ""}${current.variant ? ` Variação ${current.variant}.` : ""}`
+            : "Escolha uma composição para a capa."}
         </p>
-        <Button onClick={generate} disabled={pending} variant="secondary" data-testid="illustration-generate-button">
-          {pending ? (
-            <RefreshCw aria-hidden="true" className="animate-spin" strokeWidth={1.6} />
-          ) : (
-            <Sparkles aria-hidden="true" strokeWidth={1.6} />
-          )}
-          Gerar ilustração
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={!current}
+          onClick={() => current && onPick({ ...current, variant: freshVariant() })}
+          data-testid="cover-variant"
+        >
+          <Shuffle aria-hidden="true" strokeWidth={1.6} />
+          Gerar variação
         </Button>
       </div>
     </div>
-  );
-}
-
-function GalleryPanel({ selected, onPick }: { selected: CoverSpec | null; onPick: (spec: CoverSpec) => void }) {
-  return (
-    <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4" aria-label="Galeria curada">
-      {CURATED_COVERS.map((cover) => {
-        const active =
-          selected?.type === "generated" && selected.seed === cover.spec.seed && selected.prompt === cover.spec.prompt;
-        return (
-          <li key={cover.id}>
-            <button
-              type="button"
-              onClick={() => onPick(cover.spec)}
-              aria-pressed={active}
-              className={cn(
-                "block w-full overflow-hidden rounded-lg border text-left transition-[border-color,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary active:scale-[0.97]",
-                active ? "border-accent-primary/70 shadow-paper" : "border-subtle hover:border-muted/40",
-              )}
-            >
-              <span className="block aspect-[16/10]">
-                <IllustrationArt spec={cover.spec} size={{ width: 320, height: 200 }} />
-              </span>
-              <span className="block truncate px-2 py-1.5 text-xs text-primary">{cover.title}</span>
-            </button>
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 

@@ -14,6 +14,8 @@
  */
 import { z } from "zod";
 
+import { wallpaperDataUrl, wallpaperIdSchema } from "@/lib/geometric-wallpapers";
+
 /* ==========================================================================
    Coleções e estilos
    ========================================================================== */
@@ -70,6 +72,12 @@ export const coverSpecSchema = z.discriminatedUnion("type", [
       .min(0)
       .max(2 ** 31),
   }),
+  // Capa geométrica premium (src/lib/geometric-wallpapers.ts): wallpaper + variante de ângulo/cor.
+  z.object({
+    type: z.literal("wallpaper"),
+    wallpaper: wallpaperIdSchema.exclude(["none"]),
+    variant: z.number().int().min(0).max(9999).default(0),
+  }),
   z.object({
     type: z.literal("upload"),
     src: z
@@ -80,6 +88,7 @@ export const coverSpecSchema = z.discriminatedUnion("type", [
 ]);
 export type CoverSpec = z.infer<typeof coverSpecSchema>;
 export type GeneratedCover = Extract<CoverSpec, { type: "generated" }>;
+export type WallpaperCover = Extract<CoverSpec, { type: "wallpaper" }>;
 
 /* ==========================================================================
    Galeria curada (12 capas feitas com o mesmo motor)
@@ -597,7 +606,9 @@ export function illustrationDataUrl(
 
 /** Fonte de imagem de qualquer capa. */
 export function coverSrc(spec: CoverSpec, size?: { width: number; height: number }): string {
-  return spec.type === "upload" ? spec.src : illustrationDataUrl(spec, size);
+  if (spec.type === "upload") return spec.src;
+  if (spec.type === "wallpaper") return wallpaperDataUrl(spec.wallpaper, { variant: spec.variant, ...size }) ?? "";
+  return illustrationDataUrl(spec, size);
 }
 
 /** Semente nova a partir do relógio (cliente). */

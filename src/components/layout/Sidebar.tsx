@@ -37,6 +37,7 @@ import { createDocumentAction } from "@/app/(workspace)/actions";
 import { useShell } from "@/components/layout/ShellContext";
 import { VellumMark } from "@/components/layout/VellumMark";
 import { Avatar } from "@/components/ui/Avatar";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 import { Popover, PopoverItem } from "@/components/ui/Popover";
 import { openProfile, useCurrentAvatar } from "@/components/profile/ProfileModal";
 import { openSupport } from "@/components/support/SupportModal";
@@ -108,7 +109,7 @@ export function Sidebar(props: SidebarProps) {
       {/* Móvel: gaveta sobreposta */}
       <AnimatePresence>
         {mobileOpen && (
-          <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 z-[60] md:hidden">
             <motion.button
               type="button"
               aria-label="Fechar navegação"
@@ -338,7 +339,7 @@ function ProfileSwitcher({
         collapsed && "justify-center",
       )}
     >
-      <Avatar initials={user.initials} name={user.name} src={avatar} size="md" />
+      <UserAvatar user={{ name: user.name, initials: user.initials, avatarUrl: avatar }} size="md" />
       {!collapsed && (
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium leading-tight text-primary">{user.name}</span>

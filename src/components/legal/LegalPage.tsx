@@ -8,6 +8,7 @@ import Link from "next/link";
 
 import { AppFooter } from "@/components/layout/AppFooter";
 import { VellumMark } from "@/components/layout/VellumMark";
+import { InstitutionalBanner } from "@/components/wallpapers/GeometricBackground";
 
 export interface LegalSection {
   id: string;
@@ -28,7 +29,7 @@ export function LegalPage({
 }) {
   return (
     <div className="flex min-h-dvh flex-col bg-canvas">
-      <header className="liquid-glass-bar sticky top-0 z-20 border-b border-subtle">
+      <header className="liquid-glass-bar sticky top-0 z-50 border-b border-subtle">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-5 md:px-10">
           <Link
             href="/dashboard"
@@ -40,7 +41,7 @@ export function LegalPage({
           <VellumMark className="text-lg" />
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-5 pb-20 pt-12 md:px-10">
+      <InstitutionalBanner>
         <p className="eyebrow">{eyebrow}</p>
         <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight md:text-5xl" data-headline>
           {title}
@@ -48,14 +49,9 @@ export function LegalPage({
         <p className="mt-3 text-sm text-muted">
           Última atualização: <span className="nums">{updated}</span>
         </p>
-        <aside
-          role="note"
-          className="mt-8 max-w-prose rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm leading-relaxed text-primary"
-        >
-          <strong className="font-semibold">Modelo a rever por jurista.</strong> Este texto é um modelo preparado para o
-          Vellum e ainda não foi validado por um advogado. Não dispensa aconselhamento jurídico antes de uso comercial.
-        </aside>
-        <div className="mt-10 grid gap-12 md:grid-cols-[200px_1fr]">
+      </InstitutionalBanner>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-5 pb-20 pt-10 md:px-10">
+        <div className="grid gap-12 rounded-xl border border-subtle bg-elevated px-6 py-10 shadow-paper md:grid-cols-[200px_1fr] md:px-10">
           <nav aria-label="Índice" className="hidden md:block">
             <ol className="sticky top-24 space-y-2 text-sm">
               {sections.map((s, i) => (

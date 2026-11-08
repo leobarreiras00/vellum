@@ -150,6 +150,29 @@ async function findUser(identifier: string): Promise<AuthUserRow | null> {
   });
 }
 
+/**
+ * Nomes antigos que continuam a entrar: o username passou de «leo_barreiras»
+ * (e «leo», nos perfis de demonstração) para «leonardo_barreiras».
+ */
+const IDENTIFIER_ALIASES: Record<string, readonly string[]> = {
+  leonardo_barreiras: ["leo_barreiras", "leo"],
+  leo_barreiras: ["leonardo_barreiras", "leo"],
+  leo: ["leonardo_barreiras", "leo_barreiras"],
+  "leonardo@vellum.pt": ["leo@vellum.local"],
+  "leo@vellum.local": ["leonardo@vellum.pt"],
+};
+
+/** O identificador tal como existe na base de dados (username/email atual ou antigo). */
+async function resolveIdentifier(identifier: string): Promise<string> {
+  const needle = identifier.trim().toLowerCase();
+  const aliases = IDENTIFIER_ALIASES[needle];
+  if (!aliases || (await findUser(needle))) return needle;
+  for (const alias of aliases) {
+    if (await findUser(alias)) return alias;
+  }
+  return needle;
+}
+
 async function passwordSignIn(identifier: string, password: string): Promise<SessionUser | null> {
   const auth = await getAuth();
   const needle = identifier.trim().toLowerCase();
@@ -282,7 +305,8 @@ export async function signIn(
 ): Promise<AuthResult<SignInOutcome>> {
   const key = `login:${identifier.trim().toLowerCase()}`;
   if (isRateLimited(key, 8, 10 * 60_000)) return { ok: false, error: RATE_LIMITED };
-  const user = await verifyCredentials(identifier, password);
+  const resolved = await resolveIdentifier(identifier);
+  const user = await verifyCredentials(resolved, password);
   if (!user) return { ok: false, error: INVALID_CREDENTIALS };
   clearRateLimit(key);
 
@@ -294,7 +318,7 @@ export async function signIn(
     return { ok: true, data: await sendConfirmation(user, user.emailVerified ? "login" : "register", next) };
   }
 
-  const session = await passwordSignIn(identifier, password);
+  const session = await passwordSignIn(resolved, password);
   if (!session) return { ok: false, error: INVALID_CREDENTIALS };
   return { ok: true, data: { status: "signed-in", user: session } };
 }
@@ -336,7 +360,7 @@ export async function signInDemo(profileId: string): Promise<AuthResult<SessionU
   if (!isDemoAuthEnabled()) return { ok: false, error: "Os perfis de demonstração estão desativados." };
   const profile = DEMO_PROFILES.find((p) => p.id === profileId);
   if (!profile) return { ok: false, error: "Perfil de demonstração desconhecido." };
-  const user = await passwordSignIn(profile.username, profile.password);
+  const user = await passwordSignIn(await resolveIdentifier(profile.username), profile.password);
   if (!user?.isDemo) return { ok: false, error: "Perfil de demonstração indisponível." };
   return { ok: true, data: user };
 }
@@ -419,7 +443,7 @@ export async function requestPasswordReset(identifier: string): Promise<AuthResu
   if (isRateLimited(`reset:${identifier.trim().toLowerCase()}`, 5, 15 * 60_000)) {
     return { ok: false, error: RATE_LIMITED };
   }
-  const user = await findUser(identifier);
+  const user = await findUser(await resolveIdentifier(identifier));
   if (!user) return { ok: true, data: { demoCode: null } };
 
   const auth = await getAuth();
@@ -437,7 +461,7 @@ export async function requestPasswordReset(identifier: string): Promise<AuthResu
 const INVALID_CODE = "Código inválido ou expirado. Peça um novo código.";
 
 export async function confirmPasswordReset(identifier: string, code: string, password: string): Promise<AuthResult> {
-  const user = await findUser(identifier);
+  const user = await findUser(await resolveIdentifier(identifier));
   if (!user) return { ok: false, error: INVALID_CODE };
   if (isRateLimited(`reset-confirm:${user.id}`, 6, 15 * 60_000)) return { ok: false, error: RATE_LIMITED };
 

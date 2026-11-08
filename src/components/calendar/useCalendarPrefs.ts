@@ -40,11 +40,38 @@ export const DENSITY_LABELS: Record<CalendarDensity, string> = {
   expandida: "Expandida",
 };
 
-/** Altura das células da grelha mensal e número de eventos visíveis. */
-export const DENSITY_METRICS: Record<CalendarDensity, { cell: string; chips: number }> = {
-  compacta: { cell: "h-[96px]", chips: 2 },
-  confortavel: { cell: "h-[124px]", chips: 3 },
-  expandida: { cell: "h-[156px]", chips: 4 },
+/**
+ * Medidas de cada densidade, na grelha mensal e na Agenda com Notas.
+ * As diferenças são grandes de propósito: a troca tem de se ver logo.
+ */
+export const DENSITY_METRICS: Record<
+  CalendarDensity,
+  { cell: string; pad: string; text: string; chips: number; noteLines: string; card: string }
+> = {
+  compacta: {
+    cell: "min-h-[68px]",
+    pad: "p-1.5",
+    text: "text-xs",
+    chips: 1,
+    noteLines: "line-clamp-1",
+    card: "py-2 px-3",
+  },
+  confortavel: {
+    cell: "min-h-[96px]",
+    pad: "p-2.5",
+    text: "text-[13px]",
+    chips: 2,
+    noteLines: "line-clamp-2",
+    card: "py-3.5 px-4",
+  },
+  expandida: {
+    cell: "min-h-[132px]",
+    pad: "p-3.5",
+    text: "text-sm",
+    chips: 4,
+    noteLines: "line-clamp-3",
+    card: "py-5 px-5",
+  },
 };
 
 const KEY = "vellum:calendar-prefs";

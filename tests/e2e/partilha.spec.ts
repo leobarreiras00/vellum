@@ -154,7 +154,7 @@ test("Definições: email via Brevo, teste de envio, links ativos e dados de exe
   const sent = Date.now();
   await page.getByTestId("send-test-email").click();
   await expect(page.getByTestId("test-email-result")).toContainText("Enviado para");
-  const mail = await lastMail("leo@vellum.local", sent);
+  const mail = await lastMail("leonardo@vellum.pt", sent);
   expect(mail.subject).toBe("Vellum · email de teste");
   await expect(page.getByTestId("login-confirmation")).toBeVisible();
 

@@ -10,8 +10,9 @@
  */
 "use client";
 
-import { AtelierVignette } from "@/components/illustrations/AtelierVignette";
-import { ArrowRight, CalendarDays, FolderPlus, Sparkles, Star, StickyNote, Timer } from "lucide-react";
+import { Popover } from "@/components/ui/Popover";
+import { GeometricBackground, WallpaperPicker } from "@/components/wallpapers/GeometricBackground";
+import { ArrowRight, CalendarDays, FolderPlus, Shapes, Sparkles, Star, StickyNote, Timer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -77,22 +78,31 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
 
   return (
     <div className="mx-auto w-full max-w-7xl px-5 pb-16 pt-10 md:px-10">
-      <p className="eyebrow first-letter:uppercase">{todayLabel}</p>
-      <div className="mt-3 flex flex-wrap items-end justify-between gap-6">
-        <div>
-          <h1 className="text-4xl font-normal leading-tight tracking-tight md:text-5xl">
-            {greeting}, {firstName}
-            <span className="text-accent-primary">.</span>
-          </h1>
-          <p className="mt-3 max-w-prose font-serif text-lg text-muted">
-            Sessão em <span className="text-primary">{snapshot.workspace.name}</span> como{" "}
-            <span className="text-primary">{role ? ROLE_LABELS[role] : "visitante"}</span>.
-          </p>
+      {/* Cabeçalho vestido pelo fundo geométrico escolhido (Definições › Aparência). */}
+      <header
+        className="relative overflow-hidden rounded-xl border border-subtle bg-canvas px-6 py-8 shadow-paper md:px-9 md:py-10"
+        data-testid="dashboard-hero"
+      >
+        <GeometricBackground intensity="pleno" />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-r from-canvas/90 via-canvas/55 to-transparent"
+        />
+        <div className="relative flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <p className="eyebrow first-letter:uppercase">{todayLabel}</p>
+            <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight md:text-5xl">
+              {greeting}, {firstName}
+              <span className="text-accent-primary">.</span>
+            </h1>
+            <p className="mt-3 max-w-prose font-serif text-lg text-muted">
+              Sessão em <span className="text-primary">{snapshot.workspace.name}</span> como{" "}
+              <span className="text-primary">{role ? ROLE_LABELS[role] : "visitante"}</span>.
+            </p>
+          </div>
+          <WallpaperMenu />
         </div>
-        <div className="hidden sm:block">
-          <AtelierVignette />
-        </div>
-      </div>
+      </header>
 
       {snapshot.projects.length === 0 && (
         <EmptyAtelier
@@ -409,5 +419,35 @@ function EmptyAtelier({
         </ol>
       </div>
     </section>
+  );
+}
+
+/** Troca rápida do fundo geométrico sem sair do Dashboard. */
+function WallpaperMenu() {
+  return (
+    <Popover
+      label="Fundo geométrico"
+      align="end"
+      panelClassName="w-[19rem] p-3"
+      trigger={(props) => (
+        <button
+          type="button"
+          {...props}
+          title="Fundo geométrico"
+          data-testid="dashboard-wallpaper"
+          className="liquid-glass inline-flex h-8 items-center gap-1.5 rounded-lg px-3 text-xs font-medium text-primary transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary active:scale-[0.97] active:duration-0"
+        >
+          <Shapes aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
+          Fundo
+        </button>
+      )}
+    >
+      {() => (
+        <div>
+          <p className="eyebrow pb-2">Fundo geométrico</p>
+          <WallpaperPicker compact showIntensity showVariant />
+        </div>
+      )}
+    </Popover>
   );
 }

@@ -41,16 +41,13 @@ import {
   restoreExampleDataAction,
   revokeShareLinkAction,
   sendTestEmailAction,
-  setIllustrationThemeAction,
   setLoginConfirmationAction,
   updatePreferencesAction,
   type AccountEmailState,
 } from "@/app/(workspace)/actions";
 import { PermissionMatrix } from "@/components/auth/PermissionMatrix";
 import { openProfile } from "@/components/profile/ProfileModal";
-import { vignetteSpec } from "@/components/illustrations/AtelierVignette";
-import { IllustrationArt } from "@/components/illustrations/IllustrationArt";
-import { ILLUSTRATION_COLLECTIONS } from "@/lib/illustrations";
+import { WallpaperPicker } from "@/components/wallpapers/GeometricBackground";
 import { useCopy } from "@/components/editor/useCopy";
 import { useShell } from "@/components/layout/ShellContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
@@ -227,9 +224,21 @@ function AppearanceTab() {
         </div>
       </section>
 
-      <section aria-labelledby="set-font" className="mt-14">
+      <section aria-labelledby="set-wallpaper" className="mt-14">
         <SectionHeading
           index="02"
+          id="set-wallpaper"
+          title="Fundo geométrico"
+          description="Oito composições abstratas que vestem o fundo do atelier, o cabeçalho do Dashboard e a mesa à volta da folha A4. A escolha fica neste dispositivo."
+        />
+        <div className="mt-5" data-testid="settings-wallpapers">
+          <WallpaperPicker showIntensity showVariant />
+        </div>
+      </section>
+
+      <section aria-labelledby="set-font" className="mt-14">
+        <SectionHeading
+          index="03"
           id="set-font"
           title="Fonte de leitura"
           description="Usada no corpo das páginas. Os títulos mantêm sempre a Newsreader."
@@ -264,49 +273,6 @@ function AppearanceTab() {
                 <span className={cn("mt-3 block text-primary", meta.className)}>
                   «Um atelier para o pensamento escrito: a liberdade dos blocos, o rigor da página.»
                 </span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section aria-labelledby="set-illustrations" className="mt-14">
-        <SectionHeading
-          index="03"
-          id="set-illustrations"
-          title="Coleção de ilustrações"
-          description="Dá o tom à vinheta do Atelier e é a coleção inicial do Estúdio de ilustração (capas de projetos e documentos)."
-        />
-        <div
-          role="radiogroup"
-          aria-labelledby="set-illustrations"
-          className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          data-testid="illustration-collections"
-        >
-          {ILLUSTRATION_COLLECTIONS.map((c) => {
-            const selected = snapshot.profile.illustrationTheme === c.id;
-            return (
-              <button
-                key={c.id}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                disabled={isPending}
-                onClick={() => run(() => setIllustrationThemeAction(c.id), { success: `Coleção: ${c.label}.` })}
-                className={cn(
-                  "overflow-hidden rounded-xl border bg-elevated text-left transition-[border-color,box-shadow] duration-200 active:scale-[0.99]",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
-                  selected ? "border-accent-primary/70 shadow-paper" : "border-subtle hover:border-muted/40",
-                )}
-              >
-                <span className="block h-24 border-b border-subtle">
-                  <IllustrationArt spec={vignetteSpec(c.id)} size={{ width: 480, height: 192 }} />
-                </span>
-                <span className="flex items-center justify-between gap-2 px-4 pt-3 text-sm font-medium text-primary">
-                  {c.label}
-                  {selected && <Check aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={1.6} />}
-                </span>
-                <span className="block px-4 pb-3 pt-0.5 text-xs text-muted">{c.blurb}</span>
               </button>
             );
           })}
