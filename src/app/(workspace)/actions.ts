@@ -13,6 +13,9 @@ import { z } from "zod";
 
 import { getSession, type SessionUser } from "@/lib/auth";
 import { FORBIDDEN_MESSAGE, ForbiddenError } from "@/lib/rbac";
+import { MAX_ICS_BYTES } from "@/lib/sync/ics";
+import { MAX_MARKDOWN_BYTES, MAX_MARKDOWN_FILES } from "@/lib/sync/markdown-import";
+import { MAX_SNAPSHOT_BYTES, snapshotSchema } from "@/lib/sync/snapshot";
 import {
   NotFoundError,
   ValidationError,
@@ -35,7 +38,13 @@ import {
   deleteNote,
   deleteProject,
   exportMarkdown,
+  exportCalendarIcs,
+  exportWorkspaceBackup,
+  getExportBundle,
   getWorkspaceSnapshot,
+  importCalendarIcs,
+  importMarkdownDocuments,
+  importWorkspaceBackup,
   saveDocumentContent,
   setCommentResolved,
   setProjectMember,
@@ -244,4 +253,74 @@ export async function recordEffortAction(input: unknown) {
 
 export async function logFocusSessionAction(input: unknown) {
   return run((user) => logFocusSession(user, focusSessionSchema.parse(input)));
+}
+
+/* Exportação fiel e sincronização (Módulo 6) -------------------------------- */
+
+/** Documento autorizado para o Motor de Exportação (assertCan "document:export"). */
+export async function prepareDocumentExportAction(documentId: unknown) {
+  return run((user) => getExportBundle(user, idSchema.parse(documentId)));
+}
+
+const icsExportSchema = z.object({ includeAlarms: z.boolean().default(true) });
+
+export async function exportCalendarIcsAction(input: unknown) {
+  return run((user) => exportCalendarIcs(user, icsExportSchema.parse(input ?? {})));
+}
+
+const icsImportSchema = z.object({
+  text: z
+    .string()
+    .min(1, "O ficheiro está vazio.")
+    .max(MAX_ICS_BYTES, "O ficheiro .ics é demasiado grande (máximo 2 MB).")
+    .refine((t) => t.includes("BEGIN:VCALENDAR"), "Não é um ficheiro iCalendar (.ics) válido."),
+});
+
+export async function importCalendarIcsAction(input: unknown) {
+  return run((user) => importCalendarIcs(user, icsImportSchema.parse(input).text));
+}
+
+const markdownImportSchema = z.object({
+  projectId: idSchema,
+  files: z
+    .array(
+      z.object({
+        name: z.string().trim().min(1).max(200),
+        text: z.string().max(MAX_MARKDOWN_BYTES, "Cada ficheiro pode ter no máximo 500 KB."),
+      }),
+    )
+    .min(1, "Escolha pelo menos um ficheiro.")
+    .max(MAX_MARKDOWN_FILES, `No máximo ${MAX_MARKDOWN_FILES} ficheiros de cada vez.`),
+});
+
+export async function importMarkdownAction(input: unknown) {
+  return run((user) => {
+    const parsed = markdownImportSchema.parse(input);
+    return importMarkdownDocuments(user, parsed.projectId, parsed.files);
+  });
+}
+
+export async function exportWorkspaceSnapshotAction() {
+  return run((user) => exportWorkspaceBackup(user));
+}
+
+const snapshotImportSchema = z.object({
+  text: z.string().min(2).max(MAX_SNAPSHOT_BYTES, "O snapshot é demasiado grande (máximo 25 MB)."),
+});
+
+export async function importWorkspaceSnapshotAction(input: unknown) {
+  return run((user) => {
+    const { text } = snapshotImportSchema.parse(input);
+    let json: unknown;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      throw new ValidationError("O ficheiro não é um snapshot .vellum.json válido.");
+    }
+    const backup = snapshotSchema.safeParse(json);
+    if (!backup.success) {
+      throw new ValidationError("O snapshot não tem o formato do Vellum (versão 1) ou está corrompido.");
+    }
+    return importWorkspaceBackup(user, backup.data);
+  });
 }

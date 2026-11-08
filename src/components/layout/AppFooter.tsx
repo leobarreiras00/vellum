@@ -185,7 +185,7 @@ function StatusbarFooter({
       </div>
 
       {/* Centro — direitos reservados */}
-      <p className="hidden min-w-0 flex-1 truncate text-center md:block" title={COPYRIGHT_SHORT}>
+      <p className="hidden min-w-0 flex-1 truncate text-center md:block" title={COPYRIGHT_FULL}>
         {COPYRIGHT_SHORT}
       </p>
 

@@ -144,15 +144,19 @@ export function docToPlainText(doc: DocNode): string {
 function markdownInline(node: DocNode): string {
   if (node.type === "hardBreak") return "  \n";
   if (node.type !== "text") return (node.content ?? []).map(markdownInline).join("");
-  let text = node.text ?? "";
+  const raw = node.text ?? "";
   const marks = new Set((node.marks ?? []).map((m) => m.type));
-  if (marks.has("code")) return `\`${text}\``;
+  if (marks.has("code")) return `\`${raw}\``;
+  // Espaços nas pontas ficam fora dos delimitadores («**negrito:** texto», não «**negrito: **texto»).
+  const [, lead = "", core = "", trail = ""] = /^(\s*)([\s\S]*?)(\s*)$/.exec(raw) ?? [];
+  if (!core) return raw;
+  let text = core;
   if (marks.has("bold")) text = `**${text}**`;
   if (marks.has("italic")) text = `*${text}*`;
   if (marks.has("strike")) text = `~~${text}~~`;
   const link = node.marks?.find((m) => m.type === "link");
   if (link && typeof link.attrs?.href === "string") text = `[${text}](${link.attrs.href})`;
-  return text;
+  return `${lead}${text}${trail}`;
 }
 
 function markdownBlock(node: DocNode, indent = ""): string {

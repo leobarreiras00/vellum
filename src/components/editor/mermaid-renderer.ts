@@ -28,10 +28,11 @@ function loadLibs() {
   return libs;
 }
 
-function themeVariables() {
-  const root = getComputedStyle(document.documentElement);
+function themeVariables(themeRoot: Element = document.documentElement) {
+  const root = getComputedStyle(themeRoot);
   const v = (name: string) => root.getPropertyValue(name).trim();
-  const dark = document.documentElement.getAttribute("data-theme") === "dark-espresso";
+  const dark =
+    (themeRoot.closest("[data-theme]") ?? document.documentElement).getAttribute("data-theme") === "dark-espresso";
   const sans = v("--font-sans") || "sans-serif";
   return {
     darkMode: dark,
@@ -94,8 +95,17 @@ function themeVariables() {
 
 export type MermaidRenderResult = { ok: true; svg: string } | { ok: false; error: MermaidFriendlyError };
 
+export interface RenderMermaidOptions {
+  /**
+   * Elemento de onde se leem as variáveis do tema (por omissão, o <html>).
+   * A exportação usa um contentor com `data-theme` próprio, para que o PDF/Word
+   * saia sempre em papel claro, independentemente do tema da interface.
+   */
+  themeRoot?: Element;
+}
+
 /** Valida e renderiza um diagrama; nunca lança (devolve um erro amigável). */
-export function renderMermaid(code: string): Promise<MermaidRenderResult> {
+export function renderMermaid(code: string, options: RenderMermaidOptions = {}): Promise<MermaidRenderResult> {
   const job = queue.then(async (): Promise<MermaidRenderResult> => {
     if (!code.trim()) return { ok: false, error: explainMermaidError("", code) };
     const { mermaid, purify } = await loadLibs();
@@ -104,7 +114,7 @@ export function renderMermaid(code: string): Promise<MermaidRenderResult> {
       securityLevel: "strict",
       htmlLabels: false,
       theme: "base",
-      themeVariables: themeVariables(),
+      themeVariables: themeVariables(options.themeRoot),
       flowchart: { htmlLabels: false, curve: "basis", padding: 12 },
       sequence: { useMaxWidth: true },
       gantt: { useMaxWidth: true },

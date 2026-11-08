@@ -22,9 +22,9 @@ test("App Shell: sidebar, topbar, barra de estado e direitos reservados", async 
     await expect(sidebar.getByRole("link", { name: link, exact: true })).toBeVisible();
   }
   const tree = sidebar.getByRole("tree");
-  await expect(tree.getByRole("link", { name: "Arquitetura Plataforma Vellum" })).toBeVisible();
-  await expect(tree.getByRole("link", { name: "Investigação UX & Sistemas Editoriais" })).toBeVisible();
-  await expect(tree.getByRole("link", { name: "Planeamento Estratégico Q4" })).toBeVisible();
+  await expect(tree.getByRole("link", { name: "Arquitetura Plataforma Vellum", exact: true })).toBeVisible();
+  await expect(tree.getByRole("link", { name: "Investigação UX & Sistemas Editoriais", exact: true })).toBeVisible();
+  await expect(tree.getByRole("link", { name: "Planeamento Estratégico Q4", exact: true })).toBeVisible();
 
   await expect(page.locator("header [data-role]").first()).toHaveText(/Super Admin/);
   await expect(page.getByRole("contentinfo", { name: "Barra de estado" })).toContainText(

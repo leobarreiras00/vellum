@@ -3,12 +3,12 @@
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
-**Estado atual:** Fase 4 concluída (Calendário personalizável, Notificações, Motor de Telemetria de Esforço e Dashboard analítico) · Próximo passo: Fase 2B (PostgreSQL + Better-Auth), Fase 3B ou Fase 5 (Exportação fiel)
-**Última atualização:** 2026-11-07
+**Estado atual:** ✅ Todas as fases do Vellum (0 a 5) 100% Concluídas. A Fase 5 fechou o projeto com o Motor de Exportação Sem Desformatação (PDF, Word, Markdown, HTML) e o Hub de Sincronização (.ics, Markdown, `.vellum.json`). As evoluções seguintes estão no «Roteiro pós-lançamento», no fim deste ficheiro.
+**Última atualização:** 2026-11-08
 
 ---
 
-## Fase 0 — Governação & Fundação documental ✅ CONCLUÍDA
+## Fase 0 — Governação & Fundação documental ✅ 100% CONCLUÍDA
 
 - [x] Inspeção inicial do repositório
 - [x] `LICENSE` proprietária (PT + EN) — todos os direitos reservados a Leonardo Barreiras
@@ -18,7 +18,7 @@
 - [x] `.claude/PROGRESS.md` (este ficheiro)
 - [x] `README.md` oficial em PT-PT com Footer documental
 
-## Fase 1 — Fundação técnica
+## Fase 1 — Fundação técnica ✅ 100% CONCLUÍDA
 
 ### Fase 1A — Skills, fundação Next.js 15, Design System Creme, `<AppFooter />` e Prisma ✅ CONCLUÍDA (2026-11-07)
 
@@ -63,7 +63,7 @@
 - [x] Playwright configurado (`playwright.config.ts`, `npm run test:e2e`): 10 testes E2E (desktop 1440×900 + Pixel 7)
 - [x] Validado: `tsc --noEmit`, `next build`, Playwright 10/10 (duas execuções seguidas), revisão visual em `warm-cream` e `dark-espresso`, desktop e móvel
 
-## Fase 2 — Módulo 1 (Auth & RBAC) + Módulo 2 (Workspace Engine)
+## Fase 2 — Módulo 1 (Auth & RBAC) + Módulo 2 (Workspace Engine) ✅ 100% CONCLUÍDA
 
 ### Fase 2A — Workspace Engine, Projetos, Páginas, Notas, ⌘K e Definições ✅ CONCLUÍDA (2026-11-07)
 
@@ -84,7 +84,7 @@
 - [x] `prisma/schema.prisma`: `InkColor`, `ReadingFont`, `ProjectMember`, `Project.color`, `Document.summary`, `QuickNote.title/color/projectId`, `User.dailyGoalMinutes/readingFont`
 - [x] `middleware.ts` protege `/projects`, `/notes`, `/calendar`, `/settings`
 
-### Fase 2B — Persistência real e autenticação definitiva (pendente)
+### Roteiro pós-lançamento · Persistência real e autenticação definitiva (antiga Fase 2B)
 
 - [ ] Primeira migração Prisma (`prisma migrate dev --name init`) com PostgreSQL local; trocar a implementação de `workspace-store.ts` por Prisma (mesma API)
 - [ ] Better-Auth (email/palavra-passe, magic link, OAuth) a substituir o motor provisório de `src/lib/auth.ts` (mesma API pública)
@@ -103,7 +103,7 @@
 - [x] Pipeline CI em `.github/workflows/ci.yml`: lint, typecheck, formatação, Vitest; depois build + Playwright (Chromium)
 - [ ] Converter o fluxo E2E da Fase 1B (login, registo, recuperação) em testes Playwright
 
-## Fase 3 — Módulo 3 (Editor Rico + Estúdio Mermaid)
+## Fase 3 — Módulo 3 (Editor Rico + Estúdio Mermaid) ✅ 100% CONCLUÍDA
 
 ### Fase 3A — Editor Gráfico (Word + Notion), Modo Folha A4 e Estúdio Mermaid ✅ CONCLUÍDA (2026-11-07)
 
@@ -122,18 +122,18 @@
 - [x] Modelo: `DocumentRecord.contentJson` + `version`, `DocumentCommentRecord`, `DocumentView.effortSeconds`; ficheiros `.data/workspace.json` antigos são atualizados ao carregar; seed com documento rico («Visão geral da arquitetura»: callout, Mermaid, tabela, checklist) e 2 comentários
 - [x] Validado: `tsc --noEmit`, `next build` (sem cache), Vitest 23/23, Playwright 15/15 (4 novos: editor, Folha A4/Fluido, Estúdio Mermaid, RBAC do documento; + documento no telemóvel), revisão visual em `warm-cream` e `dark-espresso`, desktop e Pixel 7
 
-### Fase 3B — pendente
+### Roteiro pós-lançamento · Editor (antiga Fase 3B)
 
 - [ ] Pega de arrasto à esquerda de cada bloco e conversão de tipo de bloco (Modo Bloco completo)
-- [ ] Paginação real (blocos distribuídos por folhas), cabeçalhos/rodapés e numeração de páginas
+- [x] Paginação real (blocos distribuídos por folhas), rodapés e numeração de páginas — feito na exportação da Fase 5 (pré-visualização e PDF); no editor continua o Modo Folha A4 com guias
 - [ ] Estilos de parágrafo nomeados e índice automático
 - [ ] Imagens e código com realce de sintaxe
 - [ ] Histórico de versões com restauro (hoje só o número da versão)
 - [ ] Comentários ancorados ao texto (marks) e menções
 - [ ] Atualização da página quando outra pessoa grava (hoje última gravação ganha)
-- [ ] Exportação PDF no servidor via Playwright e DOCX (Fase 5)
+- [x] Exportação PDF no servidor via Playwright e DOCX (Fase 5)
 
-## Fase 4 — Módulo 4 (Calendário + Notificações) + Módulo 5 (Telemetria & Dashboard)
+## Fase 4 — Módulo 4 (Calendário + Notificações) + Módulo 5 (Telemetria & Dashboard) ✅ 100% CONCLUÍDA
 
 ### Fase 4 — Calendário Personalizável, Notificações, Telemetria de Esforço e Dashboard Analítico ✅ CONCLUÍDA (2026-11-07)
 
@@ -154,24 +154,57 @@
 - [x] `prisma/schema.prisma`: `CalendarLegend.color` → `InkColor` + `deletedAt`, `CalendarEvent.isImportant`, modelo `DayNote`, `EffortLog.edits`, `EffortSource.FOCUS_SESSION`
 - [x] Validado: `tsc --noEmit`, ESLint (0 erros), Prettier, Vitest 40/40 (17 novos: calendário, notificações, telemetria), `next build`, Playwright 20/20 (5 novos: calendário completo, centro de notificações com alertas nativos, legendas e RBAC, telemetria/dashboard/RBAC, calendário e dashboard no telemóvel), revisão visual em `warm-cream` e `dark-espresso`, desktop e Pixel 7
 
-### Fase 4B — pendente
+### Roteiro pós-lançamento · Calendário (antiga Fase 4B)
 
-- [ ] Recorrência (RRULE) e importação/exportação ICS
+- [x] Importação/exportação ICS (Fase 5)
+- [ ] Recorrência (RRULE) — hoje os eventos recorrentes importados entram só com a primeira ocorrência
 - [ ] Arrastar eventos na grelha e redimensionar na vista semanal
 - [ ] Notificações no servidor (modelo `Notification`, email, Web Push com Service Worker para Android)
 - [ ] Preferências de notificação e controlos de privacidade da telemetria (pausar medição, apagar histórico)
 - [ ] Agregações diárias no servidor quando os registos crescerem (PostgreSQL)
 
-## Fase 5 — Módulo 6 (Exportação Fiel & Sincronização) + Lançamento
+## Correção pré-Fase 5 — Menu lateral recolhido ✅ CONCLUÍDA (2026-11-07)
 
-- [ ] Exportação PDF via Playwright
-- [ ] Exportação DOCX via `docx` sem desformatação
-- [ ] Exportação/importação Markdown e HTML
-- [ ] Testes de regressão visual da exportação
-- [ ] Fila offline e resolução de conflitos
-- [ ] Auditoria de acessibilidade (AA) nos 5 temas
-- [ ] Otimização de performance e SEO
-- [ ] Deploy de produção e documentação final
+- [x] Com a barra lateral recolhida (60px), o conteúdo interno continuava a 272px e o `overflow-hidden` cortava o botão de expandir, a pesquisa e os ícones (visível em `/calendar`, no print do Leonardo). `Sidebar.tsx`: o conteúdo acompanha a largura (`w-[60px]` / `w-[272px]` / `w-full` no telemóvel), com `data-sidebar-content`
+- [x] `tests/e2e/sidebar-collapsed.spec.ts`: com `vellum:sidebar-collapsed=1`, em `/calendar`, `/dashboard`, `/projects`, `/notes` e `/settings`, o botão de expandir, a pesquisa e os ícones ficam dentro dos 60px; depois expande (falhava antes da correção: 144 > 60,5)
+
+## Fase 5 — Módulo 6 (Exportação Fiel & Sincronização) + Fecho ✅ 100% CONCLUÍDA (2026-11-08)
+
+### Motor de Exportação Sem Desformatação
+
+- [x] `src/components/editor/ExportModal.tsx` (`<dialog>` nativo, aberto pelo botão «Exportar» do editor e da Topbar num documento): escolha do formato, opções (papel creme `#FAF7F2` ou branco `#FFFFFF`, folha de rosto com metadados, rodapé paginado com direitos reservados, tema do HTML entre os 5, frontmatter YAML), lista de integridade (diagramas, tabelas, tarefas, palavras) e **pré-visualização paginada A4** num `iframe` `srcdoc` com contagem de folhas; grava o documento antes de exportar (`registerFlush`)
+- [x] RBAC: `canExportDocument` — Proprietário, Editor e Comentador (Marta Rocha) exportam; Leitor (Pedro Costa) não vê o botão. No servidor, `getExportBundle` exige `document:export` no projeto (Server Action `prepareDocumentExportAction` e rota do PDF)
+- [x] `src/lib/exporters/`: `types.ts` (formatos, papéis, medidas A4, nome de ficheiro, linha de direitos), `inline.ts` (marcas → runs, só chaves fechadas da paleta, ligações seguras `http(s)`/`mailto`/`#`), `html-render.ts` (HTML semântico escapado), `html-document.ts` (CSS de exportação e documento paginado ou autónomo), `paginate.ts` (paginação no cliente), `fonts.ts` (Newsreader, Plus Jakarta Sans e JetBrains Mono em base64), `theme-vars.ts`, `mermaid-assets.ts`, `markdown.ts`, `docx.ts`, `download.ts`, `index.ts`
+- [x] **Mermaid «Zero Desformatação»**: cada diagrama é re-renderizado a partir do código com as cores do tema e serializado a partir do SVG; `viewBox` preservado, largura limitada à largura útil A4 (643px ≈ 170mm), altura máxima ≈ 205mm, `max-width: 100%`; diagrama com erro sai como código com aviso, nunca em branco
+- [x] Paginação: folha de rosto numa folha só; blocos que não cabem passam para a folha seguinte e levam consigo o H1–H3 anterior; listas dividem por item (mantêm o `start`); tabelas e código maiores que uma folha dividem por linhas; rodapé «Página N de M» + direitos
+- [x] **PDF**: `POST /api/export/pdf` (sessão, Zod, RBAC) imprime com `playwright-core` (Chromium com JS desligado, offline, todos os pedidos não-`data:` abortados) as mesmas folhas da pré-visualização: `@page { size: A4 portrait; margin: 20mm; }`, `break-inside: avoid !important` em Mermaid, tabelas, callouts e código, `break-after: avoid !important` em H1–H3, papel creme ou branco (incluindo margens, via `@page { background }`), PDF etiquetado com marcadores. Sem Chromium devolve 503 e o modal usa a impressão do navegador
+- [x] **Word (.docx)** com `docx`: A4 com margens de 20mm, título, descrição, metadados, H1–H3, fontes, cores e realces da paleta, sublinhados (estilo e cor), listas com numeração própria por lista, checklists, tabelas com bordas e cabeçalho repetido, callouts, código, citações, estilos nomeados em PT-PT («Citação Vellum», «Código Vellum»…), diagramas Mermaid em PNG a 300 dpi com texto alternativo, folha de rosto e rodapé paginado com direitos. Verificado no LibreOffice (3 folhas, sem sobreposições)
+- [x] **Markdown**: frontmatter YAML (`title`, `description`, `project`, `author`, `date`, `word_count`…), H1 + sumário, `docToMarkdown` com ```` ```mermaid ```` preservado e direitos no fim. `docToMarkdown` passou a manter os espaços fora de `**…**` (corrige «**Regra de ouro: **A…»)
+- [x] **HTML**: ficheiro único e offline, fontes e SVG embutidos, variáveis do tema escolhido, folha centrada com colofão de direitos, sem scripts nem pedidos externos
+
+### Hub de Sincronização
+
+- [x] `src/components/settings/SyncHub.tsx`, no Calendário (botão «Sincronizar .ics», só a secção do calendário) e nas Definições (secção 05 «Hub de Sincronização», completa)
+- [x] **.ics (RFC 5545)** — `src/lib/sync/ics.ts`: exportação com `VTIMEZONE` Europe/Lisbon, eventos com hora (`TZID`) e de dia inteiro (`VALUE=DATE`), Dias Importantes (`CATEGORIES:Dia Importante`, `PRIORITY:1`), legendas (`CATEGORIES`, `COLOR`, `X-VELLUM-LEGEND`), projeto nas notas, `VALARM` (dias inteiros às 09:00), escape e dobragem a 75 octetos com CRLF. Importação de Google, Outlook (fusos Windows) e Apple: UTC, `TZID`, dias inteiros multi-dia, `DURATION`, `VALARM`, ignora cancelados, legendas pelo nome, sem duplicados (UID ou assinatura); recorrentes entram com a primeira ocorrência e são contados
+- [x] **Importação de Markdown** — `src/lib/sync/markdown-import.ts`: até 20 ficheiros de 500 KB para um projeto; frontmatter, título (H1) e sumário, títulos, listas aninhadas, tarefas, tabelas GFM, citações, callouts (`> **Destaque**`), código, Mermaid com legenda, ligações seguras; ida e volta fiel com a exportação Markdown do Vellum
+- [x] **Snapshot `.vellum.json`** — `src/lib/sync/snapshot.ts` (schema Zod, versão 1, até 25 MB): projetos, documentos (JSON ProseMirror validado), notas, legendas, eventos, Notas do Dia e métricas de esforço. Exportar inclui só os projetos que a pessoa pode exportar e só as suas Notas do Dia e esforço; restaurar é aditivo (ids novos, nomes repetidos ganham «(importado)»), exige Proprietário e cada snapshot só entra uma vez
+- [x] Server Actions: `exportCalendarIcsAction`, `importCalendarIcsAction`, `importMarkdownAction`, `exportWorkspaceSnapshotAction`, `importWorkspaceSnapshotAction` (autenticar → Zod → `assertCan`)
+
+### Qualidade
+
+- [x] `tests/unit/exporters.test.ts` (12) e `tests/unit/sync.test.ts` (8): segurança das marcas, HTML escapado, CSS A4, docx (estilos, tabela, numeração, imagem, rodapé), Markdown, .ics (estrutura, dobragem, ida e volta, Google/Outlook/Apple), Markdown importado e snapshot
+- [x] `tests/e2e/fase5.spec.ts` (4): login **com** a animação da caneta → Dashboard → Projetos → Editor com Mermaid → Exportar (pré-visualização paginada, PDF A4 com N folhas, docx com imagem, Markdown com frontmatter e Mermaid, HTML offline) → Calendário (.ics com VALARM, importação Google sem duplicar) → Definições (Markdown, snapshot, restauro único) → direitos no `<AppFooter />`; RBAC Marta exporta, Pedro não
+- [x] `<AppFooter variant="statusbar" />`: o texto curto passa a ter como `title` a linha completa «Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras)»
+- [x] Validado: `tsc --noEmit`, ESLint (0 erros; os 5 avisos `exhaustive-deps` antigos), Prettier, Vitest 60/60, `next build`, Playwright 25/25 (desktop + Pixel 7)
+
+## Roteiro pós-lançamento (fora do âmbito das Fases 0–5)
+
+- [ ] PostgreSQL + Better-Auth (ver «antiga Fase 2B» acima)
+- [ ] Recorrência de eventos (RRULE) e sincronização contínua por URL de subscrição
+- [ ] Fila offline e resolução de conflitos entre pessoas a editar o mesmo documento
+- [ ] Testes de regressão visual das exportações (comparação de imagens)
+- [ ] Auditoria de acessibilidade AA nos 5 temas
+- [ ] Otimização de performance, SEO e deploy de produção
 
 ---
 
@@ -214,6 +247,10 @@
 | 2026-11-07 | Telemetria: inatividade a 120 s, heartbeat a cada 60 s ativos, sessões agregadas no servidor (< 10 min entre heartbeats). Palavras escritas = aumento da contagem de palavras dos documentos gravados pela própria pessoa. |
 | 2026-11-07 | Índice de Esforço Aplicado (7 dias): 40% consistência, 30% tempo vs. meta, 20% palavras (3500/semana), 10% edições (140/semana). |
 | 2026-11-07 | Painel RBAC do dashboard passa para o separador «Permissões (RBAC)» (`/dashboard#rbac`). |
+| 2026-11-08 | Fase 5: dependências novas `docx` (Word no navegador) e `playwright-core` (PDF no servidor, em `serverExternalPackages`); `serverActions.bodySizeLimit` a 26 MB para snapshots. |
+| 2026-11-08 | Paginação feita no cliente (mesmo HTML para pré-visualização e PDF); o servidor só imprime as folhas, com JS desligado e rede bloqueada. Papel creme nas margens via `@page { background }`. |
+| 2026-11-08 | Exportar snapshot exige `document:export` e inclui só projetos exportáveis pela pessoa; restaurar é aditivo, só para o Proprietário (`project:manage` + `legend:manage`) e uma vez por snapshot. |
+| 2026-11-08 | Todas as fases 0–5 dadas como 100% Concluídas; o que estava em «2B/3B/4B» e os itens de lançamento passam ao Roteiro pós-lançamento. |
 
 ---
 

@@ -238,6 +238,8 @@ export interface CalendarEventRecord {
   /** Minutos de antecedência do lembrete; `null` = sem notificação. */
   reminderMinutes: number | null;
   notes: string;
+  /** UID iCalendar de origem (importação .ics; evita duplicados e mantém o UID ao reexportar). */
+  externalUid?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -279,6 +281,8 @@ export interface StoreData {
   calendarEvents: CalendarEventRecord[];
   dayNotes: DayNoteRecord[];
   preferences: Record<string, UserPreferences>;
+  /** Snapshots .vellum.json já importados (por workspace), para não duplicar. */
+  importedSnapshots?: Array<{ workspaceId: string; snapshotId: string; importedAt: string }>;
 }
 
 /* ==========================================================================

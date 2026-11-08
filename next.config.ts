@@ -8,8 +8,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Chromium do Playwright para o PDF paginado no servidor (Fase 5): nunca empacotado.
+  serverExternalPackages: ["playwright-core"],
   experimental: {
     optimizePackageImports: ["lucide-react", "motion"],
+    // Snapshots .vellum.json e pacotes de notas Markdown (Fase 5).
+    serverActions: { bodySizeLimit: "26mb" },
   },
   async headers() {
     return [

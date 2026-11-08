@@ -13,7 +13,7 @@
  */
 "use client";
 
-import { Download, Eye, FilePlus2, FileText, MessageSquareText, Printer, Trash2 } from "lucide-react";
+import { Download, Eye, FilePlus2, FileText, MessageSquareText, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -27,7 +27,6 @@ import { VellumEditor, useVellumEditor } from "@/components/editor/VellumEditor"
 import { useShell } from "@/components/layout/ShellContext";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { Popover, PopoverItem } from "@/components/ui/Popover";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { docToPlainText, plainTextToDoc, type DocContent } from "@/lib/document-content";
 import { PAGE_MODES, PAGE_MODE_LABELS } from "@/lib/page-mode";
@@ -48,7 +47,7 @@ interface DocumentEditorClientProps {
 export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentEditorClientProps) {
   const router = useRouter();
   const { snapshot, run, subjectFor, isPending } = useWorkspace();
-  const { exportMarkdown, isExporting } = useShell();
+  const { openExport, registerFlush, isExporting } = useShell();
   const project = snapshot.projects.find((p) => p.id === projectId);
   const doc = snapshot.documents.find((d) => d.id === documentId);
 
@@ -140,6 +139,12 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
   // Grava ao sair da página; avisa antes de fechar o separador com alterações.
   const saveRef = useRef(save);
   saveRef.current = save;
+
+  // O Modal de Exportação grava primeiro as alterações pendentes.
+  useEffect(() => {
+    registerFlush(() => saveRef.current());
+    return () => registerFlush(null);
+  }, [registerFlush]);
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (dirty.current || saving.current) event.preventDefault();
@@ -219,11 +224,6 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
     }
   }
 
-  function printSheet() {
-    setPageMode("A4");
-    window.setTimeout(() => window.print(), 350);
-  }
-
   return (
     <div className="flex min-h-full items-start">
       <div className="min-w-0 flex-1">
@@ -286,41 +286,17 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
             )}
 
             {canExport && (
-              <Popover
-                label="Exportar documento"
-                role="menu"
-                align="end"
-                trigger={(props) => (
-                  <Button size="sm" variant="ghost" data-testid="document-export" disabled={isExporting} {...props}>
-                    <Download aria-hidden="true" strokeWidth={1.5} />
-                    Exportar
-                  </Button>
-                )}
+              <Button
+                size="sm"
+                variant="ghost"
+                data-testid="document-export"
+                disabled={isExporting}
+                onClick={() => openExport(doc.id)}
+                title="PDF paginado, Word, Markdown ou HTML autónomo"
               >
-                {(close) => (
-                  <>
-                    <PopoverItem
-                      onClick={async () => {
-                        close();
-                        await save();
-                        exportMarkdown({ kind: "document", id: doc.id });
-                      }}
-                    >
-                      <FileText aria-hidden="true" className="size-4 text-muted" strokeWidth={1.5} />
-                      Markdown (.md)
-                    </PopoverItem>
-                    <PopoverItem
-                      onClick={() => {
-                        close();
-                        printSheet();
-                      }}
-                    >
-                      <Printer aria-hidden="true" className="size-4 text-muted" strokeWidth={1.5} />
-                      PDF · Imprimir Folha A4
-                    </PopoverItem>
-                  </>
-                )}
-              </Popover>
+                <Download aria-hidden="true" strokeWidth={1.5} />
+                Exportar
+              </Button>
             )}
 
             {canCreate && (

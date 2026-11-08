@@ -14,6 +14,10 @@ export interface ShellContextValue {
   openProjectForm: (projectId?: string) => void;
   openMembers: (projectId: string | null) => void;
   exportMarkdown: (target: { kind: "document" | "project"; id: string }) => void;
+  /** Abre o Modal de Exportação (PDF, Word, Markdown, HTML) de um documento. */
+  openExport: (documentId: string) => void;
+  /** O editor regista aqui a gravação imediata, chamada antes de exportar. */
+  registerFlush: (flush: (() => Promise<void>) | null) => void;
   chooseTheme: (theme: ThemeId) => void;
   isExporting: boolean;
 }

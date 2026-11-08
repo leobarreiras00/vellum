@@ -151,7 +151,10 @@ function SidebarContent({
   const { snapshot, can } = useWorkspace();
 
   return (
-    <div className={cn("flex h-full flex-col", isMobile ? "w-full" : "w-[272px]")}>
+    <div
+      className={cn("flex h-full flex-col", isMobile ? "w-full" : collapsed ? "w-[60px]" : "w-[272px]")}
+      data-sidebar-content=""
+    >
       {/* Topo: monograma + recolher */}
       <div
         className={cn("flex h-12 shrink-0 items-center", collapsed ? "justify-center" : "justify-between pl-4 pr-2")}

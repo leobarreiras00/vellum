@@ -11,13 +11,24 @@
  */
 "use client";
 
-import { CalendarDays, ChevronLeft, ChevronRight, NotebookTabs, Plus, SlidersHorizontal, Star } from "lucide-react";
+import {
+  ArrowLeftRight,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  NotebookTabs,
+  Plus,
+  SlidersHorizontal,
+  Star,
+} from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 
 import { AgendaView } from "@/components/calendar/AgendaView";
 import { EventDialog, type EventDialogState } from "@/components/calendar/EventDialog";
 import { LegendManager } from "@/components/calendar/LegendManager";
+import { SyncHub } from "@/components/settings/SyncHub";
+import { Dialog } from "@/components/ui/Dialog";
 import { MonthGrid } from "@/components/calendar/MonthGrid";
 import { useDayNotes } from "@/components/calendar/useDayNotes";
 import { WeekGrid } from "@/components/calendar/WeekGrid";
@@ -77,6 +88,7 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<EventDialogState>({ open: false });
   const [legendsOpen, setLegendsOpen] = useState(false);
+  const [syncOpen, setSyncOpen] = useState(false);
 
   // Preferências locais da vista.
   useEffect(() => {
@@ -294,7 +306,17 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
             </button>
           );
         })}
-        <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setLegendsOpen(true)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="ml-auto"
+          onClick={() => setSyncOpen(true)}
+          data-testid="calendar-sync"
+        >
+          <ArrowLeftRight aria-hidden="true" strokeWidth={1.5} />
+          Sincronizar .ics
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => setLegendsOpen(true)}>
           <SlidersHorizontal aria-hidden="true" strokeWidth={1.5} />
           Gerir legendas
         </Button>
@@ -346,6 +368,16 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
 
       <EventDialog state={dialog} onClose={() => setDialog({ open: false })} />
       <LegendManager open={legendsOpen} onClose={() => setLegendsOpen(false)} hidden={hidden} onToggle={toggleLegend} />
+      <Dialog
+        open={syncOpen}
+        onClose={() => setSyncOpen(false)}
+        size="lg"
+        eyebrow="Hub de Sincronização"
+        title="Google Calendar, Apple Calendar e Outlook"
+        description="Exporte a agenda editorial em .ics ou traga eventos de outras aplicações."
+      >
+        <SyncHub sections={["calendar"]} />
+      </Dialog>
     </div>
   );
 }

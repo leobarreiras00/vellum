@@ -11,9 +11,10 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { exportMarkdownAction, updatePreferencesAction } from "@/app/(workspace)/actions";
+import { ExportModal } from "@/components/editor/ExportModal";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { ShellContext, type ShellContextValue } from "@/components/layout/ShellContext";
@@ -55,6 +56,8 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
     projectId: null,
   });
   const [isExporting, setExporting] = useState(false);
+  const [exportDocId, setExportDocId] = useState<string | null>(null);
+  const flushRef = useRef<(() => Promise<void>) | null>(null);
   const [ready, setReady] = useState(false);
   const telemetry = useTelemetry();
   useEventReminders();
@@ -143,6 +146,10 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
       openProjectForm: (projectId?: string) => setProjectForm({ open: true, projectId }),
       openMembers: (projectId: string | null) => setMembersFor({ open: true, projectId }),
       exportMarkdown,
+      openExport: (documentId: string) => setExportDocId(documentId),
+      registerFlush: (flush) => {
+        flushRef.current = flush;
+      },
       chooseTheme,
       isExporting,
     }),
@@ -204,6 +211,14 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
         open={membersFor.open}
         projectId={membersFor.projectId}
         onClose={() => setMembersFor((s) => ({ ...s, open: false }))}
+      />
+      <ExportModal
+        open={exportDocId !== null}
+        documentId={exportDocId}
+        onClose={() => setExportDocId(null)}
+        beforeExport={async () => {
+          await flushRef.current?.();
+        }}
       />
       <Toaster />
     </ShellContext.Provider>

@@ -13,6 +13,7 @@ import { useEffect, useState } from "react";
 
 import { updatePreferencesAction } from "@/app/(workspace)/actions";
 import { PermissionMatrix } from "@/components/auth/PermissionMatrix";
+import { SyncHub } from "@/components/settings/SyncHub";
 import { useShell } from "@/components/layout/ShellContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Button } from "@/components/ui/Button";
@@ -236,6 +237,19 @@ export function SettingsClient() {
         )}
         <div className="mt-5">
           <PermissionMatrix role={role} />
+        </div>
+      </section>
+
+      {/* 05 Sincronização */}
+      <section aria-labelledby="set-sync" className="mt-14" id="sincronizacao">
+        <SectionHeading
+          index="05"
+          id="set-sync"
+          title="Hub de Sincronização"
+          description="Calendário em .ics, documentos em Markdown e o snapshot completo do workspace para backup."
+        />
+        <div className="mt-5">
+          <SyncHub />
         </div>
       </section>
     </div>

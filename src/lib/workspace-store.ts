@@ -20,8 +20,17 @@ import path from "node:path";
 
 import type { SessionUser } from "@/lib/auth";
 import { ForbiddenError, assertCan, canDeleteDocument, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
-import { docStats, docToMarkdown, docToPlainText, type DocContent } from "@/lib/document-content";
-import { countWords } from "@/lib/utils";
+import { docContentSchema, docStats, docToMarkdown, docToPlainText, type DocContent } from "@/lib/document-content";
+import { APP_VERSION, countWords } from "@/lib/utils";
+import { COPYRIGHT_LINE, exportFilename, type ExportBundle } from "@/lib/exporters/types";
+import { buildIcs, parseIcs } from "@/lib/sync/ics";
+import { markdownToDoc } from "@/lib/sync/markdown-import";
+import {
+  SNAPSHOT_FORMAT,
+  SNAPSHOT_VERSION,
+  type SnapshotImportSummary,
+  type WorkspaceBackup,
+} from "@/lib/sync/snapshot";
 import { buildCalendarSeed } from "@/lib/calendar-seed";
 import { DEMO_WORKSPACE_ID, EFFORT_HISTORY_DAYS, buildSeed, seedEffortLogs } from "@/lib/workspace-seed";
 import {
@@ -1043,5 +1052,492 @@ export async function saveDayNote(user: SessionUser, input: DayNoteInput): Promi
     const record = { content: input.content, documentIds, updatedAt: now() };
     if (index >= 0) Object.assign(data.dayNotes[index]!, record);
     else data.dayNotes.push({ id: newId("dia"), workspaceId, userId: user.userId, date: input.date, ...record });
+  });
+}
+
+/* ==========================================================================
+   Exportação fiel e sincronização (Módulo 6 · Fase 5)
+   ========================================================================== */
+
+function personName(data: StoreData, userId: string): string {
+  return data.people.find((p) => p.id === userId)?.name ?? "Pessoa desconhecida";
+}
+
+/**
+ * Documento autorizado para exportação: o servidor confirma `document:export`
+ * com o papel efetivo no projeto (VIEWER fica de fora) e devolve o conteúdo
+ * gravado, que o cliente transforma em PDF, Word, Markdown ou HTML.
+ */
+export async function getExportBundle(user: SessionUser, documentId: string): Promise<ExportBundle> {
+  const data = await load();
+  const workspaceId = workspaceIdFor(data, user);
+  const doc = liveDocument(data, workspaceId, documentId);
+  const project = liveProject(data, workspaceId, doc.projectId);
+  assertCan(subjectIn(user, project), "document:export");
+  const workspace = data.workspaces.find((w) => w.id === workspaceId);
+  return {
+    documentId: doc.id,
+    projectId: project.id,
+    title: doc.title,
+    summary: doc.summary,
+    projectName: project.name,
+    workspaceName: workspace?.name ?? user.workspaceName,
+    authorName: personName(data, doc.createdById),
+    lastEditorName: personName(data, doc.lastEditedById),
+    version: doc.version ?? 1,
+    wordCount: doc.wordCount,
+    createdAt: doc.createdAt,
+    updatedAt: doc.updatedAt,
+    exportedAt: now(),
+    exportedBy: user.name,
+    content: doc.contentJson ? structuredClone(doc.contentJson) : plainTextDoc(doc.plainText),
+  };
+}
+
+function plainTextDoc(text: string): DocContent {
+  const paragraphs = text
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  return {
+    type: "doc",
+    content: paragraphs.length
+      ? paragraphs.map((p) => ({ type: "paragraph", content: [{ type: "text", text: p }] }))
+      : [{ type: "paragraph" }],
+  };
+}
+
+/** Calendário em .ics (RFC 5545) com os eventos que a pessoa pode ler. */
+export async function exportCalendarIcs(
+  user: SessionUser,
+  options: { includeAlarms: boolean },
+): Promise<{ filename: string; ics: string; count: number }> {
+  assertCan(user, "calendar:read");
+  const snapshot = await getWorkspaceSnapshot(user);
+  const ics = buildIcs({
+    calendarName: `Vellum · ${snapshot.workspace.name}`,
+    events: snapshot.events,
+    legends: snapshot.legends,
+    projects: snapshot.projects,
+    includeAlarms: options.includeAlarms,
+  });
+  return {
+    filename: exportFilename(`vellum-calendario-${snapshot.workspace.name}`, ".ics"),
+    ics,
+    count: snapshot.events.length,
+  };
+}
+
+/** Importa eventos de um .ics (Google Calendar, Apple Calendar, Outlook). Exige `calendar:edit`. */
+export async function importCalendarIcs(
+  user: SessionUser,
+  text: string,
+): Promise<{ created: number; duplicates: number; recurring: number; multiDay: number; total: number }> {
+  assertCan(user, "calendar:edit");
+  const parsed = parseIcs(text);
+  if (parsed.events.length === 0) throw new ValidationError("O ficheiro não tem eventos válidos (VEVENT).");
+  return mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const legends = data.calendarLegends.filter((l) => l.workspaceId === workspaceId && !l.deletedAt);
+    const byName = new Map(legends.map((l) => [l.name.toLocaleLowerCase("pt-PT"), l.id]));
+    const existing = data.calendarEvents.filter((e) => e.workspaceId === workspaceId && !e.deletedAt);
+    const uids = new Set(existing.map((e) => e.externalUid ?? `${e.id}@vellum.leobarreiras`));
+    const signatures = new Set(existing.map((e) => `${e.date}|${e.startTime ?? ""}|${e.title.toLowerCase()}`));
+    const result = { created: 0, duplicates: 0, recurring: 0, multiDay: 0, total: parsed.events.length };
+    const timestamp = now();
+    for (const event of parsed.events) {
+      const signature = `${event.date}|${event.startTime ?? ""}|${event.title.toLowerCase()}`;
+      if ((event.uid && uids.has(event.uid)) || signatures.has(signature)) {
+        result.duplicates++;
+        continue;
+      }
+      const notes: string[] = [];
+      if (event.notes) notes.push(event.notes);
+      if (event.endDate) {
+        result.multiDay++;
+        notes.push(`Termina a ${event.endDate}${event.allDay ? "" : " (evento de vários dias)"}.`);
+      }
+      if (event.recurring) {
+        result.recurring++;
+        notes.push("Evento recorrente: importada a primeira ocorrência.");
+      }
+      const legendName = event.legendName ?? event.categories.find((c) => byName.has(c.toLocaleLowerCase("pt-PT")));
+      data.calendarEvents.push({
+        id: newId("evt"),
+        workspaceId,
+        createdById: user.userId,
+        title: event.title,
+        date: event.date,
+        startTime: event.allDay ? null : event.startTime,
+        endTime: event.allDay ? null : event.endTime,
+        allDay: event.allDay,
+        projectId: null,
+        documentId: null,
+        legendId: legendName ? (byName.get(legendName.toLocaleLowerCase("pt-PT")) ?? null) : null,
+        isImportant: event.isImportant,
+        reminderMinutes: event.reminderMinutes,
+        notes: notes.join("\n\n").slice(0, 4000),
+        externalUid: event.uid,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        deletedAt: null,
+      });
+      if (event.uid) uids.add(event.uid);
+      signatures.add(signature);
+      result.created++;
+    }
+    return result;
+  });
+}
+
+/** Cria documentos a partir de ficheiros Markdown (exige `document:create` no projeto). */
+export async function importMarkdownDocuments(
+  user: SessionUser,
+  projectId: string,
+  files: ReadonlyArray<{ name: string; text: string }>,
+): Promise<{ ids: string[] }> {
+  return mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const project = liveProject(data, workspaceId, projectId);
+    assertCan(subjectIn(user, project), "document:create");
+    const ids: string[] = [];
+    for (const file of files) {
+      const fallback =
+        file.name
+          .replace(/\.(md|markdown|txt)$/i, "")
+          .replace(/[-_]+/g, " ")
+          .trim() || "Documento importado";
+      const parsed = markdownToDoc(file.text, fallback);
+      const content = docContentSchema.parse(parsed.content);
+      const doc = insertDocument(data, user, workspaceId, {
+        projectId,
+        parentId: null,
+        title: parsed.title,
+        summary: parsed.summary,
+        plainText: "",
+      });
+      doc.contentJson = content;
+      doc.plainText = docToPlainText(content);
+      doc.wordCount = countWords(doc.plainText);
+      ids.push(doc.id);
+    }
+    return { ids };
+  });
+}
+
+/**
+ * Snapshot completo (.vellum.json): projetos e documentos que a pessoa pode
+ * exportar, notas, legendas, eventos e as suas próprias Notas do Dia e
+ * métricas de esforço. Exige `document:export` (o Leitor não leva cópias).
+ */
+export async function exportWorkspaceBackup(user: SessionUser): Promise<{ filename: string; json: string }> {
+  assertCan(user, "document:export");
+  const data = await load();
+  const workspaceId = workspaceIdFor(data, user);
+  const workspace = data.workspaces.find((w) => w.id === workspaceId);
+  const projects = data.projects.filter(
+    (p) => p.workspaceId === workspaceId && !p.deletedAt && hasPermissionIn(user, p, "document:export"),
+  );
+  const projectIds = new Set(projects.map((p) => p.id));
+  const documents = data.documents.filter(
+    (d) => d.workspaceId === workspaceId && !d.deletedAt && projectIds.has(d.projectId),
+  );
+  const docIds = new Set(documents.map((d) => d.id));
+  const keepProject = (id: string | null) => (id && projectIds.has(id) ? id : null);
+  const keepDoc = (id: string | null) => (id && docIds.has(id) ? id : null);
+
+  const backup: WorkspaceBackup = {
+    format: SNAPSHOT_FORMAT,
+    version: SNAPSHOT_VERSION,
+    id: `snap_${randomBytes(12).toString("base64url")}`,
+    exportedAt: now(),
+    exportedBy: { name: user.name },
+    app: `Vellum ${APP_VERSION}`,
+    copyright: COPYRIGHT_LINE,
+    workspace: { name: workspace?.name ?? user.workspaceName },
+    projects: projects.map((p) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      icon: p.icon,
+      color: p.color,
+      position: p.position,
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    })),
+    documents: documents.map((d) => ({
+      id: d.id,
+      projectId: d.projectId,
+      parentId: d.parentId && docIds.has(d.parentId) ? d.parentId : null,
+      title: d.title,
+      summary: d.summary,
+      plainText: d.plainText,
+      contentJson: d.contentJson,
+      version: d.version ?? 1,
+      position: d.position,
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+    })),
+    notes: data.notes
+      .filter((n) => n.workspaceId === workspaceId && !n.deletedAt && (!n.projectId || projectIds.has(n.projectId)))
+      .map((n) => ({
+        id: n.id,
+        projectId: keepProject(n.projectId),
+        title: n.title,
+        content: n.content,
+        color: n.color,
+        isPinned: n.isPinned,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+      })),
+    legends: data.calendarLegends
+      .filter((l) => l.workspaceId === workspaceId && !l.deletedAt)
+      .map((l) => ({ id: l.id, name: l.name, color: l.color, position: l.position })),
+    events: data.calendarEvents
+      .filter((e) => e.workspaceId === workspaceId && !e.deletedAt && (!e.projectId || projectIds.has(e.projectId)))
+      .map((e) => ({
+        id: e.id,
+        title: e.title,
+        date: e.date,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        allDay: e.allDay,
+        projectId: keepProject(e.projectId),
+        documentId: keepDoc(e.documentId),
+        legendId: e.legendId,
+        isImportant: e.isImportant,
+        reminderMinutes: e.reminderMinutes,
+        notes: e.notes,
+        externalUid: e.externalUid ?? null,
+      })),
+    dayNotes: data.dayNotes
+      .filter((n) => n.workspaceId === workspaceId && n.userId === user.userId)
+      .map((n) => ({ date: n.date, content: n.content, documentIds: n.documentIds.filter((id) => docIds.has(id)) })),
+    effort: data.effortLogs
+      .filter((l) => l.workspaceId === workspaceId && l.userId === user.userId)
+      .map((l) => ({
+        projectId: keepProject(l.projectId),
+        documentId: keepDoc(l.documentId),
+        startedAt: l.startedAt,
+        activeSeconds: l.activeSeconds,
+        wordsWritten: l.wordsWritten ?? 0,
+        edits: l.edits ?? 0,
+        kind: l.kind ?? "tracked",
+      })),
+  };
+  const stamp = backup.exportedAt.slice(0, 10);
+  return {
+    filename: `${exportFilename(`${backup.workspace.name}-${stamp}`, "")}.vellum.json`,
+    json: JSON.stringify(backup, null, 2),
+  };
+}
+
+function hasPermissionIn(user: SessionUser, project: ProjectRecord, permission: "document:export"): boolean {
+  try {
+    assertCan(subjectIn(user, project), permission);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Restaura um snapshot, juntando-o ao workspace atual com identificadores
+ * novos (nunca substitui nem apaga). Exige Proprietário (`project:manage` e
+ * `legend:manage`). O mesmo snapshot só pode ser importado uma vez.
+ */
+export async function importWorkspaceBackup(
+  user: SessionUser,
+  backup: WorkspaceBackup,
+): Promise<SnapshotImportSummary> {
+  assertCan(user, "project:manage");
+  assertCan(user, "legend:manage");
+  return mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    data.importedSnapshots ??= [];
+    if (data.importedSnapshots.some((s) => s.workspaceId === workspaceId && s.snapshotId === backup.id)) {
+      throw new ValidationError("Este snapshot já foi importado neste workspace.");
+    }
+    const timestamp = now();
+    const summary: SnapshotImportSummary = {
+      projects: 0,
+      documents: 0,
+      notes: 0,
+      legends: 0,
+      events: 0,
+      dayNotes: 0,
+      effortLogs: 0,
+    };
+
+    // Projetos
+    const projectMap = new Map<string, string>();
+    const liveNames = new Set(
+      data.projects.filter((p) => p.workspaceId === workspaceId && !p.deletedAt).map((p) => p.name.toLowerCase()),
+    );
+    let position = nextPosition(data.projects.filter((p) => p.workspaceId === workspaceId && !p.deletedAt));
+    for (const p of [...backup.projects].sort((a, b) => a.position - b.position)) {
+      const id = newId("prj");
+      projectMap.set(p.id, id);
+      const name = liveNames.has(p.name.toLowerCase()) ? `${p.name.slice(0, 68)} (importado)` : p.name;
+      data.projects.push({
+        id,
+        workspaceId,
+        createdById: user.userId,
+        name,
+        description: p.description,
+        icon: p.icon,
+        color: p.color,
+        position: position++,
+        members: [{ userId: user.userId, role: "OWNER", addedAt: timestamp }],
+        createdAt: p.createdAt,
+        updatedAt: timestamp,
+        deletedAt: null,
+      });
+      summary.projects++;
+    }
+
+    // Documentos (pais primeiro)
+    const docMap = new Map<string, string>();
+    const docs = backup.documents.filter((d) => projectMap.has(d.projectId));
+    for (const d of docs) docMap.set(d.id, newId("doc"));
+    for (const d of docs) {
+      const plainText = d.contentJson ? docToPlainText(d.contentJson) : d.plainText;
+      data.documents.push({
+        id: docMap.get(d.id)!,
+        workspaceId,
+        projectId: projectMap.get(d.projectId)!,
+        parentId: d.parentId ? (docMap.get(d.parentId) ?? null) : null,
+        createdById: user.userId,
+        lastEditedById: user.userId,
+        title: d.title || "Sem título",
+        summary: d.summary,
+        plainText,
+        contentJson: d.contentJson,
+        version: d.version,
+        wordCount: countWords(plainText),
+        position: d.position,
+        createdAt: d.createdAt,
+        updatedAt: d.updatedAt,
+        deletedAt: null,
+      });
+      summary.documents++;
+    }
+
+    const mapProject = (id: string | null) => (id ? (projectMap.get(id) ?? null) : null);
+    const mapDoc = (id: string | null) => (id ? (docMap.get(id) ?? null) : null);
+
+    for (const n of backup.notes) {
+      data.notes.push({
+        id: newId("nota"),
+        userId: user.userId,
+        workspaceId,
+        projectId: mapProject(n.projectId),
+        documentId: null,
+        title: n.title,
+        content: n.content,
+        color: n.color,
+        isPinned: n.isPinned,
+        createdAt: n.createdAt,
+        updatedAt: n.updatedAt,
+        deletedAt: null,
+      });
+      summary.notes++;
+    }
+
+    // Legendas: reaproveita as que já existem com o mesmo nome.
+    const legendMap = new Map<string, string>();
+    const legendsHere = data.calendarLegends.filter((l) => l.workspaceId === workspaceId && !l.deletedAt);
+    let legendPosition = nextPosition(legendsHere);
+    for (const l of backup.legends) {
+      const same = legendsHere.find((x) => x.name.toLocaleLowerCase("pt-PT") === l.name.toLocaleLowerCase("pt-PT"));
+      if (same) {
+        legendMap.set(l.id, same.id);
+        continue;
+      }
+      const id = newId("lg");
+      legendMap.set(l.id, id);
+      const record: CalendarLegendRecord = {
+        id,
+        workspaceId,
+        name: l.name,
+        color: l.color,
+        position: legendPosition++,
+        createdAt: timestamp,
+        deletedAt: null,
+      };
+      data.calendarLegends.push(record);
+      legendsHere.push(record);
+      summary.legends++;
+    }
+
+    const existingUids = new Set(
+      data.calendarEvents
+        .filter((e) => e.workspaceId === workspaceId && !e.deletedAt)
+        .map((e) => e.externalUid ?? `${e.id}@vellum.leobarreiras`),
+    );
+    for (const e of backup.events) {
+      const uid = e.externalUid ?? `${e.id}@vellum.leobarreiras`;
+      if (existingUids.has(uid)) continue;
+      const documentId = mapDoc(e.documentId);
+      data.calendarEvents.push({
+        id: newId("evt"),
+        workspaceId,
+        createdById: user.userId,
+        title: e.title,
+        date: e.date,
+        startTime: e.allDay ? null : e.startTime,
+        endTime: e.allDay ? null : e.endTime,
+        allDay: e.allDay,
+        projectId: mapProject(e.projectId),
+        documentId,
+        legendId: e.legendId ? (legendMap.get(e.legendId) ?? null) : null,
+        isImportant: e.isImportant,
+        reminderMinutes: e.reminderMinutes,
+        notes: e.notes,
+        externalUid: uid,
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        deletedAt: null,
+      });
+      existingUids.add(uid);
+      summary.events++;
+    }
+
+    for (const n of backup.dayNotes) {
+      const taken = data.dayNotes.some(
+        (x) => x.workspaceId === workspaceId && x.userId === user.userId && x.date === n.date,
+      );
+      if (taken) continue;
+      data.dayNotes.push({
+        id: newId("dia"),
+        workspaceId,
+        userId: user.userId,
+        date: n.date,
+        content: n.content,
+        documentIds: n.documentIds.map((id) => docMap.get(id)).filter((id): id is string => Boolean(id)),
+        updatedAt: timestamp,
+      });
+      summary.dayNotes++;
+    }
+
+    for (const l of backup.effort) {
+      data.effortLogs.push({
+        id: newId("eff"),
+        userId: user.userId,
+        workspaceId,
+        projectId: mapProject(l.projectId),
+        documentId: mapDoc(l.documentId),
+        startedAt: l.startedAt,
+        activeSeconds: l.activeSeconds,
+        wordsWritten: l.wordsWritten,
+        edits: l.edits,
+        kind: l.kind,
+        updatedAt: l.startedAt,
+      });
+      summary.effortLogs++;
+    }
+
+    data.importedSnapshots.push({ workspaceId, snapshotId: backup.id, importedAt: timestamp });
+    return summary;
   });
 }

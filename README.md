@@ -9,7 +9,7 @@
 ![Licença](https://img.shields.io/badge/licen%C3%A7a-propriet%C3%A1ria-C85A32?style=flat-square)
 ![Next.js](https://img.shields.io/badge/Next.js-15-1C1B18?style=flat-square&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-1C1B18?style=flat-square&logo=typescript)
-![Estado](https://img.shields.io/badge/estado-Fase%201A%20conclu%C3%ADda-6E6A63?style=flat-square)
+![Estado](https://img.shields.io/badge/estado-Fases%200%E2%80%935%20conclu%C3%ADdas-6E6A63?style=flat-square)
 
 **Repositório oficial:** [github.com/leobarreiras00/vellum](https://github.com/leobarreiras00/vellum)
 
@@ -138,9 +138,24 @@ npm run dev                 # http://localhost:3000 → /login
 Testes E2E (Playwright, sobre o build de produção):
 
 ```bash
-npx playwright install chromium   # só na primeira vez
+npx playwright install chromium   # só na primeira vez (também usado pelo PDF no servidor)
 npm run build && npm run test:e2e
 ```
+
+### Exportação e sincronização (Fase 5)
+
+No editor, **Exportar** abre o modal com pré-visualização paginada A4 e quatro formatos:
+
+| Formato | Como é gerado |
+| ------- | ------------- |
+| **PDF** | Chromium no servidor (`POST /api/export/pdf`, `playwright-core`) imprime as mesmas folhas da pré-visualização: A4, margens de 20 mm, papel creme `#FAF7F2` ou branco, folha de rosto e rodapé «Página N de M» com direitos reservados. Sem Chromium disponível, cai para a impressão do navegador. |
+| **Word (.docx)** | `docx` no navegador: estilos nomeados, tipos de letra, cores, sublinhados, listas numeradas, tabelas com bordas e diagramas Mermaid em PNG a 300 dpi dentro da largura útil A4. |
+| **Markdown** | Frontmatter YAML (título, descrição, projeto, autor, data, palavras) e blocos ```` ```mermaid ```` preservados. |
+| **HTML** | Ficheiro único e offline: fontes em base64, variáveis do tema escolhido e SVG dos diagramas embutidos, sem scripts. |
+
+Exportar exige `canExportDocument` (Proprietário, Editor e Comentador); o Leitor não vê o botão.
+
+O **Hub de Sincronização** (Calendário → «Sincronizar .ics» e Definições → secção 05) exporta e importa `.ics` (RFC 5545, com fuso Europe/Lisbon, Dias Importantes, legendas e VALARM; lê Google, Outlook e Apple), importa ficheiros Markdown para um projeto e guarda ou restaura um snapshot completo `.vellum.json` (projetos, documentos, notas, calendário e métricas de esforço). O restauro é aditivo, só para o Proprietário, e cada snapshot só entra uma vez.
 
 ### Rotas
 
@@ -151,10 +166,10 @@ npm run build && npm run test:e2e
 | `/dashboard`                           | Dashboard executivo: 4 KPIs de esforço, horas por projeto (7/30 dias), mapa de consistência anual, «Continuar a Escrever», dias importantes; separador RBAC (`#rbac`) |
 | `/projects`                            | Hub de projetos em grelha ou lista editorial                             |
 | `/projects/[id]`                       | Projeto: árvore de documentos, notas associadas, membros e exportação    |
-| `/projects/[id]/pages/[pageId]`        | Página: leitura na fonte escolhida e edição (`?editar=1`)                 |
+| `/projects/[id]/documents/[docId]`     | Editor rico (Folha A4/Fluido, Mermaid, comentários) e modal de exportação |
 | `/notes`                               | Mural de Notas Rápidas (`?nova=1`, `?projeto=<id>`, `?nota=<id>`)         |
 | `/calendar`                            | Calendário (grelha mês/semana) e Agenda com Notas do Dia; eventos, legendas, Dias Importantes e lembretes (`?dia=AAAA-MM-DD`) |
-| `/settings`                            | 5 temas, fonte de leitura, meta diária e matriz RBAC ativa                |
+| `/settings`                            | 5 temas, fonte de leitura, meta diária, matriz RBAC e Hub de Sincronização |
 | `/design-system`                       | Página de verificação do Design System (Fase 1A)                          |
 
 Todas as rotas do workspace partilham o App Shell (Sidebar retrátil, Topbar contextual, Command Palette `⌘K` e `<AppFooter variant="statusbar" />`).
@@ -183,11 +198,13 @@ Com uma conta de demonstração, o seletor no topo da barra lateral troca de per
 | Fase | Âmbito                                              | Estado        |
 | :--: | --------------------------------------------------- | ------------- |
 | 0    | Governação e fundação documental                    | ✅ Concluída  |
-| 1    | Fundação técnica (Next.js, temas, Prisma, login, App Shell)| ✅ 1A, 1B e 1C concluídas |
-| 2    | Auth & RBAC · Workspace Engine                      | ⏳ 2A concluída (workspace); 2B (Better-Auth + PostgreSQL) planeada |
-| 3    | Editor Rico · Estúdio Mermaid                       | ✅ 3A concluída |
+| 1    | Fundação técnica (Next.js, temas, Prisma, login, App Shell)| ✅ Concluída |
+| 2    | Auth & RBAC · Workspace Engine                      | ✅ Concluída  |
+| 3    | Editor Rico · Estúdio Mermaid                       | ✅ Concluída  |
 | 4    | Calendário · Notificações · Telemetria & Dashboard  | ✅ Concluída  |
-| 5    | Exportação Fiel · Sincronização · Lançamento        | ○ Planeada    |
+| 5    | Exportação Fiel · Sincronização · Fecho             | ✅ Concluída  |
+
+Evoluções pós-lançamento (PostgreSQL + Better-Auth, recorrência no calendário, fila offline, entre outras) estão listadas no roteiro do PROGRESS.
 
 Detalhe completo em [`.claude/PROGRESS.md`](.claude/PROGRESS.md).
 

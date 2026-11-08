@@ -45,7 +45,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const pathname = usePathname();
   const { user, logout, isLoggingOut } = useAuth();
   const { snapshot, subjectFor } = useWorkspace();
-  const { openMembers, exportMarkdown, isExporting } = useShell();
+  const { openMembers, exportMarkdown, openExport, isExporting } = useShell();
   const { projectId, documentId } = parseWorkspacePath(pathname);
 
   const project = projectId ? snapshot.projects.find((p) => p.id === projectId) : undefined;
@@ -160,10 +160,8 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
             variant="ghost"
             size="sm"
             disabled={isExporting}
-            onClick={() =>
-              exportMarkdown(document ? { kind: "document", id: document.id } : { kind: "project", id: project.id })
-            }
-            title={document ? "Exportar página (Markdown)" : "Exportar projeto (Markdown)"}
+            onClick={() => (document ? openExport(document.id) : exportMarkdown({ kind: "project", id: project.id }))}
+            title={document ? "Exportar documento (PDF, Word, Markdown, HTML)" : "Exportar projeto (Markdown)"}
             data-testid="topbar-export"
           >
             <Download aria-hidden="true" strokeWidth={1.5} />
