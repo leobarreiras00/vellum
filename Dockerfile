@@ -24,6 +24,16 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     NEXT_OUTPUT=standalone
 RUN npx prisma generate && npm run build
 
+# CLI do Prisma isolada (com todas as dependências) só para `migrate deploy` no arranque.
+# Copiar apenas node_modules/prisma deixava de fora @prisma/config → effect, c12…
+FROM node:22-bookworm-slim AS prisma-cli
+WORKDIR /prisma-cli
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY package-lock.json /tmp/lock.json
+RUN PRISMA_VERSION=$(node -p "require('/tmp/lock.json').packages['node_modules/prisma'].version") \
+    && npm init -y >/dev/null \
+    && npm install --no-audit --no-fund "prisma@${PRISMA_VERSION}"
+
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
@@ -40,9 +50,9 @@ COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
 COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/prisma ./node_modules/prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=build /app/node_modules/@prisma/client ./node_modules/@prisma/client
 COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=prisma-cli /prisma-cli/node_modules /opt/prisma-cli/node_modules
 COPY --from=build /app/node_modules/playwright-core ./node_modules/playwright-core
 
 # Chromium (com as bibliotecas do sistema) para a exportação PDF no servidor.
@@ -57,4 +67,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]
+CMD ["sh", "-c", "node /opt/prisma-cli/node_modules/prisma/build/index.js migrate deploy --schema prisma/schema.prisma && node server.js"]
