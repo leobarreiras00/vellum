@@ -1,6 +1,6 @@
 /**
  * Vellum — Cartão da ligação mágica de confirmação
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
@@ -43,11 +43,11 @@ export function ConfirmLinkCard({ email, code, next }: { email: string; code: st
       <h1 id="confirm-title" className="mt-2 text-[28px] font-normal leading-tight tracking-tight">
         Confirmar e entrar
       </h1>
-      <p className="mt-1 font-serif text-[15px] italic text-muted">Um clique e o atelier abre neste navegador.</p>
+      <p className="mt-1 font-serif text-[15px] text-muted">Um clique e o atelier abre neste navegador.</p>
 
       <div className="mt-6 space-y-4">
         <div className="flex items-start gap-3 rounded-lg border border-subtle bg-surface/60 px-3 py-3 text-sm">
-          <MailCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.5} />
+          <MailCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.6} />
           <span className="min-w-0 break-words text-primary">{email || "—"}</span>
         </div>
         {error && <FormNotice>{error}</FormNotice>}
@@ -62,7 +62,7 @@ export function ConfirmLinkCard({ email, code, next }: { email: string; code: st
         </label>
         <SubmitButton type="button" pending={pending} pendingLabel="A confirmar…" onClick={confirm} disabled={!code}>
           Confirmar e entrar
-          <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.5} />
+          <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.6} />
         </SubmitButton>
         <p className="text-center text-xs text-muted">
           A ligação não funciona?{" "}

@@ -1,6 +1,6 @@
 /**
  * Vellum — Testes do Calendário e das Notificações (Fase 4)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { describe, expect, it } from "vitest";
 

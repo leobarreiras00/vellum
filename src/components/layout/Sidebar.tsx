@@ -1,6 +1,6 @@
 /**
  * Vellum — Sidebar editorial do Workspace
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Fundo bg-surface, borda capilar, retrátil (272 ↔ 60px) com a curva
@@ -18,6 +18,7 @@ import {
   FileText,
   FolderKanban,
   LayoutDashboard,
+  LifeBuoy,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
@@ -37,6 +38,8 @@ import { useShell } from "@/components/layout/ShellContext";
 import { VellumMark } from "@/components/layout/VellumMark";
 import { Avatar } from "@/components/ui/Avatar";
 import { Popover, PopoverItem } from "@/components/ui/Popover";
+import { openProfile, useCurrentAvatar } from "@/components/profile/ProfileModal";
+import { openSupport } from "@/components/support/SupportModal";
 import { ProjectGlyph } from "@/components/ui/ProjectGlyph";
 import { RoleBadge } from "@/components/ui/RoleBadge";
 import { useAuth } from "@/context/AuthContext";
@@ -175,9 +178,9 @@ function SidebarContent({
           className="grid size-8 place-items-center rounded-lg text-muted transition-colors duration-150 hover:bg-canvas/70 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
         >
           {collapsed ? (
-            <PanelLeftOpen aria-hidden="true" className="size-4" strokeWidth={1.5} />
+            <PanelLeftOpen aria-hidden="true" className="size-4" strokeWidth={1.6} />
           ) : (
-            <PanelLeftClose aria-hidden="true" className="size-4" strokeWidth={1.5} />
+            <PanelLeftClose aria-hidden="true" className="size-4" strokeWidth={1.6} />
           )}
         </button>
       </div>
@@ -196,7 +199,7 @@ function SidebarContent({
             collapsed ? "justify-center px-0" : "px-2.5",
           )}
         >
-          <Search aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.5} />
+          <Search aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.6} />
           {!collapsed && (
             <>
               <span className="flex-1 text-left">Pesquisar…</span>
@@ -232,12 +235,28 @@ function SidebarContent({
                       className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-accent-primary"
                     />
                   )}
-                  <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.5} />
+                  <Icon aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.6} />
                   <span className={cn(collapsed && "sr-only")}>{item.label}</span>
                 </Link>
               </li>
             );
           })}
+          <li>
+            <button
+              type="button"
+              onClick={() => openSupport("faq")}
+              title={collapsed ? "Ajuda e suporte" : undefined}
+              data-testid="sidebar-support"
+              className={cn(
+                "relative flex h-8 w-full items-center gap-2.5 rounded-lg text-sm text-muted transition-colors duration-150 hover:bg-canvas/70 hover:text-primary",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+                collapsed ? "justify-center" : "px-2.5",
+              )}
+            >
+              <LifeBuoy aria-hidden="true" className="size-4 shrink-0" strokeWidth={1.6} />
+              <span className={cn(collapsed && "sr-only")}>Ajuda e suporte</span>
+            </button>
+          </li>
         </ul>
       </nav>
 
@@ -274,7 +293,7 @@ function SidebarContent({
                   title="Novo projeto"
                   className="grid size-6 place-items-center rounded-md text-muted transition-colors hover:bg-canvas/70 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
                 >
-                  <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+                  <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
                 </button>
               )}
             </div>
@@ -302,29 +321,37 @@ function ProfileSwitcher({
   const { user, setUser } = useAuth();
   const { snapshot, notify } = useWorkspace();
   const [isPending, startTransition] = useTransition();
+  const avatar = useCurrentAvatar();
   if (!user) return null;
   const role = effectiveRole(user);
 
   const card = (
-    <>
-      <span className="relative">
-        <Avatar initials={user.initials} name={user.name} size="md" />
-      </span>
+    <button
+      type="button"
+      onClick={() => openProfile()}
+      title={collapsed ? `${user.name} — abrir perfil` : undefined}
+      aria-label={`Abrir perfil de ${user.name}`}
+      data-testid="open-profile"
+      className={cn(
+        "flex min-w-0 flex-1 items-center gap-2.5 rounded-lg p-1.5 text-left transition-colors duration-150 hover:bg-canvas/70",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+        collapsed && "justify-center",
+      )}
+    >
+      <Avatar initials={user.initials} name={user.name} src={avatar} size="md" />
       {!collapsed && (
-        <span className="min-w-0 flex-1 text-left">
+        <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium leading-tight text-primary">{user.name}</span>
           <span className="block truncate text-[11px] leading-tight text-muted">
             {snapshot.workspace.name} · {role ? ROLE_LABELS[role] : "—"}
           </span>
         </span>
       )}
-    </>
+    </button>
   );
 
-  if (profiles.length === 0) {
-    return (
-      <div className={cn("flex items-center gap-2.5 rounded-lg p-1.5", collapsed && "justify-center")}>{card}</div>
-    );
+  if (profiles.length === 0 || collapsed) {
+    return <div className="flex items-center">{card}</div>;
   }
 
   function switchTo(profileId: string, close: () => void) {
@@ -344,63 +371,60 @@ function ProfileSwitcher({
   }
 
   return (
-    <Popover
-      label="Trocar de perfil RBAC"
-      role="menu"
-      panelClassName="w-[264px]"
-      trigger={(triggerProps) => (
-        <button
-          type="button"
-          {...triggerProps}
-          disabled={isPending}
-          title={collapsed ? `${user.name} — trocar de perfil` : undefined}
-          className={cn(
-            "flex w-full items-center gap-2.5 rounded-lg p-1.5 transition-colors duration-150 hover:bg-canvas/70",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:opacity-60",
-            collapsed && "justify-center",
-          )}
-        >
-          {card}
-          {!collapsed && (
-            <ChevronsUpDown aria-hidden="true" className="size-3.5 shrink-0 text-muted" strokeWidth={1.5} />
-          )}
-          <span className="sr-only">Trocar de perfil RBAC</span>
-        </button>
-      )}
-    >
-      {(close) => (
-        <div>
-          <p className="eyebrow px-2.5 pb-1.5 pt-1">Testar como…</p>
-          {profiles.map((profile) => {
-            const current = profile.id === user.userId;
-            return (
-              <PopoverItem
-                key={profile.id}
-                onClick={() => switchTo(profile.id, close)}
-                aria-current={current ? "true" : undefined}
-                className={cn("items-start", current && "bg-surface")}
-              >
-                <Avatar
-                  initials={profile.initials}
-                  name={profile.name}
-                  size="sm"
-                  highlight={current}
-                  className="mt-0.5"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate font-medium">{profile.name}</span>
-                  <span className="mt-0.5 block text-[11px] leading-snug text-muted">{profile.blurb}</span>
-                  <RoleBadge role={profile.role} technical className="mt-1.5 text-[10px]" />
-                </span>
-              </PopoverItem>
-            );
-          })}
-          <p className="mt-1 border-t border-subtle px-2.5 pb-1 pt-2 text-[11px] leading-snug text-muted">
-            Perfis de demonstração: a interface e o servidor aplicam as permissões do papel escolhido.
-          </p>
-        </div>
-      )}
-    </Popover>
+    <div className="flex items-center gap-1">
+      {card}
+      <Popover
+        label="Trocar de perfil RBAC"
+        role="menu"
+        panelClassName="w-[264px]"
+        trigger={(triggerProps) => (
+          <button
+            type="button"
+            {...triggerProps}
+            disabled={isPending}
+            title="Trocar de perfil (demonstração RBAC)"
+            className="grid size-7 shrink-0 place-items-center rounded-md text-muted transition-colors duration-150 hover:bg-canvas/70 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary active:scale-[0.97] disabled:opacity-60"
+          >
+            <ChevronsUpDown aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
+            <span className="sr-only">Trocar de perfil RBAC</span>
+          </button>
+        )}
+      >
+        {(close) => (
+          <div>
+            <p className="eyebrow px-2.5 pb-1.5 pt-1">Testar como…</p>
+            {profiles.map((profile) => {
+              const current = profile.id === user.userId;
+              return (
+                <PopoverItem
+                  key={profile.id}
+                  onClick={() => switchTo(profile.id, close)}
+                  aria-current={current ? "true" : undefined}
+                  className={cn("items-start", current && "bg-surface")}
+                >
+                  <Avatar
+                    initials={profile.initials}
+                    name={profile.name}
+                    src={snapshot.members.find((m) => m.userId === profile.id)?.avatar}
+                    size="sm"
+                    highlight={current}
+                    className="mt-0.5"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{profile.name}</span>
+                    <span className="mt-0.5 block text-[11px] leading-snug text-muted">{profile.blurb}</span>
+                    <RoleBadge role={profile.role} technical className="mt-1.5 text-[10px]" />
+                  </span>
+                </PopoverItem>
+              );
+            })}
+            <p className="mt-1 border-t border-subtle px-2.5 pb-1 pt-2 text-[11px] leading-snug text-muted">
+              Perfis de demonstração: a interface e o servidor aplicam as permissões do papel escolhido.
+            </p>
+          </div>
+        )}
+      </Popover>
+    </div>
   );
 }
 
@@ -519,7 +543,7 @@ function ProjectTree({ projects, documents }: { projects: ProjectView[]; documen
               hasChildren={kids.length > 0}
               expanded={expanded}
               onToggle={() => toggle(doc.id)}
-              icon={<FileText aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.5} />}
+              icon={<FileText aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.6} />}
               onCreate={canCreate ? () => createPage(projectId, doc.id) : undefined}
               createLabel={`Nova subpágina em «${doc.title}»`}
               disabled={isPending}
@@ -639,7 +663,7 @@ function TreeRow({
             "group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100",
           )}
         >
-          <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
         </button>
       )}
     </div>

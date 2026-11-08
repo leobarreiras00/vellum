@@ -1,6 +1,6 @@
 /**
  * Vellum — Server Actions de autenticação
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Fronteira do servidor: valida sempre com Zod antes de chamar o motor de sessão.

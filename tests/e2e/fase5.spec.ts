@@ -1,6 +1,6 @@
 /**
  * Vellum — E2E da Fase 5: Motor de Exportação, Hub de Sincronização e fecho
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  *
  * Fluxo completo: login com a animação da caneta → Dashboard → Projetos →
  * Editor com Mermaid → Exportar (PDF, Word, Markdown, HTML) → Calendário
@@ -15,7 +15,7 @@ import { PROFILES, loginAs, switchProfile } from "./helpers";
 test.describe.configure({ mode: "serial" });
 
 const DOC_URL = "/projects/prj-arquitetura/documents/doc-visao-geral";
-const RIGHTS = "Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.";
+const RIGHTS = "Leonardo Barreiras. Todos os direitos reservados.";
 
 async function read(download: Download): Promise<Buffer> {
   const file = await download.path();
@@ -57,7 +57,7 @@ test("Fluxo completo: caneta → Dashboard → Projetos → Editor com Mermaid �
   });
 
   // Modal de exportação com pré-visualização paginada A4.
-  await page.getByTestId("document-export").click();
+  await page.getByTestId("topbar-export").click();
   const modal = page.getByTestId("export-modal");
   await expect(modal).toHaveAttribute("data-ready", "true", { timeout: 30_000 });
   await expect(modal).toHaveAttribute("data-format", "pdf");
@@ -246,6 +246,8 @@ test("Definições: Hub de Sincronização — Markdown, snapshot .vellum.json e
   await expect(rights).toHaveAttribute("title", `© 2026 Vellum · Arquitetado e Desenvolvido por ${RIGHTS}`);
 
   await page.goto("/settings#sincronizacao");
+  // A mudança só de âncora pode chegar antes da hidratação: escolhe o separador explicitamente.
+  await page.getByRole("tab", { name: "Sincronização & Backups" }).click();
   const mdNew = page.getByTestId("sync-hub").getByTestId("sync-markdown");
   // Markdown para um projeto novo, criado na hora (Proprietário).
   await mdNew.getByLabel("Projeto de destino").selectOption({ label: "+ Novo projeto…" });
@@ -264,7 +266,7 @@ test("RBAC: Marta (Comentadora) exporta; Pedro (Leitor) não vê Exportar", asyn
   await loginAs(page, PROFILES.leo);
   await switchProfile(page, PROFILES.marta);
   await page.goto(DOC_URL);
-  await page.getByTestId("document-export").click();
+  await page.getByTestId("topbar-export").click();
   const modal = page.getByTestId("export-modal");
   await expect(modal).toHaveAttribute("data-ready", "true", { timeout: 30_000 });
   await modal.locator('[data-format="md"]').first().click();
@@ -276,7 +278,6 @@ test("RBAC: Marta (Comentadora) exporta; Pedro (Leitor) não vê Exportar", asyn
   await switchProfile(page, PROFILES.pedro);
   await page.goto(DOC_URL);
   await expect(page.getByText("Modo de leitura")).toBeVisible();
-  await expect(page.getByTestId("document-export")).toHaveCount(0);
   await expect(page.getByTestId("topbar-export")).toHaveCount(0);
   await page.goto("/settings#sincronizacao");
   await expect(page.getByTestId("sync-hub")).toBeVisible();

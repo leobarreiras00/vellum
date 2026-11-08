@@ -1,6 +1,6 @@
 /**
  * Vellum — Testes: Nota do Dia estruturada e feriados de Portugal
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import { describe, expect, it } from "vitest";

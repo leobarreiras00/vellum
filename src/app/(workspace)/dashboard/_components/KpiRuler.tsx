@@ -1,6 +1,6 @@
 /**
  * Vellum — Régua de KPIs do Dashboard (4 indicadores, tabular-nums)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * I.   Tempo de Uso Real — hoje, semana, mês e % da meta diária.

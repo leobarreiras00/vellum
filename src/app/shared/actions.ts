@@ -1,6 +1,6 @@
 /**
  * Vellum — Server Actions do acesso por link partilhado
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Fronteira de quem chega por /shared/[token], com ou sem sessão: o token é a

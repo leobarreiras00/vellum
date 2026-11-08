@@ -1,6 +1,6 @@
 /**
  * Vellum — Modal de criação/edição de Evento (Calendário · Módulo 4)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Título, data, horas (ou dia inteiro), projeto e documento associados,
@@ -234,7 +234,7 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
               </span>
             ) : (
               <Button variant="ghost" onClick={() => setConfirmDelete(true)} className="mr-auto">
-                <Trash2 aria-hidden="true" strokeWidth={1.5} />
+                <Trash2 aria-hidden="true" strokeWidth={1.6} />
                 Eliminar
               </Button>
             ))}
@@ -317,7 +317,7 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
 
           <fieldset className="grid gap-3 rounded-lg border border-subtle px-3.5 pb-3.5 pt-2">
             <legend className="flex items-center gap-1.5 px-1 text-xs font-medium text-primary">
-              <Repeat aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.5} />
+              <Repeat aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.6} />
               Repetição
             </legend>
             <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
@@ -465,7 +465,7 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
                 onChange={(e) => set("isImportant", e.target.checked)}
                 className="size-4 accent-[rgb(var(--accent-primary-rgb))]"
               />
-              <Star aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+              <Star aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
               Marcar como Dia Importante
             </label>
           </div>

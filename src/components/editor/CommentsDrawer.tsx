@@ -1,6 +1,6 @@
 /**
  * Vellum — Gaveta Lateral de Comentários e Anotações Editoriais
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Comentar exige `document:comment` (Comentador ou superior). Resolver:
@@ -74,7 +74,14 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
         )}
       >
         <div className="flex items-center gap-2">
-          {author && <Avatar initials={author.initials} name={author.name} size="xs" />}
+          {author && (
+            <Avatar
+              initials={author.initials}
+              name={author.name}
+              src={"avatar" in author ? (author.avatar as string | null) : null}
+              size="xs"
+            />
+          )}
           <span className="min-w-0 flex-1 truncate text-xs font-medium text-primary">{author?.name ?? "Pessoa"}</span>
           <span
             className={cn(
@@ -108,9 +115,9 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
               className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 hover:bg-surface hover:text-primary"
             >
               {comment.resolvedAt ? (
-                <RotateCcw aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                <RotateCcw aria-hidden="true" className="size-3" strokeWidth={1.6} />
               ) : (
-                <Check aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                <Check aria-hidden="true" className="size-3" strokeWidth={1.6} />
               )}
               {comment.resolvedAt ? "Reabrir" : "Resolver"}
             </button>
@@ -123,7 +130,7 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
               disabled={isPending}
               className="grid size-5 place-items-center rounded-md hover:bg-surface hover:text-primary"
             >
-              <Trash2 aria-hidden="true" className="size-3" strokeWidth={1.5} />
+              <Trash2 aria-hidden="true" className="size-3" strokeWidth={1.6} />
             </button>
           )}
         </div>
@@ -138,7 +145,7 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
       className="flex h-full w-full flex-col border-l border-subtle bg-surface/80 font-sans"
     >
       <div className="flex items-center gap-2 border-b border-subtle px-4 py-3">
-        <MessageSquareText aria-hidden="true" className="size-4 text-accent-primary" strokeWidth={1.5} />
+        <MessageSquareText aria-hidden="true" className="size-4 text-accent-primary" strokeWidth={1.6} />
         <h2 className="flex-1 font-serif text-lg leading-none">Comentários</h2>
         <span className="nums font-mono text-[11px] text-muted">{open.length} abertos</span>
         <button
@@ -147,7 +154,7 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
           aria-label="Fechar comentários"
           className="grid size-7 place-items-center rounded-md text-muted hover:bg-elevated hover:text-primary"
         >
-          <X aria-hidden="true" className="size-4" strokeWidth={1.5} />
+          <X aria-hidden="true" className="size-4" strokeWidth={1.6} />
         </button>
       </div>
 
@@ -174,7 +181,7 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
           </div>
           {quote ? (
             <div className="flex items-start gap-2 rounded-md bg-elevated px-2 py-1.5">
-              <Quote aria-hidden="true" className="mt-0.5 size-3 shrink-0 text-accent-primary" strokeWidth={1.5} />
+              <Quote aria-hidden="true" className="mt-0.5 size-3 shrink-0 text-accent-primary" strokeWidth={1.6} />
               <p className="line-clamp-3 flex-1 font-serif text-[13px] italic text-muted">{quote}</p>
               <button
                 type="button"
@@ -182,7 +189,7 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
                 aria-label="Remover excerto"
                 className="text-muted hover:text-primary"
               >
-                <X aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                <X aria-hidden="true" className="size-3" strokeWidth={1.6} />
               </button>
             </div>
           ) : (

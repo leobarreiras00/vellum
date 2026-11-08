@@ -1,6 +1,6 @@
 /**
  * Vellum — Topbar contextual do Workspace
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Breadcrumbs dinâmicos, papel RBAC efetivo, membros do projeto, Partilha /
@@ -17,7 +17,8 @@ import { Fragment } from "react";
 import { NotificationCenter } from "@/components/layout/NotificationCenter";
 import { useShell } from "@/components/layout/ShellContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
-import { AvatarStack } from "@/components/ui/Avatar";
+import { openProfile, useCurrentAvatar } from "@/components/profile/ProfileModal";
+import { Avatar, AvatarStack } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Popover, PopoverItem } from "@/components/ui/Popover";
 import { RoleBadge } from "@/components/ui/RoleBadge";
@@ -44,6 +45,7 @@ interface Crumb {
 export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const pathname = usePathname();
   const { user, logout, isLoggingOut } = useAuth();
+  const avatar = useCurrentAvatar();
   const { snapshot, subjectFor } = useWorkspace();
   const { openShare, exportMarkdown, openExport, isExporting } = useShell();
   const { projectId, documentId } = parseWorkspacePath(pathname);
@@ -81,7 +83,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   return (
     <header
       data-print="hide"
-      className="flex h-12 shrink-0 items-center gap-3 border-b border-subtle bg-canvas/95 px-3 md:px-5"
+      className="liquid-glass-bar relative z-10 flex h-12 shrink-0 items-center gap-3 border-b border-subtle px-3 md:px-5"
     >
       <button
         type="button"
@@ -89,7 +91,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         aria-label="Abrir navegação"
         className="-ml-1 grid size-8 place-items-center rounded-lg text-muted hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary md:hidden"
       >
-        <Menu aria-hidden="true" className="size-4" strokeWidth={1.5} />
+        <Menu aria-hidden="true" className="size-4" strokeWidth={1.6} />
       </button>
 
       <nav aria-label="Localização" className="min-w-0 flex-1">
@@ -101,7 +103,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
               <Fragment key={`${crumb.label}-${index}`}>
                 {index > 0 && (
                   <li aria-hidden="true" className="hidden shrink-0 text-muted/60 lg:block">
-                    <ChevronRight className="size-3" strokeWidth={1.5} />
+                    <ChevronRight className="size-3" strokeWidth={1.6} />
                   </li>
                 )}
                 <li
@@ -154,7 +156,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
           title={document ? "Partilhar documento" : project ? "Partilhar projeto" : "Partilha e membros"}
           data-testid="topbar-share"
         >
-          <Users aria-hidden="true" strokeWidth={1.5} />
+          <Users aria-hidden="true" strokeWidth={1.6} />
           <span className="hidden xl:inline">Partilhar</span>
         </Button>
 
@@ -167,7 +169,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
             title={document ? "Exportar documento (PDF, Word, Markdown, HTML)" : "Exportar projeto (Markdown)"}
             data-testid="topbar-export"
           >
-            <Download aria-hidden="true" strokeWidth={1.5} />
+            <Download aria-hidden="true" strokeWidth={1.6} />
             <span className="hidden xl:inline">Exportar</span>
             <span className="sr-only xl:hidden">Exportar</span>
           </Button>
@@ -184,8 +186,21 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
           aria-label="Terminar sessão"
           title="Terminar sessão"
         >
-          <LogOut aria-hidden="true" strokeWidth={1.5} />
+          <LogOut aria-hidden="true" strokeWidth={1.6} />
         </Button>
+
+        {user && (
+          <button
+            type="button"
+            onClick={() => openProfile()}
+            aria-label={`Abrir perfil de ${user.name}`}
+            title="O seu perfil"
+            data-testid="topbar-profile"
+            className="rounded-full transition-transform duration-150 ease-editorial focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas active:scale-[0.97]"
+          >
+            <Avatar initials={user.initials} name={user.name} src={avatar} size="sm" className="size-7" />
+          </button>
+        )}
       </div>
     </header>
   );
@@ -203,7 +218,7 @@ function ThemeMenu() {
       panelClassName="w-64"
       trigger={(props) => (
         <Button variant="ghost" size="icon-sm" aria-label="Mudar de tema" title="Tema" {...props}>
-          <Palette aria-hidden="true" strokeWidth={1.5} />
+          <Palette aria-hidden="true" strokeWidth={1.6} />
         </Button>
       )}
     >

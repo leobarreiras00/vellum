@@ -1,6 +1,6 @@
 /**
  * Vellum — Server Actions do Workspace Engine (Módulo 2)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Fronteira do servidor (ver .claude/skills/security-rbac-guard.md §2):
@@ -14,8 +14,10 @@ import { z } from "zod";
 import {
   forgetTrustedDevice,
   getAccountSecurity,
+  changePassword,
   getSession,
   setLoginConfirmation,
+  updateAccountIdentity,
   type AccountSecurity,
   type SessionUser,
 } from "@/lib/auth";
@@ -68,8 +70,14 @@ import {
   updateDocument,
   updateNote,
   updatePreferences,
+  updateProfile,
+  setCover,
   updateProject,
 } from "@/lib/workspace-store";
+import { passwordSchema, usernameSchema } from "@/lib/auth-schemas";
+import { AVATAR_MAX_BYTES, AVATAR_TYPES, dataUrlToBytes, sniffImageType } from "@/lib/image-tools";
+import { ILLUSTRATION_COLLECTION_IDS, ILLUSTRATION_STYLE_IDS, coverSpecSchema } from "@/lib/illustrations";
+import { generateExternalIllustration, illustrationProviderStatus } from "@/lib/illustration-provider";
 import {
   commentInputSchema,
   dayNoteInputSchema,
@@ -82,6 +90,8 @@ import {
   documentUpdateSchema,
   noteInputSchema,
   preferencesInputSchema,
+  profileInputSchema,
+  illustrationThemeSchema,
   projectInputSchema,
   projectMemberInputSchema,
   inviteInputSchema,
@@ -464,4 +474,108 @@ export async function importWorkspaceSnapshotAction(input: unknown) {
     }
     return importWorkspaceBackup(user, backup.data);
   });
+}
+
+/* Perfil (Bloco 6) ---------------------------------------------------------- */
+
+const profileFormSchema = profileInputSchema.extend({ username: usernameSchema });
+
+/** Nome, username, cargo e bio. Devolve o utilizador da sessão já atualizado. */
+export async function updateProfileAction(input: unknown) {
+  return run(async (user) => {
+    const parsed = profileFormSchema.parse(input);
+    const account = await updateAccountIdentity(user.userId, { name: parsed.name, username: parsed.username });
+    if (!account.ok) throw new ValidationError(account.error);
+    await updateProfile(user, { name: parsed.name, title: parsed.title, bio: parsed.bio });
+    return (await getSession()) ?? user;
+  });
+}
+
+const avatarSchema = z
+  .string()
+  .max(Math.ceil((AVATAR_MAX_BYTES * 4) / 3) + 64, "A fotografia excede 2 MB.")
+  .regex(/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+=*$/, "Formato não suportado. Use PNG, JPEG/JPG ou WEBP.")
+  .nullable();
+
+/**
+ * Fotografia de perfil: o cliente recorta para 256×256, mas o servidor volta a
+ * verificar o tipo pelos bytes reais (assinatura) e o tamanho, e guarda na base
+ * de dados (sem disco local, compatível com o Railway).
+ */
+export async function updateAvatarAction(input: unknown) {
+  return run(async (user) => {
+    const avatar = avatarSchema.parse(input);
+    if (avatar) {
+      const declared = avatar.slice(5, avatar.indexOf(";"));
+      const bytes = dataUrlToBytes(avatar);
+      if (bytes.length > AVATAR_MAX_BYTES) throw new ValidationError("A fotografia excede 2 MB.");
+      const real = sniffImageType(bytes);
+      if (!real || real !== declared || !(AVATAR_TYPES as readonly string[]).includes(real)) {
+        throw new ValidationError("O ficheiro não é uma imagem PNG, JPEG ou WEBP válida.");
+      }
+    }
+    await updateProfile(user, { avatar });
+  });
+}
+
+export async function setIllustrationThemeAction(input: unknown) {
+  return run((user) => updateProfile(user, { illustrationTheme: illustrationThemeSchema.parse(input) }));
+}
+
+const changePasswordSchema = z
+  .object({
+    current: z.string().min(1, "Indique a palavra-passe atual."),
+    password: passwordSchema,
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, { message: "As palavras-passe não coincidem.", path: ["confirm"] });
+
+export async function changePasswordAction(input: unknown) {
+  return run(async () => {
+    const parsed = changePasswordSchema.parse(input);
+    const result = await changePassword(parsed.current, parsed.password);
+    if (!result.ok) throw new ValidationError(result.error);
+  });
+}
+
+/* Capas ilustradas (Bloco 5) ------------------------------------------------ */
+
+const coverInputSchema = z.object({
+  kind: z.enum(["project", "document"]),
+  targetId: idSchema,
+  spec: coverSpecSchema.nullable(),
+});
+
+export async function setCoverAction(input: unknown) {
+  return run(async (user) => {
+    const parsed = coverInputSchema.parse(input);
+    if (parsed.spec?.type === "upload") {
+      const declared = parsed.spec.src.slice(5, parsed.spec.src.indexOf(";"));
+      const real = sniffImageType(dataUrlToBytes(parsed.spec.src));
+      if (!real || real !== declared)
+        throw new ValidationError("O ficheiro não é uma imagem PNG, JPEG ou WEBP válida.");
+    }
+    await setCover(user, parsed);
+  });
+}
+
+const illustrationRequestSchema = z.object({
+  prompt: z.string().trim().min(3, "Descreva a ilustração (pelo menos 3 caracteres).").max(200),
+  style: z.enum(ILLUSTRATION_STYLE_IDS),
+  collection: z.enum(ILLUSTRATION_COLLECTION_IDS),
+});
+
+/**
+ * Gerador externo opcional. Sem ILLUSTRATION_API_URL configurado, devolve
+ * `{ external: false }` e o cliente usa o gerador local (SVG procedimental).
+ */
+export async function generateIllustrationAction(input: unknown) {
+  return run(async () => {
+    const parsed = illustrationRequestSchema.parse(input);
+    return generateExternalIllustration(parsed);
+  });
+}
+
+export async function illustrationProviderAction() {
+  return run(async () => illustrationProviderStatus());
 }

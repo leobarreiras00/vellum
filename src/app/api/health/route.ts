@@ -1,6 +1,6 @@
 /**
  * Vellum — Verificação de saúde (deploy, Docker HEALTHCHECK, balanceadores)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * 200 quando o repositório responde (no PostgreSQL, uma consulta à revisão);

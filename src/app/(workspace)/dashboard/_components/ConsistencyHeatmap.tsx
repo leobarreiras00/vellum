@@ -1,6 +1,6 @@
 /**
  * Vellum — Mapa de Consistência Anual (Heatmap Editorial)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * 53 semanas × 7 dias em tons graduais de creme a terracota (uma só tinta:
@@ -12,7 +12,7 @@ import { useState } from "react";
 
 import { WEEKDAY_SHORT, dayLongLabel, parseDayKey } from "@/lib/calendar";
 import { currentStreak, heatLevel, yearGrid } from "@/lib/telemetry";
-import { cn, formatDuration, formatNumber } from "@/lib/utils";
+import { cn, formatDuration, formatNumber, countLabel } from "@/lib/utils";
 
 const LEVEL_CLASSES = [
   "bg-surface border border-subtle",
@@ -130,7 +130,7 @@ export function ConsistencyHeatmap({ byDay, wordsByDay, goalSeconds, today }: He
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-muted">
         <p className="nums" aria-live="polite">
           <span className="text-primary first-letter:uppercase">{dayLongLabel(focus)}</span> ·{" "}
-          {formatDuration(byDay[focus] ?? 0)} focado · {formatNumber(wordsByDay[focus] ?? 0)} palavras
+          {formatDuration(byDay[focus] ?? 0)} focado · {countLabel(wordsByDay[focus] ?? 0, "palavra", "palavras")}
         </p>
         <span className="flex items-center gap-1.5" aria-hidden="true">
           Menos

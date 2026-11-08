@@ -1,6 +1,6 @@
 /**
  * Vellum — Paginação A4 (pré-visualização = PDF)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Distribui os blocos do fluxo (`[data-vx-flow]`) por folhas A4 com a caixa

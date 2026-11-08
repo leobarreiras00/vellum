@@ -1,6 +1,6 @@
 /**
  * Vellum — Gráfico de Horas e Esforço por Projeto (7 / 30 dias)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Uma linha por projeto: barra de horas (tinta do projeto), partilha do total
@@ -45,7 +45,7 @@ export function ProjectEffortChart({ projects, byProjectDay, today }: ProjectEff
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="nums font-serif text-lg italic text-muted">
+        <p className="nums font-serif text-lg text-muted">
           {formatDuration(total)} nos últimos {range} dias
         </p>
         <div
@@ -113,7 +113,7 @@ export function ProjectEffortChart({ projects, byProjectDay, today }: ProjectEff
         ))}
         {other > 0 && (
           <li className="flex items-center justify-between py-3 text-sm text-muted">
-            <span className="font-serif italic">Fora de projetos (dashboard, calendário, notas)</span>
+            <span className="font-serif">Fora de projetos (dashboard, calendário, notas)</span>
             <span className="nums font-mono text-xs">{hoursLabel(other)}</span>
           </li>
         )}

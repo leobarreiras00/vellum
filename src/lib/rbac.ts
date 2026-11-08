@@ -1,6 +1,6 @@
 /**
  * Vellum — Matriz RBAC (Módulo 1 · Auth & RBAC)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Fonte de verdade das permissões (ver .claude/skills/security-rbac-guard.md).

@@ -1,6 +1,6 @@
 /**
  * Vellum — Contexto de autenticação (cliente)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Recebe a sessão já resolvida no servidor (layout raiz) e expõe-a à interface,

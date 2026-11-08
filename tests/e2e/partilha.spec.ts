@@ -1,7 +1,7 @@
 /**
  * Vellum — E2E: partilha por link, convites por email, gestão de membros,
  * dados de exemplo e estado do email nas Definições
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { expect, test, type Browser, type Page } from "@playwright/test";
 
@@ -14,7 +14,7 @@ const DOC_TITLE = "Visão geral da arquitetura";
 
 async function openShare(page: Page) {
   await page.goto(DOC_URL);
-  await page.getByTestId("document-share").click();
+  await page.getByTestId("topbar-share").click();
   const modal = page.getByTestId("share-modal");
   await expect(modal).toBeVisible();
   return modal;
@@ -56,8 +56,8 @@ test("Link de edição: abre sem conta, edita e grava no documento real; revogar
   await guest.page.keyboard.type(" Nota acrescentada por link partilhado.");
   await expect(body).toContainText("Nota acrescentada por link partilhado.");
   await expect(guest.page.getByTestId("shared-save-state")).toHaveAttribute("data-state", "saved", { timeout: 15_000 });
-  // A barra de estado mostra o modo de página no documento partilhado.
-  await expect(guest.page.getByRole("radiogroup", { name: "Modo de documento" })).toBeVisible();
+  // O seletor A4 | Fluido vive no cabeçalho do documento partilhado (não na barra de estado).
+  await expect(guest.page.getByRole("radiogroup", { name: "Vista de página" })).toBeVisible();
 
   // O dono vê a alteração no documento real.
   await page.keyboard.press("Escape");

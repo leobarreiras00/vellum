@@ -1,12 +1,13 @@
 /**
  * Vellum — Layout raiz
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { SupportModalHost } from "@/components/support/SupportModal";
 import { AuthProvider } from "@/context/AuthContext";
 import { getSession } from "@/lib/auth";
 import { DEFAULT_THEME, THEME_INIT_SCRIPT } from "@/lib/themes";
@@ -46,8 +47,8 @@ export const metadata: Metadata = {
   },
   description:
     "A flexibilidade do Notion, a organização do OneNote e o rigor do Word, num atelier editorial em tons creme.",
-  authors: [{ name: "Leonardo Barreiras (Leo Barreiras)", url: "https://github.com/leobarreiras00" }],
-  creator: "Leonardo Barreiras (Leo Barreiras)",
+  authors: [{ name: "Leonardo Barreiras", url: "https://github.com/leobarreiras00" }],
+  creator: "Leonardo Barreiras",
   openGraph: {
     type: "website",
     locale: "pt_PT",
@@ -84,7 +85,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <ThemeProvider>
-          <AuthProvider initialUser={session}>{children}</AuthProvider>
+          <AuthProvider initialUser={session}>
+            {children}
+            <SupportModalHost />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

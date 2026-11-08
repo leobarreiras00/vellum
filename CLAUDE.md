@@ -1,13 +1,13 @@
 # CLAUDE.md — Regras de Arquitetura do Vellum
 
-> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 > Este ficheiro é a fonte de verdade para qualquer agente de IA ou colaborador que trabalhe neste repositório.
 
 ---
 
 ## 0. Protocolo obrigatório
 
-1. **Antes de qualquer tarefa**, ler sempre `CLAUDE.md` (este ficheiro), `.claude/PROGRESS.md` e as **5 skills obrigatórias** em `.claude/skills/` (ver §0.1).
+1. **Antes de qualquer tarefa**, ler sempre `CLAUDE.md` (este ficheiro), `.claude/PROGRESS.md` e as **7 skills obrigatórias** em `.claude/skills/` (ver §0.1).
 2. Para detalhe dos módulos, consultar `.claude/ARCHITECTURE.md`.
 3. **No fim de cada tarefa**, atualizar `.claude/PROGRESS.md` (marcar itens concluídos, registar decisões).
 4. **Idioma:** toda a interface, documentação, mensagens de erro visíveis ao utilizador e comentários de produto em **Português de Portugal (PT-PT)** (ex.: "ficheiro", "ecrã", "utilizador", "guardar", "definições"). Identificadores de código (variáveis, funções, tipos) em inglês.
@@ -22,6 +22,8 @@
 | [`motion-choreography.md`](.claude/skills/motion-choreography.md)   | Motion (`motion/react`), curva `[0.22, 1, 0.36, 1]`, caneta SVG do login, `prefers-reduced-motion` |
 | [`document-print-craft.md`](.claude/skills/document-print-craft.md) | Editor Híbrido, Folha A4 (`210mm × 297mm`), exportação sem desformatação     |
 | [`security-rbac-guard.md`](.claude/skills/security-rbac-guard.md)   | RBAC (`SUPER_ADMIN`, `OWNER`, `EDITOR`, `COMMENTER`, `VIEWER`), proteção de rotas, Mermaid `strict` |
+| [`taste-skill.md`](.claude/skills/taste-skill.md)                   | 20 regras de acabamento de UI: itálicos, rótulos, raios, cores de estado, Liquid Glass, um só CTA |
+| [`ux-forms-psychology.md`](.claude/skills/ux-forms-psychology.md)   | Formulários: rótulos visíveis, máscaras (`000 000`, `HH:MM`), larguras, agrupamento, Skeletons |
 
 Em caso de dúvida entre uma skill e este ficheiro, prevalece o `CLAUDE.md`; qualquer divergência deve ser corrigida na mesma tarefa.
 
@@ -50,8 +52,8 @@ Todas as cores são definidas como **variáveis CSS** em `:root` / `[data-theme=
 | `--bg-surface`     | `#F2ECE1` | Barras laterais, painéis, cartões     |
 | `--bg-elevated`    | `#FFFDF9` | Folha do editor, modais, popovers     |
 | `--text-primary`   | `#1C1B18` | Texto principal                       |
-| `--text-muted`     | `#6E6A63` | Texto secundário, metadados           |
-| `--accent-primary` | `#C85A32` | Ações primárias, foco, ligações       |
+| `--text-muted`     | `#57534C` | Texto secundário, metadados           |
+| `--accent-primary` | `#C85A32` | Ações primárias, foco, ligações (no ecrã `#B4461F`, mais saturado e AA) |
 | `--border-subtle`  | `#E4DDD0` | Divisores, contornos de inputs        |
 
 ### 2.2 Temas curados (lista fechada)
@@ -81,6 +83,12 @@ Carregar via `next/font/google` com `display: "swap"`. `tabular-nums` obrigatór
 - **Motion** (`motion`, importado de `motion/react`) para transições; micro-interações 150–250 ms.
 - Curva editorial padrão: `[0.22, 1, 0.36, 1]`.
 - Respeitar sempre `prefers-reduced-motion`. Regras completas em `.claude/skills/motion-choreography.md`.
+
+### 2.5 Cores de estado e Liquid Glass
+
+- Estado (fora dos 7 tokens de tema, em `:root`): `success` Sálvia `#2D6A4F`, `warning` Âmbar, `danger` Carmim `#9B2C2C`, `info` Ardósia `#2B5B84` → `text-success`, `bg-danger/10`…
+- **Liquid Glass** (`.liquid-glass`, `.liquid-glass-bar` em `globals.css`) só em elementos flutuantes: modais, ⌘K, barra de localizar, bubble toolbar, popovers, menus, Topbar. Nunca na folha nem em cartões.
+- Ícones Lucide com `strokeWidth={1.6}`; botões com `active:scale-[0.97]`; itálico só em ênfase de prosa e citações (nunca em metadados).
 
 ---
 
@@ -174,15 +182,15 @@ Cada módulo expõe: `components/`, `actions/` (Server Actions), `services/`, `s
 ```ts
 /**
  * Vellum — <Nome do Módulo>
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 ```
 
 - O componente `<AppFooter />` (`src/components/layout/AppFooter.tsx`, variantes `full` e `statusbar`) deve mostrar sempre:
 
-> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 
 ---
 
-© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.

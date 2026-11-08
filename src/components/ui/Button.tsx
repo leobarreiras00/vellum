@@ -1,6 +1,6 @@
 /**
  * Vellum — Primitiva <Button />
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * API ao estilo shadcn/ui (cva + cn), com os tokens Creme e sem dependências
@@ -14,9 +14,9 @@ import { cn } from "@/lib/utils";
 export const buttonVariants = cva(
   [
     "inline-flex shrink-0 select-none items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-sans font-medium",
-    "transition-[background-color,border-color,color,box-shadow] duration-150 ease-editorial",
+    "transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-editorial",
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas",
-    "active:translate-y-px disabled:pointer-events-none disabled:opacity-50",
+    "active:scale-[0.97] active:duration-0 disabled:pointer-events-none disabled:opacity-50",
     "[&_svg]:size-4 [&_svg]:shrink-0",
   ],
   {
@@ -26,7 +26,8 @@ export const buttonVariants = cva(
         secondary: "border border-subtle bg-elevated text-primary shadow-paper hover:bg-surface",
         ghost: "text-muted hover:bg-surface hover:text-primary",
         quiet: "text-primary hover:bg-accent-primary/[0.06]",
-        danger: "border border-accent-primary/40 bg-elevated text-accent-primary hover:bg-accent-primary/[0.08]",
+        danger: "border border-danger/40 bg-elevated text-danger hover:bg-danger/[0.08]",
+        success: "border border-success/40 bg-elevated text-success hover:bg-success/[0.08]",
       },
       size: {
         sm: "h-7 px-2.5 text-xs [&_svg]:size-3.5",

@@ -1,6 +1,6 @@
 /**
  * Vellum — Conteúdo rico do seed (Fase 3)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Documento de demonstração do Editor Rico: títulos, callout, checklist,

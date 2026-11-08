@@ -1,6 +1,6 @@
 /**
  * Vellum — Auditoria de acessibilidade WCAG 2.1 AA (axe-core) nos 5 temas
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  *
  * Para cada tema, percorre as páginas principais (login, dashboard, projetos,
  * documento, calendário, notas, definições) e falha em qualquer violação
@@ -86,7 +86,7 @@ for (const theme of THEME_IDS) {
       await page.keyboard.press("Escape");
 
       await page.goto("/projects/prj-arquitetura/documents/doc-visao-geral");
-      await page.getByTestId("document-export").click();
+      await page.getByTestId("topbar-export").click();
       await expect(page.getByRole("dialog").first()).toBeVisible();
       await page.waitForTimeout(1500);
       await audit(page, `modal de exportação · ${theme}`);

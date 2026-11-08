@@ -1,6 +1,6 @@
 /**
  * Vellum — <AppFooter /> oficial
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Variantes:
@@ -11,17 +11,16 @@
  */
 "use client";
 
-import { ArrowUpRight, CloudOff, CloudUpload, FileText, Timer, Type } from "lucide-react";
+import { ArrowUpRight, CloudOff, CloudUpload, LifeBuoy, Timer, Type } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { LicenseDialog } from "@/components/layout/LicenseDialog";
+import { openSupport } from "@/components/support/SupportModal";
 import { ThemeSwatches } from "@/components/layout/ThemeSwatches";
 import { VellumMark } from "@/components/layout/VellumMark";
 import { useOnline, usePendingSaves } from "@/lib/offline-queue";
-import { PAGE_MODES, PAGE_MODE_LABELS, type PageMode } from "@/lib/page-mode";
-import { usePageMode } from "@/lib/use-page-mode";
 import {
   APP_VERSION,
   COPYRIGHT_YEAR,
@@ -32,7 +31,7 @@ import {
   formatNumber,
 } from "@/lib/utils";
 
-export const COPYRIGHT_FULL = `© ${COPYRIGHT_YEAR} Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.`;
+export const COPYRIGHT_FULL = `© ${COPYRIGHT_YEAR} Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.`;
 export const COPYRIGHT_SHORT = `© ${COPYRIGHT_YEAR} Vellum · Leonardo Barreiras — Todos os direitos reservados.`;
 
 export interface TelemetrySnapshot {
@@ -57,9 +56,6 @@ type StatusbarFooterProps = {
   variant: "statusbar";
   className?: string;
   telemetry?: TelemetrySnapshot;
-  /** Controlado: modo de página do documento atual. */
-  pageMode?: PageMode;
-  onPageModeChange?: (mode: PageMode) => void;
 };
 
 export type AppFooterProps = FullFooterProps | StatusbarFooterProps;
@@ -82,7 +78,7 @@ function FullFooter({ className }: FullFooterProps) {
         {/* Marca + frase editorial */}
         <div className="max-w-sm">
           <VellumMark className="text-xl" />
-          <p className="mt-4 font-serif text-lg italic leading-snug text-muted">
+          <p className="mt-4 font-serif text-lg leading-snug text-muted">
             Um atelier para o pensamento escrito: a liberdade dos blocos, o rigor da página.
           </p>
         </div>
@@ -104,6 +100,7 @@ function FullFooter({ className }: FullFooterProps) {
         <nav aria-label="Informação legal" className="flex flex-col items-start gap-2.5 text-sm">
           <p className="eyebrow">Projeto</p>
           <LicenseDialog className="mt-1" />
+          <LegalLinks />
           <a
             href={REPOSITORY_URL}
             target="_blank"
@@ -111,7 +108,7 @@ function FullFooter({ className }: FullFooterProps) {
             className="inline-flex items-center gap-1 rounded-md text-muted underline-offset-4 transition-colors duration-150 ease-editorial hover:text-accent-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
           >
             Repositório no GitHub
-            <ArrowUpRight aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <ArrowUpRight aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           </a>
           <span className="nums font-mono text-[11px] text-muted">v{APP_VERSION}</span>
         </nav>
@@ -134,24 +131,8 @@ const DEFAULT_TELEMETRY: TelemetrySnapshot = {
   wordCount: 0,
 };
 
-function StatusbarFooter({
-  className,
-  telemetry = DEFAULT_TELEMETRY,
-  pageMode: controlledMode,
-  onPageModeChange,
-}: StatusbarFooterProps) {
-  const [uncontrolledMode, setUncontrolledMode] = usePageMode();
-  const pageMode = controlledMode ?? uncontrolledMode;
-  const pathname = usePathname() ?? "";
-  // O modo de página só faz sentido onde há uma folha aberta.
-  const showPageMode = isDocumentRoute(pathname);
-
-  // Modo não controlado: preferência partilhada com o documento aberto.
-  function changeMode(mode: PageMode) {
-    if (!controlledMode) setUncontrolledMode(mode);
-    onPageModeChange?.(mode);
-  }
-
+function StatusbarFooter({ className, telemetry = DEFAULT_TELEMETRY }: StatusbarFooterProps) {
+  // O modo de página (Folha A4 | Fluido) vive só no cabeçalho do documento.
   return (
     <footer
       role="contentinfo"
@@ -167,14 +148,14 @@ function StatusbarFooter({
         <TelemetryIndicator isActive={telemetry.isActive} idleMinutes={telemetry.idleMinutes ?? 2} />
         <Divider />
         <span className="inline-flex items-center gap-1" title="Tempo focado hoje">
-          <Timer aria-hidden="true" className="size-3" strokeWidth={1.5} />
+          <Timer aria-hidden="true" className="size-3" strokeWidth={1.6} />
           <span className="sr-only">Tempo focado hoje:</span>
           <span className="nums text-primary">{formatDuration(telemetry.focusedSecondsToday)}</span>
           <span className="hidden xl:inline">hoje</span>
         </span>
         <Divider className="hidden sm:block" />
         <span className="hidden items-center gap-1 sm:inline-flex" title="Palavras no documento">
-          <Type aria-hidden="true" className="size-3" strokeWidth={1.5} />
+          <Type aria-hidden="true" className="size-3" strokeWidth={1.6} />
           <span className="nums text-primary">{formatNumber(telemetry.wordCount)}</span>
           palavras
         </span>
@@ -198,13 +179,9 @@ function StatusbarFooter({
 
       {/* Direita — tema, modo de documento, versão */}
       <div className="ml-auto flex shrink-0 items-center justify-end gap-3 md:ml-0">
+        <LegalLinks compact />
+        <Divider className="hidden sm:block" />
         <ThemeSwatches size="sm" className="hidden sm:flex" />
-        {showPageMode && (
-          <>
-            <Divider className="hidden sm:block" />
-            <PageModeToggle value={pageMode} onChange={changeMode} />
-          </>
-        )}
         <Divider className="hidden sm:block" />
         <span className="nums hidden font-mono text-[10.5px] sm:inline">v{APP_VERSION}</span>
       </div>
@@ -235,14 +212,56 @@ function SyncIndicator() {
           }
         >
           {online ? (
-            <CloudUpload aria-hidden="true" className="size-3" strokeWidth={1.5} />
+            <CloudUpload aria-hidden="true" className="size-3" strokeWidth={1.6} />
           ) : (
-            <CloudOff aria-hidden="true" className="size-3" strokeWidth={1.5} />
+            <CloudOff aria-hidden="true" className="size-3" strokeWidth={1.6} />
           )}
           {online ? label : pending > 0 ? `Offline · ${label}` : "Offline"}
         </span>
       )}
     </span>
+  );
+}
+
+const legalLink =
+  "inline-flex items-center gap-1 rounded-md text-muted underline-offset-4 transition-colors duration-150 ease-editorial hover:text-accent-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary";
+
+/** Termos, Privacidade (RGPD) e Suporte — no rodapé completo e na barra de estado. */
+export function LegalLinks({ compact = false }: { compact?: boolean }) {
+  if (compact) {
+    return (
+      <nav aria-label="Informação legal e ajuda" className="hidden items-center gap-2.5 lg:flex">
+        <Link href="/termos" className={legalLink}>
+          Termos
+        </Link>
+        <Link href="/privacidade" className={legalLink}>
+          Privacidade
+        </Link>
+        <button type="button" onClick={() => openSupport()} className={legalLink} data-testid="statusbar-support">
+          <LifeBuoy aria-hidden="true" className="size-3" strokeWidth={1.6} />
+          Suporte
+        </button>
+      </nav>
+    );
+  }
+  return (
+    <>
+      <Link href="/termos" className={cn(legalLink, "text-sm")} data-testid="footer-terms">
+        Termos e Condições
+      </Link>
+      <Link href="/privacidade" className={cn(legalLink, "text-sm")} data-testid="footer-privacy">
+        Política de Privacidade (RGPD)
+      </Link>
+      <button
+        type="button"
+        onClick={() => openSupport()}
+        className={cn(legalLink, "text-sm")}
+        data-testid="footer-support"
+      >
+        <LifeBuoy aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
+        Centro de Suporte
+      </button>
+    </>
   );
 }
 
@@ -284,43 +303,5 @@ function TelemetryIndicator({ isActive, idleMinutes }: { isActive: boolean; idle
       </span>
       <span className={cn(isActive ? "text-primary" : "text-muted")}>{isActive ? "Esforço Ativo" : "Em Pausa"}</span>
     </span>
-  );
-}
-
-function PageModeToggle({ value, onChange }: { value: PageMode; onChange: (mode: PageMode) => void }) {
-  const reduceMotion = useReducedMotion();
-
-  return (
-    <div role="radiogroup" aria-label="Modo de documento" className="flex items-center rounded-md bg-canvas/70 p-px">
-      {PAGE_MODES.map((mode) => {
-        const selected = mode === value;
-        return (
-          <button
-            key={mode}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            onClick={() => onChange(mode)}
-            className={cn(
-              "relative inline-flex h-[20px] items-center gap-1 rounded-[5px] px-1.5 transition-colors duration-150 ease-editorial",
-              "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent-primary",
-              selected ? "text-primary" : "text-muted hover:text-primary",
-            )}
-          >
-            {selected && (
-              <motion.span
-                layoutId="vellum-page-mode-pill"
-                className="absolute inset-0 rounded-[5px] border border-subtle bg-elevated shadow-paper"
-                transition={reduceMotion ? { duration: 0 } : { duration: 0.22, ease: EASE_EDITORIAL }}
-              />
-            )}
-            <span className="relative inline-flex items-center gap-1">
-              {mode === "A4" && <FileText aria-hidden="true" className="size-3" strokeWidth={1.5} />}
-              {PAGE_MODE_LABELS[mode]}
-            </span>
-          </button>
-        );
-      })}
-    </div>
   );
 }

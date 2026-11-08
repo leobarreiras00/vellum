@@ -1,6 +1,6 @@
 /**
  * Vellum — Ícone de projeto (lista fechada lucide-react)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import {
@@ -54,7 +54,7 @@ export function ProjectGlyph({ icon, color, size = "md", className }: ProjectGly
         className,
       )}
     >
-      <Icon strokeWidth={1.5} />
+      <Icon strokeWidth={1.6} />
     </span>
   );
 }

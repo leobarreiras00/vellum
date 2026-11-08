@@ -1,6 +1,6 @@
 /**
  * Vellum — Seletor de temas por amostras cromáticas
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Cada amostra aplica o seu próprio data-theme, por isso mostra as cores reais

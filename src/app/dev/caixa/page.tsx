@@ -1,6 +1,6 @@
 /**
  * Vellum — Caixa de Inspeção de emails (desenvolvimento)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Mostra os últimos emails gerados pelo servidor (confirmação, convites,
@@ -21,6 +21,7 @@ const KIND_LABELS = {
   invite: "Convite",
   reset: "Recuperação",
   test: "Teste",
+  support: "Suporte",
 } as const;
 
 export default function DevInboxPage() {
@@ -34,13 +35,13 @@ export default function DevInboxPage() {
       <main className="mx-auto w-full max-w-5xl flex-1 px-5 pb-16 pt-10 md:px-10">
         <p className="eyebrow">Desenvolvimento</p>
         <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight">Caixa de inspeção</h1>
-        <p className="mt-2 font-serif text-lg italic text-muted">
+        <p className="mt-2 font-serif text-lg text-muted">
           {status.mode === "provider"
             ? `Envio real via ${status.provider}; cada email fica também aqui.`
             : "Sem fornecedor de email: os emails ficam aqui em vez de seguirem."}
         </p>
         {messages.length === 0 ? (
-          <p className="mt-10 border-t border-subtle pt-8 font-serif text-xl italic text-muted">Ainda não há emails.</p>
+          <p className="mt-10 border-t border-subtle pt-8 font-serif text-xl text-muted">Ainda não há emails.</p>
         ) : (
           <ol className="mt-8 space-y-8">
             {messages.map((m) => (

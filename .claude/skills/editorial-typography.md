@@ -1,6 +1,6 @@
 # Skill — Editorial Typography
 
-> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 > Skill obrigatória. A tipografia é a identidade do Vellum: três famílias, papéis estritos, sem exceções.
 
 ---
@@ -11,7 +11,7 @@
 | -------------- | --------------------- | ------------ | ------------------------------------------------------------------------------- |
 | `--font-serif` | **Newsreader**        | `font-serif` | Títulos de páginas, cabeçalhos de documentos, logótipo, destaques editoriais, corpo do documento no editor |
 | `--font-sans`  | **Plus Jakarta Sans** | `font-sans`  | Controlos de interface, menus, navegação, formulários, calendário, tabelas      |
-| `--font-mono`  | **JetBrains Mono**    | `font-mono`  | Editor Mermaid, código, atalhos de teclado (`<kbd>`), metadados técnicos, IDs, versões |
+| `--font-mono`  | **JetBrains Mono**    | `font-mono`  | **Só** editor Mermaid e código, atalhos de teclado (`<kbd>`) e tokens técnicos (IDs, versões, códigos). Contadores e horas ficam em sans + `tabular-nums` |
 
 Carregamento via `next/font/google` em `src/app/layout.tsx`, com `display: "swap"` e `subsets: ["latin", "latin-ext"]`. Newsreader carrega o eixo ótico (`axes: ["opsz"]`) e o estilo itálico.
 
@@ -23,7 +23,7 @@ Carregamento via `next/font/google` em `src/app/layout.tsx`, com `display: "swap
 
 ### 2.1 Serif (Newsreader)
 - Títulos com `font-serif`, peso 400–500 (nunca bold pesado), `tracking-tight` a partir de `text-3xl`.
-- Itálico para destaques editoriais, citações e subtítulos ("dek").
+- Itálico **só** para citações literárias, títulos de obras e um destaque semântico intencional. **Proibido** em metadados, contadores, subtítulos de sistema e estados vazios (`taste-skill.md` regra 1).
 - Logótipo "Vellum": serif, peso 500, `tracking-[-0.02em]`; ponto final opcional em `text-accent-primary`.
 - Corpo de documento: `text-[17px]/[1.65]`, `max-w-[68ch]`, `hanging-punctuation: first`.
 
@@ -59,4 +59,4 @@ Carregamento via `next/font/google` em `src/app/layout.tsx`, com `display: "swap
 - Reticências tipográficas `…`, travessão `—` em incisos, meia-risca `–` em intervalos (`09:00–10:30`).
 - Separador de milhares com espaço fino (`Intl.NumberFormat("pt-PT")`).
 - Datas: `7 de novembro de 2026`; horas em 24h `18:15`.
-- `text-wrap: balance` em títulos; `text-wrap: pretty` em parágrafos.
+- `text-wrap: balance` em títulos; `text-wrap: pretty` em parágrafos (regras globais em `globals.css`).

@@ -1,6 +1,6 @@
 /**
  * Vellum — Servidor de email falso para os testes E2E
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Imita POST /v3/smtp/email do Brevo e guarda as mensagens em memória, para os

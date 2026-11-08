@@ -1,6 +1,6 @@
 /**
  * Vellum — Hub de Sincronização (Módulo 6 · Sincronização)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Três pontes com aplicações externas, cada uma protegida por RBAC no cliente
@@ -131,7 +131,7 @@ function FilePick({
         }}
       />
       <Button variant="secondary" disabled={disabled} onClick={() => ref.current?.click()}>
-        <Upload aria-hidden="true" strokeWidth={1.5} />
+        <Upload aria-hidden="true" strokeWidth={1.6} />
         {label}
       </Button>
     </>
@@ -153,7 +153,7 @@ function Result({ tone = "info", children }: { tone?: "info" | "error"; children
 }
 
 function Locked({ children }: { children: ReactNode }) {
-  return <p className="text-xs italic text-muted">{children}</p>;
+  return <p className="text-xs text-muted">{children}</p>;
 }
 
 /* ==========================================================================
@@ -197,14 +197,14 @@ function CalendarSync() {
   return (
     <Row
       numeral="I"
-      icon={<CalendarDays strokeWidth={1.5} />}
+      icon={<CalendarDays strokeWidth={1.6} />}
       title="Calendário · iCalendar (.ics)"
       description="Formato RFC 5545, aceite pelo Google Calendar, Apple Calendar e Outlook."
       testId="sync-calendar"
     >
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="primary" onClick={exportIcs} disabled={isPending} data-testid="ics-export">
-          <Download aria-hidden="true" strokeWidth={1.5} />
+          <Download aria-hidden="true" strokeWidth={1.6} />
           Exportar calendário .ics
         </Button>
         <label className="flex items-center gap-2 text-[13px]">
@@ -241,7 +241,7 @@ function CalendarSync() {
         {PROVIDERS.map((provider) => (
           <li key={provider.name} className="border-l border-subtle pl-3">
             <p className="flex items-center gap-1.5 text-[13px] font-medium text-primary">
-              <CalendarPlus aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.5} />
+              <CalendarPlus aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.6} />
               {provider.href ? (
                 <a href={provider.href} target="_blank" rel="noopener noreferrer nofollow" className="hover:underline">
                   {provider.name}
@@ -331,7 +331,7 @@ function MarkdownImport() {
   return (
     <Row
       numeral="II"
-      icon={<FileUp strokeWidth={1.5} />}
+      icon={<FileUp strokeWidth={1.6} />}
       title="Documentos · Markdown (.md)"
       description="Títulos, listas, tarefas, tabelas, callouts e blocos ```mermaid passam a documentos do Editor Rico."
       testId="sync-markdown"
@@ -447,7 +447,7 @@ function SnapshotSync() {
   return (
     <Row
       numeral="III"
-      icon={<Database strokeWidth={1.5} />}
+      icon={<Database strokeWidth={1.6} />}
       title="Snapshot completo · .vellum.json"
       description="Backup integral de projetos, documentos, notas, calendário e métricas de esforço."
       testId="sync-snapshot"
@@ -470,7 +470,7 @@ function SnapshotSync() {
       <div className="flex flex-wrap items-center gap-3">
         {canExport ? (
           <Button variant="primary" onClick={exportSnapshot} disabled={isPending} data-testid="snapshot-export">
-            <Download aria-hidden="true" strokeWidth={1.5} />
+            <Download aria-hidden="true" strokeWidth={1.6} />
             Exportar snapshot
           </Button>
         ) : (

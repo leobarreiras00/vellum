@@ -1,6 +1,6 @@
 /**
  * Vellum — Dashboard Executivo de Tracking e Esforço (cliente)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Visão executiva: 4 KPIs, horas e esforço por projeto, mapa de consistência
@@ -10,6 +10,7 @@
  */
 "use client";
 
+import { AtelierVignette } from "@/components/illustrations/AtelierVignette";
 import { ArrowRight, CalendarDays, FolderPlus, Sparkles, Star, StickyNote, Timer } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -33,7 +34,7 @@ import { expandEvents } from "@/lib/recurrence";
 import { relativeTime } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/rbac";
 import { effortScore, periodTotals, sumRange } from "@/lib/telemetry";
-import { cn, formatClock, formatNumber } from "@/lib/utils";
+import { cn, formatClock, formatNumber, countLabel } from "@/lib/utils";
 import { routes } from "@/lib/workspace-routes";
 import { lisbonDay } from "@/lib/workspace-types";
 
@@ -83,10 +84,13 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
             {greeting}, {firstName}
             <span className="text-accent-primary">.</span>
           </h1>
-          <p className="mt-3 max-w-prose font-serif text-lg italic text-muted">
-            Sessão em <span className="not-italic text-primary">{snapshot.workspace.name}</span> como{" "}
-            <span className="not-italic text-primary">{role ? ROLE_LABELS[role] : "visitante"}</span>.
+          <p className="mt-3 max-w-prose font-serif text-lg text-muted">
+            Sessão em <span className="text-primary">{snapshot.workspace.name}</span> como{" "}
+            <span className="text-primary">{role ? ROLE_LABELS[role] : "visitante"}</span>.
           </p>
+        </div>
+        <div className="hidden sm:block">
+          <AtelierVignette />
         </div>
       </div>
 
@@ -116,7 +120,7 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
             </span>
           </span>
           <span className="nums inline-flex items-center gap-1.5 text-muted">
-            <Timer aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <Timer aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
             Sessão atual <span className="font-mono text-primary">{formatClock(telemetry.sessionSeconds)}</span>
           </span>
           <span className="nums text-muted">
@@ -124,7 +128,7 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
             min sem atividade
           </span>
           <Button variant="secondary" size="sm" className="ml-auto" onClick={() => setFocusOpen(true)}>
-            <Timer aria-hidden="true" strokeWidth={1.5} />
+            <Timer aria-hidden="true" strokeWidth={1.6} />
             Registar sessão de foco
           </Button>
         </div>
@@ -171,7 +175,7 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
           <section aria-labelledby="dash-escrever">
             <SectionHeading index="03" id="dash-escrever" title="Continuar a escrever" />
             {recent.length === 0 ? (
-              <p className="mt-6 font-serif italic text-muted">Ainda não há páginas. Crie um projeto para começar.</p>
+              <p className="mt-6 font-serif text-muted">Ainda não há páginas. Crie um projeto para começar.</p>
             ) : (
               <ol className="mt-2 divide-y divide-subtle">
                 {recent.map((doc) => {
@@ -190,7 +194,7 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
                         </span>
                         <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
                           {project && <InkTag color={project.color}>{project.name}</InkTag>}
-                          <span className="nums">{formatNumber(doc.wordCount)} palavras</span>
+                          <span className="nums">{countLabel(doc.wordCount, "palavra", "palavras")}</span>
                           <span
                             className="ml-auto flex w-full items-center gap-2 sm:w-44"
                             data-ink={project?.color ?? "grafite"}
@@ -225,12 +229,12 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
                     href={routes.calendar}
                     className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent-primary"
                   >
-                    Calendário <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                    Calendário <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.6} />
                   </Link>
                 }
               />
               {important.length === 0 ? (
-                <p className="mt-5 font-serif italic text-muted">
+                <p className="mt-5 font-serif text-muted">
                   Nenhum marco agendado. Marque um evento como Dia Importante.
                 </p>
               ) : (
@@ -256,7 +260,7 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
                               <Star
                                 aria-hidden="true"
                                 className="size-3 shrink-0 fill-current text-accent-primary"
-                                strokeWidth={1.5}
+                                strokeWidth={1.6}
                               />
                               <span className="truncate">{event.title}</span>
                             </span>
@@ -275,7 +279,7 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
               {todayEvents.length > 0 && (
                 <div className="mt-5 rounded-xl border border-subtle bg-surface/50 px-4 py-3">
                   <p className="eyebrow flex items-center gap-1.5">
-                    <CalendarDays aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                    <CalendarDays aria-hidden="true" className="size-3" strokeWidth={1.6} />
                     Hoje na agenda
                   </p>
                   <ul className="mt-2 space-y-1.5 text-sm">
@@ -302,22 +306,20 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
                     href={routes.notes}
                     className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent-primary"
                   >
-                    Ver mural <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                    Ver mural <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.6} />
                   </Link>
                 }
               />
               <div className="mt-4 space-y-3">
                 {pinned.length === 0 && (
-                  <p className="font-serif italic text-muted">
-                    Nenhuma nota fixada. Fixe as que quer ter sempre à mão.
-                  </p>
+                  <p className="font-serif text-muted">Nenhuma nota fixada. Fixe as que quer ter sempre à mão.</p>
                 )}
                 {pinned.map((note) => (
                   <NoteSlip key={note.id} note={note} compact />
                 ))}
                 <RoleGuard permission="document:edit">
                   <Link href={`${routes.notes}?nova=1`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-                    <StickyNote aria-hidden="true" strokeWidth={1.5} />
+                    <StickyNote aria-hidden="true" strokeWidth={1.6} />
                     Nova nota rápida
                   </Link>
                 </RoleGuard>
@@ -360,20 +362,20 @@ function EmptyAtelier({
           <h2 id="atelier-vazio" className="mt-2 font-serif text-3xl font-normal leading-tight">
             Uma mesa limpa, à espera da primeira página<span className="text-accent-primary">.</span>
           </h2>
-          <p className="mt-3 max-w-prose font-serif text-lg italic leading-relaxed text-muted">
+          <p className="mt-3 max-w-prose font-serif text-lg leading-relaxed text-muted">
             Comece por um projeto seu ou carregue três exemplos editoriais (um romance, uma revista e uma investigação)
             com documentos, diagramas, notas e uma agenda de novembro já preenchida.
           </p>
           <div className="mt-6 flex flex-wrap gap-2">
             {canManage && (
               <Button variant="primary" onClick={onNewProject}>
-                <FolderPlus aria-hidden="true" strokeWidth={1.5} />
+                <FolderPlus aria-hidden="true" strokeWidth={1.6} />
                 Criar projeto
               </Button>
             )}
             {canManage && (
               <Button variant="secondary" onClick={onLoadExamples} disabled={busy} data-testid="load-example-data">
-                <Sparkles aria-hidden="true" strokeWidth={1.5} />
+                <Sparkles aria-hidden="true" strokeWidth={1.6} />
                 Carregar dados de exemplo
               </Button>
             )}

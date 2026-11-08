@@ -1,6 +1,6 @@
 /**
  * Vellum — Hash de palavras-passe (scrypt)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Formato `scrypt$<sal>$<hash>` (N=2^14, r=8, p=1, 64 bytes), o mesmo do motor

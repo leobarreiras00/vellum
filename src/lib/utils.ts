@@ -1,6 +1,6 @@
 /**
  * Vellum — Utilitários base
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import { clsx, type ClassValue } from "clsx";
@@ -13,6 +13,8 @@ export function cn(...inputs: ClassValue[]): string {
 
 /** Curva editorial padrão (ver .claude/skills/motion-choreography.md). */
 export const EASE_EDITORIAL = [0.22, 1, 0.36, 1] as const;
+/** Movimentos de elementos que já estão no ecrã (motion-choreography lei 2). */
+export const EASE_MOVE = [0.65, 0, 0.35, 1] as const;
 
 export const APP_VERSION = "0.1.0";
 export const REPOSITORY_URL = "https://github.com/leobarreiras00/vellum";
@@ -58,4 +60,9 @@ export function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 80);
+}
+
+/** «1 palavra», «2 palavras» (número formatado em pt-PT). */
+export function countLabel(n: number, singular: string, pluralForm: string): string {
+  return `${formatNumber(n)} ${n === 1 ? singular : pluralForm}`;
 }

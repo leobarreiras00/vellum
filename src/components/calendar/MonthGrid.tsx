@@ -1,6 +1,6 @@
 /**
  * Vellum — Vista Calendário Mensal (grelha clássica)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Grelha com altura equilibrada (densidade Compacta/Confortável/Expandida),
@@ -156,7 +156,7 @@ function MonthCell({
           </button>
           {important && (
             <>
-              <Star aria-hidden="true" className="size-3 shrink-0 fill-current text-accent-primary" strokeWidth={1.5} />
+              <Star aria-hidden="true" className="size-3 shrink-0 fill-current text-accent-primary" strokeWidth={1.6} />
               <span className="sr-only">Dia importante</span>
             </>
           )}
@@ -182,7 +182,7 @@ function MonthCell({
                 aria-label={`Novo evento em ${dayLongLabel(day)}`}
                 className="grid size-5 place-items-center rounded text-muted opacity-0 transition-opacity hover:bg-surface hover:text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary group-hover:opacity-100"
               >
-                <Plus aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                <Plus aria-hidden="true" className="size-3" strokeWidth={1.6} />
               </button>
             )}
           </span>
@@ -191,7 +191,7 @@ function MonthCell({
         {holiday && (
           <p
             title={holiday.optional ? `${holiday.name} (tolerância)` : holiday.name}
-            className="mt-0.5 truncate px-0.5 font-serif text-[10.5px] italic leading-tight text-primary"
+            className="mt-0.5 truncate px-0.5 font-serif text-[10.5px] leading-tight text-primary"
           >
             <span
               aria-hidden="true"
@@ -221,10 +221,10 @@ function MonthCell({
             <p
               data-testid="cell-note"
               className={cn(
-                "flex items-start gap-1 rounded-[5px] bg-surface/80 px-1 py-0.5 font-serif text-[10.5px] italic leading-snug text-muted",
+                "flex items-start gap-1 rounded-[5px] bg-surface/80 px-1 py-0.5 font-serif text-[10.5px] leading-snug text-muted",
               )}
             >
-              <NotebookPen aria-hidden="true" className="mt-[2px] size-2.5 shrink-0" strokeWidth={1.5} />
+              <NotebookPen aria-hidden="true" className="mt-[2px] size-2.5 shrink-0" strokeWidth={1.6} />
               <span className={compact ? "line-clamp-1" : "line-clamp-2"}>{summary}</span>
             </p>
           )}

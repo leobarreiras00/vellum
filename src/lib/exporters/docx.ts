@@ -1,6 +1,6 @@
 /**
  * Vellum — Exportação Microsoft Word (.docx estruturado)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Gera um .docx com a biblioteca `docx`, segundo document-print-craft.md §3.2:
@@ -43,6 +43,7 @@ import type { DocNode } from "@/lib/document-content";
 import { CALLOUT_LABELS, CALLOUT_VARIANTS, type CalloutVariant } from "@/lib/document-content";
 import { FONT_FAMILIES, INK_HEX, MARK_HEX, inlineRuns, type TextRun as VxRun } from "@/lib/exporters/inline";
 import { COPYRIGHT_LINE, type ExportBundle, type ExportDiagram } from "@/lib/exporters/types";
+import { dataUrlToBytes, isSafeImageSrc, sniffImageType } from "@/lib/image-tools";
 import { APP_VERSION } from "@/lib/utils";
 
 /* Valores de impressão (papel claro, tema Creme Quente). */
@@ -147,13 +148,21 @@ function blocks(node: DocNode, ctx: Ctx, opts: BlockOpts = {}): Block[] {
   const base = opts.base ?? {};
   switch (node.type) {
     case "paragraph":
-      return [new Paragraph({ style: opts.style, alignment: alignment(node), children: runs(node, base) })];
+      return [
+        new Paragraph({
+          style: opts.style,
+          alignment: alignment(node),
+          indent: indentOf(node),
+          children: runs(node, base),
+        }),
+      ];
     case "heading": {
       const level = Math.min(3, Math.max(1, Number(node.attrs?.level ?? 1)));
       return [
         new Paragraph({
           heading: HEADINGS[level - 1],
           alignment: alignment(node),
+          indent: indentOf(node),
           keepNext: true,
           keepLines: true,
           children: runs(node),
@@ -225,9 +234,64 @@ function blocks(node: DocNode, ctx: Ctx, opts: BlockOpts = {}): Block[] {
       return [table(node, ctx), spacer()];
     case "mermaid":
       return mermaid(node, ctx);
+    case "image":
+      return image(node);
     default:
       return all();
   }
+}
+
+/** Recuo de parágrafo (0–6 níveis de 2em ≈ 480 twips cada, a 12 pt). */
+function indentOf(node: DocNode): { left: number } | undefined {
+  const level = Math.min(6, Math.max(0, Math.trunc(Number(node.attrs?.indent ?? 0)) || 0));
+  return level ? { left: level * 480 } : undefined;
+}
+
+const DOCX_IMAGE_TYPES = { "image/png": "png", "image/jpeg": "jpg", "image/gif": "gif" } as const;
+
+/** Imagem incorporada (PNG/JPEG/GIF) com largura proporcional à página e legenda. */
+function image(node: DocNode): Block[] {
+  const src = String(node.attrs?.src ?? "");
+  const caption = String(node.attrs?.caption ?? "").trim();
+  const alt = String(node.attrs?.alt ?? caption) || "Imagem";
+  const out: Block[] = [];
+  const bytes = src.startsWith("data:") && isSafeImageSrc(src) ? dataUrlToBytes(src) : null;
+  const real = bytes ? sniffImageType(bytes) : null;
+  const type = real && real in DOCX_IMAGE_TYPES ? DOCX_IMAGE_TYPES[real as keyof typeof DOCX_IMAGE_TYPES] : null;
+  const align =
+    node.attrs?.align === "left"
+      ? AlignmentType.LEFT
+      : node.attrs?.align === "right"
+        ? AlignmentType.RIGHT
+        : AlignmentType.CENTER;
+  if (bytes && type) {
+    const pct = [25, 50, 75, 100].includes(Number(node.attrs?.widthPct)) ? Number(node.attrs?.widthPct) : 100;
+    const naturalW = Number(node.attrs?.naturalWidth) || 1200;
+    const naturalH = Number(node.attrs?.naturalHeight) || 800;
+    const usablePx = Math.round(USABLE_DXA / 15);
+    const width = Math.min(Math.round((usablePx * pct) / 100), naturalW);
+    const height = Math.round((width * naturalH) / naturalW);
+    out.push(
+      new Paragraph({
+        alignment: align,
+        keepNext: Boolean(caption),
+        spacing: { before: 120, after: caption ? 60 : 200 },
+        children: [
+          new ImageRun({
+            type,
+            data: bytes,
+            transformation: { width, height },
+            altText: { name: alt.slice(0, 120), title: caption || alt, description: alt.slice(0, 900) },
+          }),
+        ],
+      }),
+    );
+  } else {
+    // WEBP ou imagem remota: o Word não a incorpora; fica uma indicação clara.
+    out.push(new Paragraph({ style: "VellumCaption", text: `[Imagem: ${alt}]` }));
+  }
+  if (caption) out.push(new Paragraph({ style: "VellumCaption", text: caption }));
+  return out;
 }
 
 function listItem(item: DocNode, ctx: Ctx, kind: string, level: number, instance: number): Block[] {

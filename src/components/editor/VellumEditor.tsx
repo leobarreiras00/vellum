@@ -1,6 +1,6 @@
 /**
  * Vellum — Editor Rico (híbrido Microsoft Word + blocos Notion)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Motor TipTap v2 (ProseMirror). Fonte de verdade: JSON ProseMirror
@@ -14,22 +14,41 @@ import { useEffect, useRef } from "react";
 
 import { buildExtensions } from "@/components/editor/extensions";
 import type { DocContent } from "@/lib/document-content";
+import { SkeletonText } from "@/components/ui/Skeleton";
 import { cn } from "@/lib/utils";
 
 interface UseVellumEditorOptions {
   content: DocContent;
   editable: boolean;
   onChange?: (json: DocContent) => void;
+  /** ⌘K / Ctrl+K com texto selecionado. */
+  onRequestLink?: () => void;
+  /** Erros ao colar ou arrastar imagens. */
+  onError?: (message: string) => void;
 }
 
 /** Cria o editor uma vez por documento; atualizações do servidor não o reiniciam. */
-export function useVellumEditor({ content, editable, onChange }: UseVellumEditorOptions): Editor | null {
+export function useVellumEditor({
+  content,
+  editable,
+  onChange,
+  onRequestLink,
+  onError,
+}: UseVellumEditorOptions): Editor | null {
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const linkRef = useRef(onRequestLink);
+  linkRef.current = onRequestLink;
+  const errorRef = useRef(onError);
+  errorRef.current = onError;
 
   const editor = useEditor(
     {
-      extensions: buildExtensions({ editable }),
+      extensions: buildExtensions({
+        editable,
+        onRequestLink: () => linkRef.current?.(),
+        onImageError: (message) => errorRef.current?.(message),
+      }),
       content,
       editable,
       immediatelyRender: false,
@@ -65,15 +84,18 @@ interface VellumEditorProps {
 export function VellumEditor({ editor, readingFont, className }: VellumEditorProps) {
   return (
     <div className={cn("vellum-prose", className)} data-reading-font={readingFont}>
-      {editor ? (
-        <EditorContent editor={editor} />
-      ) : (
-        <div aria-hidden="true" className="space-y-3 py-2">
-          <div className="h-4 w-11/12 rounded bg-surface" />
-          <div className="h-4 w-10/12 rounded bg-surface" />
-          <div className="h-4 w-8/12 rounded bg-surface" />
-        </div>
-      )}
+      {editor ? <EditorContent editor={editor} /> : <SkeletonText lines={4} className="py-2" />}
     </div>
   );
+}
+
+/**
+ * Excerto selecionado para comentar: só o texto do documento (a régua, os
+ * números de página e a interface nunca entram na citação).
+ */
+export function editorQuote(editor: Editor | null): string {
+  if (!editor) return "";
+  const { from, to, empty } = editor.state.selection;
+  if (empty) return "";
+  return editor.state.doc.textBetween(from, to, " ", " ").replace(/\s+/g, " ").trim().slice(0, 600);
 }

@@ -1,6 +1,6 @@
 /**
  * Vellum — Envio de email transacional (Brevo · Resend)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Só `fetch`, sem dependências. Configuração apenas por variáveis de ambiente:
@@ -30,7 +30,7 @@ import type { EmailContent } from "@/lib/email-templates";
 
 export type MailProvider = "brevo" | "resend";
 export type MailMode = "provider" | "dev-inbox" | "off";
-export type MailKind = "confirm" | "login" | "invite" | "reset" | "test";
+export type MailKind = "confirm" | "login" | "invite" | "reset" | "test" | "support";
 
 export interface MailStatus {
   mode: MailMode;

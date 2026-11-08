@@ -1,6 +1,6 @@
 /**
  * Vellum — Primitivas de formulário (<Label />, <Input />, <Textarea />, <Select />)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import { ChevronDown } from "lucide-react";
@@ -19,7 +19,7 @@ const control = [
   "w-full rounded-lg border border-subtle bg-elevated px-3 font-sans text-sm text-primary shadow-[inset_0_1px_0_rgb(var(--border-subtle-rgb)/0.5)]",
   "placeholder:text-muted/70 transition-[border-color,box-shadow] duration-150 ease-editorial",
   "focus-visible:border-accent-primary/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/25 focus-visible:ring-offset-0",
-  "disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-accent-primary/70",
+  "disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-danger/70",
 ].join(" ");
 
 export function Label({ className, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
@@ -52,7 +52,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
       <ChevronDown
         aria-hidden="true"
         className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted"
-        strokeWidth={1.5}
+        strokeWidth={1.6}
       />
     </span>
   );
@@ -61,7 +61,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
 export function FieldError({ id, children }: { id?: string; children?: ReactNode }) {
   if (!children) return null;
   return (
-    <p id={id} role="alert" className="mt-1.5 text-xs text-accent-primary">
+    <p id={id} role="alert" className="mt-1.5 text-xs text-danger">
       {children}
     </p>
   );

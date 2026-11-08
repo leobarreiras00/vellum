@@ -1,6 +1,6 @@
 /**
  * Vellum — Repositório PostgreSQL (Prisma)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Cada coleção de `StoreData` tem a sua tabela (prisma/schema.prisma). Cada
@@ -28,6 +28,7 @@ import type {
   RecurrenceRule,
   StoreData,
   UserPreferences,
+  UserProfileRecord,
 } from "@/lib/workspace-types";
 
 import { readJsonFile } from "./json";
@@ -55,6 +56,10 @@ interface ProjectMemberRow extends ProjectMemberRecord {
 }
 
 interface PreferenceRow extends UserPreferences {
+  userId: string;
+}
+
+interface ProfileRow extends UserProfileRecord {
   userId: string;
 }
 
@@ -266,6 +271,23 @@ const TABLES: readonly TableSpec[] = [
     }),
   },
   {
+    model: "userProfile",
+    keyFields: ["userId"],
+    orderBy: { userId: "asc" },
+    rows: (d) =>
+      Object.entries(d.profiles ?? {}).map(([userId, p]): ProfileRow => ({ userId, ...p })) as unknown as Row[],
+    toRow: (r) => ({ ...r, updatedAt: toDate(r.updatedAt as string) }),
+    fromRow: (r) => ({ ...r, avatar: r.avatar ?? null, updatedAt: iso(r.updatedAt) }),
+  },
+  {
+    model: "coverArt",
+    keyFields: ["targetId"],
+    orderBy: { updatedAt: "asc" },
+    rows: (d) => (d.covers ?? []) as unknown as Row[],
+    toRow: (r) => ({ ...r, spec: r.spec as Prisma.InputJsonValue, updatedAt: toDate(r.updatedAt as string) }),
+    fromRow: (r) => ({ ...r, updatedAt: iso(r.updatedAt) }),
+  },
+  {
     model: "importedSnapshot",
     keyFields: ["workspaceId", "snapshotId"],
     orderBy: { importedAt: "asc" },
@@ -352,6 +374,10 @@ async function loadAll(tx: Tx): Promise<StoreData> {
     dayNotes: result.dayNote as never,
     importedSnapshots: result.importedSnapshot as never,
     shareLinks: result.shareLink as never,
+    profiles: Object.fromEntries(
+      (result.userProfile as unknown as ProfileRow[]).map(({ userId, ...p }) => [userId, p]),
+    ),
+    covers: result.coverArt as never,
   };
 }
 

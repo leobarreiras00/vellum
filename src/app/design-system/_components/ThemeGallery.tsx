@@ -1,6 +1,6 @@
 /**
  * Vellum — Galeria dos 5 temas (página de verificação do Design System)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
@@ -51,7 +51,7 @@ export function ThemeGallery() {
                 <div className="flex-1 p-3">
                   <div className="h-full rounded-md border border-subtle bg-elevated px-3 py-2.5 shadow-paper">
                     <p className="font-serif text-[15px] leading-tight text-primary">Caderno</p>
-                    <p className="font-serif text-[10px] italic text-muted">7 de novembro</p>
+                    <p className="font-serif text-[10px] text-muted">7 de novembro</p>
                     <div className="mt-2 space-y-1">
                       <div className="h-[3px] w-full rounded bg-primary/15" />
                       <div className="h-[3px] w-5/6 rounded bg-primary/15" />

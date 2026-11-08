@@ -1,6 +1,6 @@
 /**
  * Vellum — Kit do Estúdio Mermaid (Módulo 3 · Editor Rico)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Módulo puro: templates de 1 clique, guia de sintaxe em PT-PT, assistente de

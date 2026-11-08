@@ -1,6 +1,6 @@
 /**
  * Vellum — Hub de Projetos (cliente): grelha ou lista editorial
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
@@ -59,7 +59,7 @@ export function ProjectsClient() {
         <div>
           <p className="eyebrow">{snapshot.workspace.name}</p>
           <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight">Projetos</h1>
-          <p className="nums mt-2 font-serif text-lg italic text-muted">
+          <p className="nums mt-2 font-serif text-lg text-muted">
             {formatNumber(snapshot.projects.length)} cadernos · {formatNumber(totals.pages)} páginas ·{" "}
             {hoursLabel(totals.effort)} de esforço registado
           </p>
@@ -83,14 +83,14 @@ export function ProjectsClient() {
                   view === value ? "bg-elevated text-primary shadow-paper" : "text-muted hover:text-primary",
                 )}
               >
-                <Icon aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+                <Icon aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
                 {label}
               </button>
             ))}
           </div>
           <RoleGuard permission="project:manage">
             <Button variant="primary" onClick={() => openProjectForm()}>
-              <FolderPlus aria-hidden="true" strokeWidth={1.5} />
+              <FolderPlus aria-hidden="true" strokeWidth={1.6} />
               Novo projeto
             </Button>
           </RoleGuard>
@@ -176,7 +176,7 @@ function ProjectEntry({ project, index }: { project: ProjectView; index: number 
             title="Membros e permissões"
             onClick={() => openMembers(project.id)}
           >
-            <Users aria-hidden="true" strokeWidth={1.5} />
+            <Users aria-hidden="true" strokeWidth={1.6} />
           </Button>
           {can("project:manage", project.id) && (
             <Button
@@ -186,7 +186,7 @@ function ProjectEntry({ project, index }: { project: ProjectView; index: number 
               title="Editar projeto"
               onClick={() => openProjectForm(project.id)}
             >
-              <PenLine aria-hidden="true" strokeWidth={1.5} />
+              <PenLine aria-hidden="true" strokeWidth={1.6} />
             </Button>
           )}
         </span>

@@ -1,6 +1,6 @@
 /**
  * Vellum — Middleware de proteção de rotas
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Primeira barreira (ver .claude/skills/security-rbac-guard.md §3):

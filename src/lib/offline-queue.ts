@@ -1,6 +1,6 @@
 /**
  * Vellum — Fila offline de gravações de documentos
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Só no cliente. Quando não há rede (ou o servidor não responde), a última

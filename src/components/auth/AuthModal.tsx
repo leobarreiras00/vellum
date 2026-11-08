@@ -1,6 +1,6 @@
 /**
  * Vellum — <AuthModal /> · Entrar, Criar conta e Recuperar palavra-passe
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Folha de papelaria (bg-elevated, borda capilar, shadow-sheet) com quatro vistas:
@@ -29,6 +29,7 @@ import {
 } from "@/app/(auth)/actions";
 import { FormNotice, PasswordField, SubmitButton, TextField, linkButton } from "@/components/auth/AuthFields";
 import { useTheme } from "@/components/providers/ThemeProvider";
+import { openSupport } from "@/components/support/SupportModal";
 import { useAuth } from "@/context/AuthContext";
 import {
   fieldErrors,
@@ -42,6 +43,7 @@ import {
 import type { SignInOutcome } from "@/lib/auth";
 import type { PlatformRole, WorkspaceRole } from "@/lib/rbac";
 import type { ThemeId } from "@/lib/themes";
+import { digitsOnly, formatOtp } from "@/lib/input-masks";
 import { EASE_EDITORIAL, cn } from "@/lib/utils";
 
 /** Perfil de demonstração tal como chega ao cliente (sem palavra-passe). */
@@ -161,7 +163,7 @@ export function AuthModal({
               <h2 id="auth-title" className="mt-2 text-[28px] font-normal leading-tight tracking-tight">
                 {header[view].title}
               </h2>
-              <p className="mt-1 font-serif text-[15px] italic text-muted">{header[view].dek}</p>
+              <p className="mt-1 font-serif text-[15px] text-muted">{header[view].dek}</p>
             </header>
 
             {view === "login" && (
@@ -198,6 +200,24 @@ export function AuthModal({
             )}
           </motion.div>
         </AnimatePresence>
+        <p className="mt-6 border-t border-subtle pt-4 text-center text-xs text-muted">
+          Precisa de ajuda?{" "}
+          <button
+            type="button"
+            onClick={() => openSupport("pedido")}
+            className="rounded-sm font-medium text-accent-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+          >
+            Contactar Suporte
+          </button>
+          <span aria-hidden="true"> · </span>
+          <a href="/termos" className="hover:text-primary">
+            Termos
+          </a>
+          <span aria-hidden="true"> · </span>
+          <a href="/privacidade" className="hover:text-primary">
+            Privacidade
+          </a>
+        </p>
       </div>
     </section>
   );
@@ -318,7 +338,7 @@ function LoginView({ next, prefill, notice, demoProfiles, onForgot, onCodeSent }
         />
         <SubmitButton pending={pending && !demoPending} pendingLabel="A entrar…" disabled={pending}>
           Entrar
-          <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.5} />
+          <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.6} />
         </SubmitButton>
       </form>
 
@@ -352,12 +372,12 @@ function LoginView({ next, prefill, notice, demoProfiles, onForgot, onCodeSent }
                     <span className="block truncate text-xs text-muted">{profile.blurb}</span>
                   </span>
                   {demoPending === profile.id ? (
-                    <Loader2 aria-label="A entrar…" className="size-4 animate-spin text-muted" strokeWidth={1.5} />
+                    <Loader2 aria-label="A entrar…" className="size-4 animate-spin text-muted" strokeWidth={1.6} />
                   ) : (
                     <ArrowRight
                       aria-hidden="true"
                       className="size-4 text-muted transition-transform duration-150 ease-editorial group-hover:translate-x-0.5 group-hover:text-accent-primary"
-                      strokeWidth={1.5}
+                      strokeWidth={1.6}
                     />
                   )}
                 </button>
@@ -377,13 +397,21 @@ function LoginView({ next, prefill, notice, demoProfiles, onForgot, onCodeSent }
    Vista 2 · Criar conta
    ========================================================================== */
 
-type RegisterFields = { name: string; username: string; email: string; password: string; theme: string };
+type RegisterFields = {
+  name: string;
+  username: string;
+  email: string;
+  password: string;
+  theme: string;
+  acceptTerms: boolean;
+};
 
 function RegisterView({ onCodeSent }: { onCodeSent: (outcome: CodeSent) => void }) {
   const complete = useCompleteSignIn();
   const { theme, themes, setTheme } = useTheme();
   const [values, setValues] = useState({ name: "", username: "", email: "", password: "" });
   const [chosenTheme, setChosenTheme] = useState<ThemeId>(theme);
+  const [accepted, setAccepted] = useState(false);
   const [errors, setErrors] = useState<FieldErrors<RegisterFields>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -398,7 +426,7 @@ function RegisterView({ onCodeSent }: { onCodeSent: (outcome: CodeSent) => void 
 
   function onSubmit(event: FormEvent) {
     event.preventDefault();
-    const parsed = registerSchema.safeParse({ ...values, theme: chosenTheme });
+    const parsed = registerSchema.safeParse({ ...values, theme: chosenTheme, acceptTerms: accepted });
     if (!parsed.success) {
       setErrors(fieldErrors(parsed.error));
       return;
@@ -514,9 +542,50 @@ function RegisterView({ onCodeSent }: { onCodeSent: (outcome: CodeSent) => void 
         </p>
       </fieldset>
 
+      <div>
+        <label className="flex items-start gap-2.5 text-[13px] leading-snug text-primary">
+          <input
+            type="checkbox"
+            name="acceptTerms"
+            checked={accepted}
+            onChange={(e) => setAccepted(e.target.checked)}
+            aria-invalid={errors.acceptTerms ? true : undefined}
+            aria-describedby={errors.acceptTerms ? "accept-terms-error" : undefined}
+            className="mt-0.5 size-4 shrink-0 rounded border-subtle accent-[rgb(var(--accent-primary-rgb))]"
+            data-testid="accept-terms"
+          />
+          <span>
+            Li e aceito os{" "}
+            <a
+              href="/termos"
+              target="_blank"
+              rel="noopener"
+              className="text-accent-primary underline underline-offset-2"
+            >
+              Termos e Condições
+            </a>{" "}
+            e a{" "}
+            <a
+              href="/privacidade"
+              target="_blank"
+              rel="noopener"
+              className="text-accent-primary underline underline-offset-2"
+            >
+              Política de Privacidade
+            </a>
+            .
+          </span>
+        </label>
+        {errors.acceptTerms && (
+          <p id="accept-terms-error" role="alert" className="mt-1.5 text-xs text-danger">
+            {errors.acceptTerms}
+          </p>
+        )}
+      </div>
+
       <SubmitButton pending={pending} pendingLabel="A preparar o seu atelier…">
         Criar conta
-        <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.5} />
+        <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.6} />
       </SubmitButton>
       <p className="text-center text-[11px] leading-relaxed text-muted">
         Fica como Proprietário do seu próprio workspace. Enviamos um código para confirmar o email.
@@ -633,11 +702,11 @@ function ResetView({ prefill, onBack, onDone }: ResetViewProps) {
                 name="one-time-code"
                 autoComplete="one-time-code"
                 inputMode="numeric"
-                maxLength={6}
-                placeholder="000000"
-                className="nums font-mono tracking-[0.4em]"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                maxLength={7}
+                placeholder="000 000"
+                className="nums font-mono tracking-[0.3em]"
+                value={formatOtp(code)}
+                onChange={(e) => setCode(digitsOnly(e.target.value, 6))}
                 error={errors.code}
                 autoFocus
               />
@@ -659,7 +728,7 @@ function ResetView({ prefill, onBack, onDone }: ResetViewProps) {
                 error={errors.confirm}
               />
               <SubmitButton pending={pending} pendingLabel="A guardar…">
-                <KeyRound aria-hidden="true" className="size-4" strokeWidth={1.5} />
+                <KeyRound aria-hidden="true" className="size-4" strokeWidth={1.6} />
                 Definir nova palavra-passe
               </SubmitButton>
               <div className="text-center">
@@ -678,7 +747,7 @@ function ResetView({ prefill, onBack, onDone }: ResetViewProps) {
           onClick={step === 2 ? () => setStep(1) : onBack}
           className={cn(linkButton, "inline-flex items-center gap-1.5")}
         >
-          <ArrowLeft aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          <ArrowLeft aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           {step === 2 ? "Usar outra conta" : "Voltar a iniciar sessão"}
         </button>
       </div>
@@ -767,7 +836,7 @@ function VerifyView({ pending, next, devInbox, onResent, onBack }: VerifyViewPro
       data-testid="verify-view"
     >
       <div className="flex items-start gap-3 rounded-lg border border-subtle bg-surface/60 px-3 py-3">
-        <MailCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.5} />
+        <MailCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.6} />
         <p className="text-sm leading-relaxed text-primary">
           Enviámos um código de 6 algarismos para{" "}
           <span className="font-medium" data-testid="verify-email">
@@ -801,12 +870,12 @@ function VerifyView({ pending, next, devInbox, onResent, onBack }: VerifyViewPro
         name="one-time-code"
         autoComplete="one-time-code"
         inputMode="numeric"
-        maxLength={6}
-        placeholder="000000"
-        className="nums h-12 text-center font-mono text-xl tracking-[0.5em]"
-        value={code}
+        maxLength={7}
+        placeholder="000 000"
+        className="nums h-12 text-center font-mono text-xl tracking-[0.35em]"
+        value={formatOtp(code)}
         onChange={(e) => {
-          const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+          const value = digitsOnly(e.target.value, 6);
           setCode(value);
           if (value.length === 6) submit(value);
         }}
@@ -825,12 +894,12 @@ function VerifyView({ pending, next, devInbox, onResent, onBack }: VerifyViewPro
 
       <SubmitButton pending={pendingSubmit} pendingLabel="A confirmar…">
         {pending.purpose === "register" ? "Confirmar e abrir o atelier" : "Confirmar e entrar"}
-        <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.5} />
+        <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.6} />
       </SubmitButton>
 
       <div className="flex flex-wrap items-center justify-between gap-2 border-t border-subtle pt-4">
         <button type="button" onClick={onBack} className={cn(linkButton, "inline-flex items-center gap-1.5")}>
-          <ArrowLeft aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          <ArrowLeft aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           Voltar
         </button>
         <div className="flex items-center gap-3">
@@ -841,7 +910,7 @@ function VerifyView({ pending, next, devInbox, onResent, onBack }: VerifyViewPro
               rel="noopener noreferrer"
               className={cn(linkButton, "inline-flex items-center gap-1")}
             >
-              <Inbox aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+              <Inbox aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
               Caixa de inspeção
             </a>
           )}
@@ -851,7 +920,7 @@ function VerifyView({ pending, next, devInbox, onResent, onBack }: VerifyViewPro
             onClick={resend}
             disabled={pendingSubmit || cooldown > 0}
           >
-            <RotateCw aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <RotateCw aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
             {cooldown > 0 ? `Reenviar código (${cooldown} s)` : "Reenviar código"}
           </button>
         </div>

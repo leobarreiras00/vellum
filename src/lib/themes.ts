@@ -1,6 +1,6 @@
 /**
  * Vellum — Catálogo dos 5 temas restritos
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Lista fechada (ver .claude/skills/frontend-design.md). Os valores das cores

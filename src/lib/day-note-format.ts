@@ -1,6 +1,6 @@
 /**
  * Vellum — Formato estruturado da Nota do Dia
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * A nota continua a ser texto simples (compatível com notas antigas, exportação

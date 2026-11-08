@@ -1,6 +1,6 @@
 /**
  * Vellum — Conteúdo estruturado dos documentos (Módulo 3 · Editor Rico)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Módulo puro (servidor e cliente). O documento vive como JSON ProseMirror
@@ -9,6 +9,8 @@
  * derivam-se daqui, no servidor, a cada gravação.
  */
 import { z } from "zod";
+
+import { isSafeImageSrc } from "@/lib/image-tools";
 
 /* ==========================================================================
    Tipos
@@ -33,7 +35,8 @@ export interface DocContent extends DocNode {
 }
 
 /** Tamanho máximo do JSON serializado (≈ 1 MB). */
-export const MAX_CONTENT_BYTES = 1_000_000;
+/** 8 MB: texto e imagens comprimidas (cada imagem ≤ ~1,2 MB, ver image-tools). */
+export const MAX_CONTENT_BYTES = 8_000_000;
 const MAX_DEPTH = 24;
 
 const markSchema = z.object({
@@ -61,7 +64,19 @@ export const docContentSchema = z
     if (depthOf(value) > MAX_DEPTH) {
       ctx.addIssue({ code: "custom", message: "A estrutura do documento é demasiado profunda." });
     }
+    // Imagens: só data URLs de imagem (PNG/JPEG/WEBP/GIF) ou https; nada de javascript:, svg ou http.
+    for (const node of walkNodes(value)) {
+      if (node.type === "image" && !isSafeImageSrc(node.attrs?.src)) {
+        ctx.addIssue({ code: "custom", message: "Uma das imagens tem um formato ou tamanho não suportado." });
+        break;
+      }
+    }
   }) as z.ZodType<DocContent>;
+
+function* walkNodes(node: DocNode): Generator<DocNode> {
+  yield node;
+  for (const child of node.content ?? []) yield* walkNodes(child);
+}
 
 function depthOf(node: DocNode, depth = 0): number {
   if (!node.content?.length) return depth;
@@ -118,6 +133,11 @@ export function docToPlainText(doc: DocNode): string {
       return;
     }
     if (node.type === "horizontalRule") return;
+    if (node.type === "image") {
+      const caption = String(node.attrs?.caption ?? "").trim();
+      if (caption) blocks.push(caption);
+      return;
+    }
     if (node.type === "tableRow") {
       const cells = (node.content ?? []).map((cell) => inlineText(cell).trim()).filter(Boolean);
       if (cells.length) blocks.push(cells.join(" · "));
@@ -188,6 +208,14 @@ function markdownBlock(node: DocNode, indent = ""): string {
     }
     case "horizontalRule":
       return "---";
+    case "image": {
+      const src = String(node.attrs?.src ?? "");
+      if (!src) return "";
+      const alt = String(node.attrs?.alt ?? node.attrs?.caption ?? "").replace(/[[\]]/g, "");
+      const caption = String(node.attrs?.caption ?? "").trim();
+      const title = caption ? ` "${caption.replace(/"/g, "'")}"` : "";
+      return `![${alt}](${src}${title})${caption ? `\n\n*${caption}*` : ""}`;
+    }
     case "bulletList":
       return children.map((item) => listItem(item, `${indent}- `, indent)).join("\n");
     case "orderedList": {

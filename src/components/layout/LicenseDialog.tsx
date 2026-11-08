@@ -1,6 +1,6 @@
 /**
  * Vellum — Diálogo de consulta da Licença Proprietária
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
@@ -46,7 +46,7 @@ export function LicenseDialog({ className, children }: LicenseDialogProps) {
       >
         {children ?? (
           <>
-            <Scale aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <Scale aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
             Licença Proprietária
           </>
         )}
@@ -68,7 +68,7 @@ export function LicenseDialog({ className, children }: LicenseDialogProps) {
               <h2 id="vellum-license-title" className="mt-2 text-2xl leading-snug">
                 Licença Proprietária de Código Visível
               </h2>
-              <p className="mt-1 font-serif text-base italic text-muted">Todos os direitos reservados.</p>
+              <p className="mt-1 font-serif text-base text-muted">Todos os direitos reservados.</p>
             </div>
             <button
               type="button"
@@ -76,16 +76,15 @@ export function LicenseDialog({ className, children }: LicenseDialogProps) {
               aria-label="Fechar"
               className="grid size-8 shrink-0 place-items-center rounded-lg text-muted transition-colors duration-150 hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             >
-              <X aria-hidden="true" className="size-4" strokeWidth={1.5} />
+              <X aria-hidden="true" className="size-4" strokeWidth={1.6} />
             </button>
           </header>
 
           <div className="overflow-y-auto px-7 py-6 text-sm leading-relaxed">
             <p className="font-serif text-[17px] leading-[1.6] text-primary">
               O Vellum, incluindo código-fonte, design, marca, identidade visual, documentação, arquitetura e temas, é
-              propriedade exclusiva de <strong className="font-medium">Leonardo Barreiras (Leo Barreiras)</strong>. Este
-              repositório é público apenas para <em>visualização e portefólio</em> e não constitui uma licença de código
-              aberto.
+              propriedade exclusiva de <strong className="font-medium">Leonardo Barreiras</strong>. Este repositório é
+              público apenas para <em>visualização e portefólio</em> e não constitui uma licença de código aberto.
             </p>
 
             <section className="mt-6">
@@ -130,7 +129,7 @@ export function LicenseDialog({ className, children }: LicenseDialogProps) {
               className="inline-flex items-center gap-1 text-sm text-accent-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             >
               Ler o texto integral (PT + EN)
-              <ArrowUpRight aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+              <ArrowUpRight aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
             </a>
             <button
               type="button"

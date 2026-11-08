@@ -1,6 +1,6 @@
 /**
  * Vellum — Tipos do Workspace Engine (Módulo 2)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Módulo puro, partilhado entre servidor (workspace-store.ts) e cliente.
@@ -11,6 +11,8 @@
 import { z } from "zod";
 
 import { docContentSchema, type DocContent } from "@/lib/document-content";
+import { dataUrlToBytes, isSafeImageSrc, sniffImageType } from "@/lib/image-tools";
+import { ILLUSTRATION_COLLECTION_IDS, type CoverSpec, type IllustrationCollection } from "@/lib/illustrations";
 import { ROLE_RANK, WORKSPACE_ROLES, type PlatformRole, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
 import { THEME_IDS, type ThemeId } from "@/lib/themes";
 
@@ -141,6 +143,8 @@ export interface QuickNoteRecord {
   content: string;
   color: InkColor;
   isPinned: boolean;
+  /** Imagem colada ou arrastada (data URL comprimido no navegador). */
+  image?: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -339,6 +343,26 @@ export interface UserPreferences {
   readingFont: ReadingFont;
 }
 
+/** Perfil público de cada pessoa (Bloco 6): fotografia, cargo, bio e coleção de ilustrações. */
+export interface UserProfileRecord {
+  /** Fotografia 256×256 (data URL WEBP/PNG/JPEG) ou `null` (monograma). */
+  avatar: string | null;
+  title: string;
+  bio: string;
+  illustrationTheme: IllustrationCollection;
+  updatedAt: string;
+}
+
+/** Capa de um projeto ou documento (Bloco 5). */
+export interface CoverRecord {
+  targetId: string;
+  workspaceId: string;
+  kind: "project" | "document";
+  spec: CoverSpec;
+  updatedById: string;
+  updatedAt: string;
+}
+
 export interface StoreData {
   version: 1;
   workspaces: WorkspaceRecord[];
@@ -357,6 +381,10 @@ export interface StoreData {
   importedSnapshots?: Array<{ workspaceId: string; snapshotId: string; importedAt: string }>;
   /** Links de partilha e convites por email. */
   shareLinks?: ShareLinkRecord[];
+  /** Perfis (fotografia, cargo, bio), por utilizador. */
+  profiles?: Record<string, UserProfileRecord>;
+  /** Capas ilustradas de projetos e documentos. */
+  covers?: CoverRecord[];
 }
 
 /* ==========================================================================
@@ -370,6 +398,9 @@ export interface MemberView {
   initials: string;
   role: WorkspaceRole;
   platformRole: PlatformRole;
+  /** Fotografia de perfil (data URL 256×256) ou `null`. */
+  avatar: string | null;
+  title: string;
 }
 
 export interface ProjectView extends Omit<ProjectRecord, "deletedAt" | "workspaceId"> {
@@ -438,6 +469,10 @@ export interface WorkspaceSnapshot {
   /** Diagramas Mermaid ativos em todos os documentos. */
   diagramCount: number;
   preferences: UserPreferences;
+  /** Perfil do utilizador atual. */
+  profile: UserProfileRecord;
+  /** Capas por id de projeto/documento. */
+  covers: Record<string, CoverSpec>;
   /** Esforço do utilizador atual (AAAA-MM-DD, Europa/Lisboa). */
   effort: EffortSummary;
   generatedAt: string;
@@ -503,6 +538,16 @@ export const noteInputSchema = z.object({
   color: inkSchema,
   projectId: id.nullable().default(null),
   isPinned: z.boolean().default(false),
+  image: z
+    .string()
+    .nullable()
+    .default(null)
+    .refine(
+      (v) => v === null || (v.startsWith("data:") && isSafeImageSrc(v) && sniffImageType(dataUrlToBytes(v)) !== null),
+      {
+        message: "A imagem da nota tem um formato ou tamanho não suportado.",
+      },
+    ),
 });
 export type NoteInput = z.infer<typeof noteInputSchema>;
 
@@ -641,6 +686,16 @@ export const preferencesInputSchema = z
     readingFont: z.enum(READING_FONTS),
   })
   .partial();
+
+/** Perfil editável (ProfileModal). A fotografia é validada à parte (bytes reais). */
+export const profileInputSchema = z.object({
+  name: z.string().trim().min(2, "Indique o nome completo.").max(80, "Nome demasiado longo."),
+  title: z.string().trim().max(80, "Máximo de 80 caracteres.").default(""),
+  bio: z.string().trim().max(400, "Máximo de 400 caracteres.").default(""),
+});
+export type ProfileInput = z.infer<typeof profileInputSchema>;
+
+export const illustrationThemeSchema = z.enum(ILLUSTRATION_COLLECTION_IDS);
 
 /* ==========================================================================
    RBAC por projeto

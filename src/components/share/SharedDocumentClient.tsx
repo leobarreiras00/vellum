@@ -1,6 +1,6 @@
 /**
  * Vellum — Documento aberto por link partilhado
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * O mesmo editor e a mesma folha do atelier, com o papel do link:
@@ -18,7 +18,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { addSharedCommentAction, fetchSharedDocumentAction, saveSharedDocumentAction } from "@/app/shared/actions";
 import { DocumentCanvas } from "@/components/editor/DocumentCanvas";
 import { RichWordToolbar } from "@/components/editor/RichWordToolbar";
-import { VellumEditor, useVellumEditor } from "@/components/editor/VellumEditor";
+import { VellumEditor, editorQuote, useVellumEditor } from "@/components/editor/VellumEditor";
+import { PageModeSwitch } from "@/components/editor/PageModeSwitch";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { VellumMark } from "@/components/layout/VellumMark";
 import { Button } from "@/components/ui/Button";
@@ -27,7 +28,7 @@ import { ProjectGlyph } from "@/components/ui/ProjectGlyph";
 import type { DocContent } from "@/lib/document-content";
 import { relativeTime } from "@/lib/format";
 import { usePageMode } from "@/lib/use-page-mode";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn, countLabel } from "@/lib/utils";
 import type { SharedAccess, SharedCommentView, SharedDocumentView } from "@/lib/workspace-store";
 import { COMMENT_KINDS, COMMENT_KIND_LABELS, SHARE_ROLE_LABELS, type CommentKind } from "@/lib/workspace-types";
 
@@ -179,8 +180,8 @@ export function SharedDocumentClient({ token, access, initial, viewerName }: Sha
 
   function captureQuote() {
     if (!canComment) return;
-    const selection = window.getSelection()?.toString().trim() ?? "";
-    if (selection) setQuote(selection.slice(0, 600));
+    const selection = editorQuote(editor);
+    if (selection.length >= 2) setQuote(selection);
   }
 
   function changeGuest(name: string) {
@@ -217,7 +218,7 @@ export function SharedDocumentClient({ token, access, initial, viewerName }: Sha
           className="ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-md border border-subtle bg-elevated px-2 py-0.5 font-sans text-[11px] text-muted"
           title={`Partilhado por ${access.ownerName}`}
         >
-          <RoleIcon aria-hidden="true" className="size-3" strokeWidth={1.5} />
+          <RoleIcon aria-hidden="true" className="size-3" strokeWidth={1.6} />
           {SHARE_ROLE_LABELS[role]}
         </span>
         <span className="hidden shrink-0 font-sans text-xs text-muted md:inline">
@@ -248,7 +249,7 @@ export function SharedDocumentClient({ token, access, initial, viewerName }: Sha
                       d.id === docId ? "bg-surface text-primary" : "text-muted hover:bg-surface/60 hover:text-primary",
                     )}
                   >
-                    <FileText aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.5} />
+                    <FileText aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.6} />
                     <span className="truncate">{d.title}</span>
                   </Link>
                 </li>
@@ -287,9 +288,10 @@ export function SharedDocumentClient({ token, access, initial, viewerName }: Sha
                   </select>
                 </label>
               )}
+              <PageModeSwitch value={pageMode} onChange={setPageMode} />
               <SaveBadge state={saveState} canEdit={canEdit} onReload={() => void refresh(true)} />
               <span className="nums mr-auto text-muted">
-                {formatNumber(doc.wordCount)} palavras · atualizado {relativeTime(doc.updatedAt)}
+                {countLabel(doc.wordCount, "palavra", "palavras")} · atualizado {relativeTime(doc.updatedAt)}
               </span>
               {canComment && (
                 <Button
@@ -299,7 +301,7 @@ export function SharedDocumentClient({ token, access, initial, viewerName }: Sha
                   data-testid="shared-comments-toggle"
                   onClick={() => setDrawerOpen((v) => !v)}
                 >
-                  <MessageSquareText aria-hidden="true" strokeWidth={1.5} />
+                  <MessageSquareText aria-hidden="true" strokeWidth={1.6} />
                   Comentários
                   <span className="nums font-mono text-[10.5px] text-muted">{openComments}</span>
                 </Button>
@@ -341,7 +343,7 @@ export function SharedDocumentClient({ token, access, initial, viewerName }: Sha
                           markDirty();
                         }}
                         placeholder="Uma linha de resumo (opcional)"
-                        className="mt-1 w-full bg-transparent font-serif text-lg italic text-muted outline-none placeholder:text-muted/50"
+                        className="mt-1 w-full bg-transparent font-serif text-lg text-muted outline-none placeholder:text-muted/50"
                       />
                     </>
                   ) : (
@@ -352,14 +354,13 @@ export function SharedDocumentClient({ token, access, initial, viewerName }: Sha
                       >
                         {doc.title || "Sem título"}
                       </h1>
-                      {doc.summary && <p className="mt-1 font-serif text-lg italic text-muted">{doc.summary}</p>}
+                      {doc.summary && <p className="mt-1 font-serif text-lg text-muted">{doc.summary}</p>}
                     </>
                   )}
                 </div>
                 <VellumEditor editor={editor} readingFont="serif" />
                 <p className="mt-12 hidden border-t border-subtle pt-3 font-sans text-[9pt] text-muted print:block">
-                  © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos
-                  reservados.
+                  © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
                 </p>
               </DocumentCanvas>
             </div>
@@ -387,8 +388,6 @@ export function SharedDocumentClient({ token, access, initial, viewerName }: Sha
       <AppFooter
         variant="statusbar"
         telemetry={{ isActive: false, focusedSecondsToday: 0, wordCount: doc.wordCount }}
-        pageMode={pageMode}
-        onPageModeChange={setPageMode}
         className="sticky bottom-0 z-40"
       />
     </div>
@@ -399,7 +398,7 @@ function SaveBadge({ state, canEdit, onReload }: { state: SaveState; canEdit: bo
   if (!canEdit) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-subtle px-1.5 py-0.5 text-muted">
-        <Eye aria-hidden="true" className="size-3" strokeWidth={1.5} />
+        <Eye aria-hidden="true" className="size-3" strokeWidth={1.6} />
         Só leitura
       </span>
     );
@@ -439,11 +438,11 @@ function SaveBadge({ state, canEdit, onReload }: { state: SaveState; canEdit: bo
       className="inline-flex items-center gap-1.5 text-muted"
     >
       {state === "saving" ? (
-        <Loader2 aria-hidden="true" className="size-3 animate-spin" strokeWidth={1.5} />
+        <Loader2 aria-hidden="true" className="size-3 animate-spin" strokeWidth={1.6} />
       ) : state === "saved" ? (
-        <Check aria-hidden="true" className="size-3 text-accent-primary" strokeWidth={1.5} />
+        <Check aria-hidden="true" className="size-3 text-accent-primary" strokeWidth={1.6} />
       ) : (
-        <PenLine aria-hidden="true" className="size-3" strokeWidth={1.5} />
+        <PenLine aria-hidden="true" className="size-3" strokeWidth={1.6} />
       )}
       {label}
     </span>
@@ -507,7 +506,7 @@ function SharedComments({
       <div className="flex items-center justify-between border-b border-subtle px-4 py-3">
         <p className="font-serif text-lg">Comentários</p>
         <Button size="icon-sm" variant="ghost" onClick={onClose} aria-label="Fechar comentários">
-          <X aria-hidden="true" strokeWidth={1.5} />
+          <X aria-hidden="true" strokeWidth={1.6} />
         </Button>
       </div>
 
@@ -551,7 +550,7 @@ function SharedComments({
         </div>
         {quote && (
           <blockquote className="flex items-start gap-2 rounded-md bg-surface px-2.5 py-2 font-serif text-sm italic text-muted">
-            <Quote aria-hidden="true" className="mt-0.5 size-3 shrink-0" strokeWidth={1.5} />
+            <Quote aria-hidden="true" className="mt-0.5 size-3 shrink-0" strokeWidth={1.6} />
             <span className="line-clamp-3 flex-1">{quote}</span>
             <button
               type="button"
@@ -559,7 +558,7 @@ function SharedComments({
               aria-label="Remover citação"
               className="text-muted hover:text-primary"
             >
-              <X aria-hidden="true" className="size-3" strokeWidth={1.5} />
+              <X aria-hidden="true" className="size-3" strokeWidth={1.6} />
             </button>
           </blockquote>
         )}
@@ -584,16 +583,14 @@ function SharedComments({
           disabled={pending || !body.trim()}
           data-testid="shared-comment-send"
         >
-          {pending && <Loader2 aria-hidden="true" className="animate-spin" strokeWidth={1.5} />}
+          {pending && <Loader2 aria-hidden="true" className="animate-spin" strokeWidth={1.6} />}
           Publicar
         </Button>
       </form>
 
       <ol className="flex-1 space-y-3 overflow-y-auto px-4 py-4">
         {open.length === 0 && (
-          <li className="py-6 text-center font-serif text-sm italic text-muted">
-            Ainda ninguém comentou este documento.
-          </li>
+          <li className="py-6 text-center font-serif text-sm text-muted">Ainda ninguém comentou este documento.</li>
         )}
         {open.map((c) => (
           <CommentItem key={c.id} comment={c} />

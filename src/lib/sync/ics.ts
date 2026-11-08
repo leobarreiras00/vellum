@@ -1,6 +1,6 @@
 /**
  * Vellum — Calendário iCalendar (.ics, RFC 5545)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Módulo puro (servidor e testes).
@@ -152,7 +152,7 @@ export function buildIcs(input: IcsExportInput): string {
     `X-WR-CALNAME:${escapeIcsText(input.calendarName)}`,
     `NAME:${escapeIcsText(input.calendarName)}`,
     `X-WR-TIMEZONE:${CALENDAR_TZ}`,
-    `X-WR-CALDESC:${escapeIcsText("Calendário exportado do Vellum. © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.")}`,
+    `X-WR-CALDESC:${escapeIcsText("Calendário exportado do Vellum. © 2026 Leonardo Barreiras. Todos os direitos reservados.")}`,
     ...LISBON_VTIMEZONE,
   ];
 

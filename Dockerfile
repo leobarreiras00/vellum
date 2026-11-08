@@ -1,6 +1,6 @@
 # =============================================================================
 # Vellum — Imagem de produção (Next.js standalone + Chromium para o PDF)
-# © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+# © 2026 Leonardo Barreiras. Todos os direitos reservados.
 # Licença proprietária — ver LICENSE na raiz do repositório.
 #
 #   docker build -t vellum .

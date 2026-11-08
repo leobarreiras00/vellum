@@ -1,6 +1,6 @@
 /**
  * Vellum — Modelos de email transacional (Creme Quente)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * HTML de email com estilos em linha (os clientes de email ignoram folhas de
@@ -219,5 +219,46 @@ export function testEmail(input: { name: string; provider: string; link: string 
     ].join("\n"),
   });
   const text = `${input.name}, o envio de emails do Vellum via ${input.provider} está a funcionar.\n\n${COPYRIGHT_LINE}`;
+  return { subject, html, text };
+}
+
+/* ==========================================================================
+   Pedido de suporte (Centro de Suporte)
+   ========================================================================== */
+
+export function supportEmail(input: {
+  category: string;
+  replyTo: string;
+  name: string;
+  message: string;
+  diagnostics: string;
+}): EmailContent {
+  const subject = `Vellum · Suporte · ${input.category}`;
+  const pre = (value: string) =>
+    `<pre style="margin:0 0 14px;padding:12px 14px;background:${C.surface};border-radius:8px;font-family:${MONO};font-size:12px;line-height:1.55;white-space:pre-wrap;color:${C.ink}">${escapeHtml(value)}</pre>`;
+  const html = layout({
+    eyebrow: "Pedido de suporte",
+    title: input.category,
+    preheader: `${input.name || "Alguém"} pediu ajuda no Vellum.`,
+    body: [
+      paragraph(
+        `<strong style="font-weight:600">${escapeHtml(input.name || "Sem nome")}</strong> · <a href="mailto:${escapeHtml(input.replyTo)}" style="color:${C.accent}">${escapeHtml(input.replyTo)}</a>`,
+      ),
+      paragraph(escapeHtml(input.message).replace(/\n/g, "<br>")),
+      small("Diagnóstico enviado pelo navegador:"),
+      pre(input.diagnostics),
+    ].join("\n"),
+  });
+  const text = [
+    `Pedido de suporte · ${input.category}`,
+    `De: ${input.name || "Sem nome"} <${input.replyTo}>`,
+    "",
+    input.message,
+    "",
+    "Diagnóstico:",
+    input.diagnostics,
+    "",
+    COPYRIGHT_LINE,
+  ].join("\n");
   return { subject, html, text };
 }

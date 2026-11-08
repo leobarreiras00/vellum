@@ -1,6 +1,6 @@
 /**
  * Vellum — E2E móvel do App Shell
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { expect, test } from "@playwright/test";
 

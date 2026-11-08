@@ -1,6 +1,6 @@
 /**
  * Vellum — Regressão: barra lateral recolhida (60px) mostra ícones em todas as rotas
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  *
  * Bug corrigido: com a barra recolhida, o conteúdo mantinha 272px de largura e os
  * ícones centrados ficavam a ~136px, cortados pelo `overflow-hidden` do <aside>

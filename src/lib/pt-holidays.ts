@@ -1,6 +1,6 @@
 /**
  * Vellum — Feriados nacionais de Portugal
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Calculados para qualquer ano (Páscoa pelo algoritmo de Meeus/Jones/Butcher),

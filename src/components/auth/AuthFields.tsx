@@ -1,6 +1,6 @@
 /**
  * Vellum — Campos de formulário de autenticação
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Papelaria de luxo: rótulos sans pequenos, contornos capilares, foco em tinta
@@ -118,9 +118,9 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(fu
           className="grid size-8 place-items-center rounded-md text-muted transition-colors duration-150 ease-editorial hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
         >
           {visible ? (
-            <EyeOff aria-hidden="true" className="size-4" strokeWidth={1.5} />
+            <EyeOff aria-hidden="true" className="size-4" strokeWidth={1.6} />
           ) : (
-            <Eye aria-hidden="true" className="size-4" strokeWidth={1.5} />
+            <Eye aria-hidden="true" className="size-4" strokeWidth={1.6} />
           )}
         </button>
       }
@@ -179,7 +179,7 @@ export function SubmitButton({ pending, pendingLabel, children, className, disab
       )}
       {...props}
     >
-      {pending && <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.5} />}
+      {pending && <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.6} />}
       {pending ? (pendingLabel ?? children) : children}
     </button>
   );

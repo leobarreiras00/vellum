@@ -1,6 +1,6 @@
 /**
  * Vellum — Design System "Tactile Editorial Atelier"
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Fonte de verdade dos 5 temas restritos (ver .claude/skills/frontend-design.md).
@@ -24,19 +24,19 @@
     --bg-surface: #f2ece1;
     --bg-elevated: #fffdf9;
     --text-primary: #1c1b18;
-    --text-muted: #6e6a63;
-    --accent-primary: #ac4c2a; /* AA: ≥4.5:1 em canvas, surface e elevated */
+    --text-muted: #57534c; /* taste-skill regra 5: ≈7:1 em canvas */
+    --accent-primary: #b4461f; /* mais saturado (regra 6), AA ≥4.5:1 em canvas, surface e elevated */
     --border-subtle: #e4ddd0;
     --bg-canvas-rgb: 250 247 242;
     --bg-surface-rgb: 242 236 225;
     --bg-elevated-rgb: 255 253 249;
     --text-primary-rgb: 28 27 24;
-    --text-muted-rgb: 110 106 99;
-    --accent-primary-rgb: 172 76 42;
+    --text-muted-rgb: 87 83 76;
+    --accent-primary-rgb: 180 70 31;
     --border-subtle-rgb: 228 221 208;
     --shadow-paper: 0 2px 12px -2px rgba(28, 27, 24, 0.06);
     --shadow-sheet: 0 1px 2px rgba(28, 27, 24, 0.04), 0 12px 32px -8px rgba(28, 27, 24, 0.1);
-    --selection: rgba(172, 76, 42, 0.18);
+    --selection: rgba(180, 70, 31, 0.18);
     color-scheme: light;
   }
 
@@ -210,10 +210,28 @@
     --doc-mark-carmim: rgba(224, 128, 140, 0.22);
   }
 
+  /* Cores de estado (psicologia da cor, taste-skill regra 7). Não são tokens de
+     tema: a lista fechada de 7 mantém-se. Escurecidas para AA em texto. */
+  :root {
+    --state-success-rgb: 45 106 79; /* Verde Sálvia profundo #2D6A4F */
+    --state-warning-rgb: 158 72 8; /* Âmbar quente #B45309, escurecido p/ texto AA */
+    --state-danger-rgb: 155 44 44; /* Carmim editorial #9B2C2C */
+    --state-info-rgb: 43 91 132; /* Azul Ardósia #2B5B84 */
+    --glass-specular: rgba(255, 253, 249, 0.65);
+  }
+  [data-theme="dark-espresso"] {
+    --state-success-rgb: 136 192 160;
+    --state-warning-rgb: 226 170 92;
+    --state-danger-rgb: 232 132 132;
+    --state-info-rgb: 141 178 216;
+    --glass-specular: rgba(255, 253, 249, 0.06);
+  }
+
   /* Textura de papel velino: feTurbulence com opacidade 0.02 */
   :root {
     --paper-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.02'/%3E%3C/svg%3E");
     --ease-editorial: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-move: cubic-bezier(0.65, 0, 0.35, 1);
   }
 
   [data-theme] {
@@ -260,13 +278,25 @@
   h1,
   h2,
   h3,
+  h4,
+  h5,
+  h6,
+  [data-headline] {
+    text-wrap: balance;
+  }
+
+  h1,
+  h2,
+  h3,
   h4 {
     @apply font-serif;
-    text-wrap: balance;
     font-optical-sizing: auto;
   }
 
-  p {
+  p,
+  li,
+  dd,
+  figcaption {
     text-wrap: pretty;
   }
 
@@ -334,6 +364,70 @@
 
   .surface-card {
     @apply rounded-xl border border-subtle bg-elevated shadow-paper;
+  }
+
+  /* Liquid Glass Editorial — só elementos flutuantes (taste-skill §V) */
+  .liquid-glass,
+  .dialog-editorial {
+    background-color: rgb(var(--bg-elevated-rgb) / 0.78);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    backdrop-filter: blur(24px) saturate(1.5);
+    border: 1px solid rgb(var(--border-subtle-rgb) / 0.8);
+    box-shadow:
+      inset 0 1px 0 0 var(--glass-specular),
+      var(--shadow-sheet);
+  }
+  .liquid-glass-bar {
+    background-color: rgb(var(--bg-canvas-rgb) / 0.78);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    backdrop-filter: blur(24px) saturate(1.5);
+    box-shadow: inset 0 -1px 0 0 rgb(var(--border-subtle-rgb) / 0.8);
+  }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .liquid-glass,
+    .dialog-editorial {
+      background-color: var(--bg-elevated);
+    }
+    .liquid-glass-bar {
+      background-color: var(--bg-canvas);
+    }
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .liquid-glass,
+    .dialog-editorial {
+      background-color: var(--bg-elevated);
+      backdrop-filter: none;
+    }
+    .liquid-glass-bar {
+      background-color: var(--bg-canvas);
+      backdrop-filter: none;
+    }
+  }
+
+  /* Skeleton com shimmer creme quente (ux-forms-psychology §5) */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background-color: rgb(var(--bg-surface-rgb) / 0.9);
+  }
+  .skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--bg-elevated-rgb) / 0.75) 45%,
+      rgb(var(--bg-elevated-rgb) / 0.75) 55%,
+      transparent
+    );
+    animation: vellum-shimmer 1.6s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton::after {
+      display: none;
+    }
   }
 
   /* Rótulo de secção editorial */
@@ -574,9 +668,9 @@
     content: attr(data-placeholder);
     float: left;
     height: 0;
+    margin-left: 2px; /* não colide com o cursor */
     pointer-events: none;
     color: rgb(var(--text-muted-rgb) / 0.6);
-    font-style: italic;
   }
   .vellum-prose .ProseMirror-selectednode > [data-mermaid-block] {
     outline: 2px solid rgb(var(--accent-primary-rgb) / 0.5);
@@ -584,6 +678,67 @@
   }
   .vellum-prose .ProseMirror-gapcursor::after {
     border-top-color: var(--text-primary);
+  }
+
+  /* Recuo editorial de parágrafos e títulos (Tab / Shift+Tab) */
+  .vellum-prose [data-indent="1"] {
+    margin-left: 2em;
+  }
+  .vellum-prose [data-indent="2"] {
+    margin-left: 4em;
+  }
+  .vellum-prose [data-indent="3"] {
+    margin-left: 6em;
+  }
+  .vellum-prose [data-indent="4"] {
+    margin-left: 8em;
+  }
+  .vellum-prose [data-indent="5"] {
+    margin-left: 10em;
+  }
+  .vellum-prose [data-indent="6"] {
+    margin-left: 12em;
+  }
+
+  /* Ligações no documento */
+  .vellum-prose a[href] {
+    color: var(--accent-primary);
+    text-decoration: underline;
+    text-decoration-thickness: 0.06em;
+    text-underline-offset: 0.18em;
+  }
+
+  /* Localizar e substituir */
+  .vellum-prose .find-match {
+    background-color: rgb(var(--state-warning-rgb) / 0.22);
+    border-radius: 2px;
+  }
+  .vellum-prose .find-match-current {
+    background-color: rgb(var(--accent-primary-rgb) / 0.32);
+    box-shadow: 0 0 0 1px rgb(var(--accent-primary-rgb) / 0.55);
+  }
+
+  /* Figuras (imagens) */
+  .vellum-prose figure.vellum-figure {
+    margin: 1.2em 0;
+    break-inside: avoid;
+  }
+  .vellum-prose figure.vellum-figure img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+  }
+  .vellum-prose figure.vellum-figure figcaption {
+    @apply mt-2 font-sans text-[13px] text-muted;
+    text-align: center;
+  }
+  .vellum-prose .ProseMirror-selectednode .vellum-figure-media {
+    outline: 2px solid rgb(var(--accent-primary-rgb) / 0.55);
+    outline-offset: 3px;
+  }
+  .vellum-figure-enter {
+    animation: vellum-figure-in 320ms var(--ease-editorial);
   }
 
   /* Campos editáveis do cabeçalho (título e descrição) */
@@ -609,7 +764,7 @@
 
   /* Diálogo nativo com entrada editorial */
   .dialog-editorial {
-    @apply m-auto max-h-[85dvh] w-[min(640px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-subtle bg-elevated p-0 text-primary shadow-sheet;
+    @apply m-auto max-h-[85dvh] w-[min(640px,calc(100vw-2rem))] overflow-hidden rounded-xl p-0 text-primary;
   }
 
   .dialog-editorial::backdrop {
@@ -644,6 +799,33 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes vellum-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes vellum-figure-in {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes vellum-pulse-ok {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
   }
 }
 

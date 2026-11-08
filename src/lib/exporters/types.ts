@@ -1,6 +1,6 @@
 /**
  * Vellum — Tipos do Motor de Exportação (Módulo 6 · Exportação Fiel)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import type { DocContent } from "@/lib/document-content";
@@ -82,7 +82,7 @@ export const A4 = {
 } as const;
 
 export const COPYRIGHT_LINE =
-  "© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.";
+  "© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.";
 
 /** Nome de ficheiro seguro (sem acentos nem espaços). */
 export function exportFilename(title: string, ext: string): string {

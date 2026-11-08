@@ -1,6 +1,6 @@
 /**
  * Vellum — Dados iniciais do Atelier de demonstração (Módulo 2)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Seed editorial em PT-PT associado aos 4 perfis de demonstração RBAC:
@@ -565,7 +565,7 @@ export const EFFORT_HISTORY_DAYS = 200;
 
 /**
  * Registos de esforço semeados entre `fromDay` e `toDay` dias atrás para quem
- * escreve (Leo, Ana) e revê (Marta). A densidade cai com a antiguidade para o
+ * escreve (Leonardo, Ana) e revê (Marta). A densidade cai com a antiguidade para o
  * mapa de consistência mostrar um hábito a ganhar forma.
  */
 export function seedEffortLogs(

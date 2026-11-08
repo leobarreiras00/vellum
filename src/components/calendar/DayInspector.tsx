@@ -1,6 +1,6 @@
 /**
  * Vellum — Day Studio Inspector (painel lateral do dia)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Painel de 360px ao lado da grelha e da agenda: cabeçalho do dia, ★ Dia
@@ -20,7 +20,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { dayLongLabel, parseDayKey, relativeDayLabel, timeRangeLabel } from "@/lib/calendar";
 import { parseDayNote, serializeDayNote, type StructuredDayNote } from "@/lib/day-note-format";
 import type { Holiday } from "@/lib/pt-holidays";
-import { cn, countWords, formatDuration, formatNumber } from "@/lib/utils";
+import { cn, countWords, formatDuration, formatNumber, countLabel } from "@/lib/utils";
 import { routes } from "@/lib/workspace-routes";
 import type { CalendarEventView, DayNoteView, LegendView } from "@/lib/workspace-types";
 
@@ -198,7 +198,7 @@ export function DayInspector({
               : "border-subtle text-muted hover:border-accent-primary/40 hover:text-accent-primary",
           )}
         >
-          <Star aria-hidden="true" className={cn("size-3", important && "fill-current")} strokeWidth={1.5} />
+          <Star aria-hidden="true" className={cn("size-3", important && "fill-current")} strokeWidth={1.6} />
           {important ? "Importante" : "Marcar"}
         </button>
       </header>
@@ -223,7 +223,7 @@ export function DayInspector({
           />
         </div>
         <p className="nums mt-1.5 text-[11px] text-muted">
-          {formatNumber(words)} palavras escritas · {formatNumber(events.length)}{" "}
+          {formatNumber(words)} {words === 1 ? "palavra escrita" : "palavras escritas"} · {formatNumber(events.length)}{" "}
           {events.length === 1 ? "evento" : "eventos"}
           {isImportant && " · dia importante"}
         </p>
@@ -233,7 +233,7 @@ export function DayInspector({
       <section aria-label="Eventos do dia" className="border-b border-subtle px-5 py-3.5">
         <p className="eyebrow">Eventos</p>
         {events.length === 0 ? (
-          <p className="mt-1.5 font-serif text-sm italic text-muted">Dia livre de compromissos.</p>
+          <p className="mt-1.5 font-serif text-sm text-muted">Dia livre de compromissos.</p>
         ) : (
           <ul className="mt-1.5 space-y-0.5">
             {events.map((event) => {
@@ -253,7 +253,7 @@ export function DayInspector({
                         <Star
                           aria-label="Importante"
                           className="mr-1 inline size-3 -translate-y-px fill-current text-accent-primary"
-                          strokeWidth={1.5}
+                          strokeWidth={1.6}
                         />
                       )}
                       {event.title}
@@ -272,7 +272,7 @@ export function DayInspector({
             onClick={() => onNewEvent(day)}
             className="mt-2 inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 text-xs text-accent-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
           >
-            <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
             Adicionar evento
           </button>
         )}
@@ -296,20 +296,23 @@ export function DayInspector({
                   ? "Não foi possível guardar"
                   : state === "dirty"
                     ? "Por guardar"
-                    : `${formatNumber(countWords(structured.log))} palavras`}
+                    : countLabel(countWords(structured.log), "palavra", "palavras")}
           </span>
         </div>
 
         {/* Checklist */}
         <div className="mt-3">
-          <p className="flex items-center justify-between font-sans text-[11px] font-medium text-primary">
+          <label
+            htmlFor={`tarefa-${day}`}
+            className="flex items-center justify-between font-sans text-[11px] font-medium text-primary"
+          >
             Checklist
             {structured.checklist.length > 0 && (
-              <span className="nums font-mono text-[10.5px] font-normal text-muted">
+              <span className="nums text-[11px] font-normal text-muted">
                 {doneCount}/{structured.checklist.length}
               </span>
             )}
-          </p>
+          </label>
           <ul className="mt-1 space-y-0.5" data-testid="day-checklist">
             {structured.checklist.map((item, index) => (
               <li key={index} className="group flex items-start gap-2 rounded-md px-1 py-1 hover:bg-surface/60">
@@ -349,20 +352,22 @@ export function DayInspector({
             ))}
           </ul>
           <input
+            id={`tarefa-${day}`}
             data-testid="day-task-input"
             value={newTask}
             onChange={(e) => setNewTask(e.target.value)}
             onKeyDown={(e) => addFrom(e, "task")}
             maxLength={200}
             placeholder="+ Nova tarefa (Enter)"
-            aria-label="Nova tarefa"
             className="mt-1 h-7 w-full rounded-md border border-transparent bg-transparent px-1 text-[13px] outline-none placeholder:text-muted/70 focus:border-subtle focus:bg-canvas"
           />
         </div>
 
         {/* Pontos-chave */}
         <div className="mt-3">
-          <p className="font-sans text-[11px] font-medium text-primary">Pontos-chave</p>
+          <label htmlFor={`ponto-${day}`} className="font-sans text-[11px] font-medium text-primary">
+            Pontos-chave
+          </label>
           <ul className="mt-1 space-y-0.5" data-testid="day-keypoints">
             {structured.keyPoints.map((point, index) => (
               <li key={index} className="group flex items-start gap-2 rounded-md px-1 py-1 hover:bg-surface/60">
@@ -376,13 +381,13 @@ export function DayInspector({
             ))}
           </ul>
           <input
+            id={`ponto-${day}`}
             data-testid="day-point-input"
             value={newPoint}
             onChange={(e) => setNewPoint(e.target.value)}
             onKeyDown={(e) => addFrom(e, "point")}
             maxLength={200}
             placeholder="+ Ponto-chave (Enter)"
-            aria-label="Novo ponto-chave"
             className="mt-1 h-7 w-full rounded-md border border-transparent bg-transparent px-1 text-[13px] outline-none placeholder:text-muted/70 focus:border-subtle focus:bg-canvas"
           />
         </div>
@@ -401,7 +406,7 @@ export function DayInspector({
             onBlur={() => state === "dirty" && void persist()}
             placeholder="O que avançou, o que bloqueou, o que fica para amanhã…"
             maxLength={18_000}
-            className="mt-1 block w-full resize-none overflow-hidden border-0 bg-transparent px-0 font-serif text-[15.5px] leading-[1.75] text-primary outline-none placeholder:italic placeholder:text-muted/70"
+            className="mt-1 block w-full resize-none overflow-hidden border-0 bg-transparent px-0 font-serif text-[15.5px] leading-[1.75] text-primary outline-none placeholder:text-muted/70"
             style={{
               backgroundImage:
                 "repeating-linear-gradient(to bottom, transparent 0, transparent calc(1.75em - 1px), rgb(var(--border-subtle-rgb) / 0.8) calc(1.75em - 1px), rgb(var(--border-subtle-rgb) / 0.8) 1.75em)",
@@ -412,7 +417,7 @@ export function DayInspector({
         {/* Documentos ligados */}
         <div className="mt-4 border-t border-subtle pt-3">
           <p className="eyebrow flex items-center gap-1.5">
-            <Link2 aria-hidden="true" className="size-3" strokeWidth={1.5} />
+            <Link2 aria-hidden="true" className="size-3" strokeWidth={1.6} />
             Documentos ligados
           </p>
           <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label="Documentos ligados a este dia">
@@ -424,7 +429,7 @@ export function DayInspector({
                   data-ink={project?.color ?? "grafite"}
                   className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-subtle bg-canvas py-0.5 pl-2 pr-0.5 text-xs"
                 >
-                  <FileText aria-hidden="true" className="size-3 shrink-0 text-ink" strokeWidth={1.5} />
+                  <FileText aria-hidden="true" className="size-3 shrink-0 text-ink" strokeWidth={1.6} />
                   <Link
                     href={routes.page(doc.projectId, doc.id)}
                     className="truncate text-primary hover:text-accent-primary"
@@ -444,14 +449,15 @@ export function DayInspector({
                 </li>
               );
             })}
-            {linked.length === 0 && (
-              <li className="font-serif text-[13px] italic text-muted">Nenhum documento ligado.</li>
-            )}
+            {linked.length === 0 && <li className="font-serif text-[13px] text-muted">Nenhum documento ligado.</li>}
           </ul>
           {available.length > 0 && (
             <div className="mt-2 flex items-center gap-1.5">
+              <label htmlFor={`ligar-${day}`} className="shrink-0 text-[11px] font-medium text-primary">
+                Ligar
+              </label>
               <Select
-                aria-label="Ligar documento de projeto"
+                id={`ligar-${day}`}
                 value={picker}
                 onChange={(e) => setPicker(e.target.value)}
                 className="h-7 text-xs"
@@ -502,7 +508,7 @@ function RemoveButton({ label, onClick, visible = false }: { label: string; onCl
         !visible && "opacity-0 group-hover:opacity-100",
       )}
     >
-      <X aria-hidden="true" className="size-3" strokeWidth={1.5} />
+      <X aria-hidden="true" className="size-3" strokeWidth={1.6} />
     </button>
   );
 }

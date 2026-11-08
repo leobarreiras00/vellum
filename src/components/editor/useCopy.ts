@@ -1,6 +1,6 @@
 /**
  * Vellum — Copiar para a área de transferência com confirmação breve
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";

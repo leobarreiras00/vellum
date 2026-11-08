@@ -1,6 +1,6 @@
 /**
  * Vellum — E2E da Fase 4: Calendário, Notificações, Telemetria e Dashboard
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { expect, test } from "@playwright/test";
 
@@ -59,14 +59,14 @@ test("Calendário: evento importante, legendas, vistas mês/semana e Agenda com 
   await expect(cell.getByTestId("cell-note")).toContainText("Fechar o manuscrito hoje.");
 
   // Nota estruturada: checklist e pontos-chave; ★ dia importante.
-  await inspector.getByLabel("Nova tarefa").fill("Rever bibliografia");
-  await inspector.getByLabel("Nova tarefa").press("Enter");
-  await inspector.getByLabel("Nova tarefa").fill("Enviar à editora");
-  await inspector.getByLabel("Nova tarefa").press("Enter");
+  await inspector.getByTestId("day-task-input").fill("Rever bibliografia");
+  await inspector.getByTestId("day-task-input").press("Enter");
+  await inspector.getByTestId("day-task-input").fill("Enviar à editora");
+  await inspector.getByTestId("day-task-input").press("Enter");
   await inspector.getByRole("checkbox", { name: "Rever bibliografia" }).click();
   await expect(inspector.getByRole("checkbox", { name: "Rever bibliografia" })).toHaveAttribute("aria-checked", "true");
-  await inspector.getByLabel("Novo ponto-chave").fill("Capítulo 4 precisa de outro fecho");
-  await inspector.getByLabel("Novo ponto-chave").press("Enter");
+  await inspector.getByTestId("day-point-input").fill("Capítulo 4 precisa de outro fecho");
+  await inspector.getByTestId("day-point-input").press("Enter");
   await expect(inspector.getByTestId("day-keypoints")).toContainText("Capítulo 4 precisa de outro fecho");
   await expect(inspector.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
   await expect(cell).toContainText("1/2");
@@ -111,7 +111,7 @@ test("Calendário: evento importante, legendas, vistas mês/semana e Agenda com 
   await expect(log).toHaveValue(/Fechar o manuscrito hoje\./);
   await log.fill("Fechar o manuscrito hoje.\n\nRevi os capítulos 3 e 4; falta a bibliografia.");
   await expect(inspector.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
-  await inspector.getByLabel("Ligar documento de projeto").selectOption({ label: "Guião de entrevistas" });
+  await inspector.getByLabel("Ligar", { exact: true }).selectOption({ label: "Guião de entrevistas" });
   await inspector.getByRole("button", { name: "Ligar", exact: true }).click();
   await expect(inspector.getByRole("list", { name: "Documentos ligados a este dia" })).toContainText(
     "Guião de entrevistas",

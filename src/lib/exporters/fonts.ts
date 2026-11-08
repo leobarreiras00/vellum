@@ -1,6 +1,6 @@
 /**
  * Vellum — Fontes embutidas na exportação (cliente)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Lê as regras @font-face que o next/font gerou (Newsreader, Plus Jakarta Sans,

@@ -1,6 +1,6 @@
 /**
  * Vellum — Painel «Como Gerar ou Importar Mermaid»
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * 1. Galeria de 6 templates com 1 clique · 2. Guia de sintaxe PT-PT com
@@ -130,9 +130,9 @@ function SyntaxGuide({ onInsertSnippet }: { onInsertSnippet?: (snippet: string) 
                       className="grid size-6 shrink-0 place-items-center rounded-md text-muted hover:bg-surface hover:text-primary"
                     >
                       {copied === key ? (
-                        <Check aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={1.5} />
+                        <Check aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={1.6} />
                       ) : (
-                        <Copy aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+                        <Copy aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
                       )}
                     </button>
                     {onInsertSnippet && (
@@ -142,7 +142,7 @@ function SyntaxGuide({ onInsertSnippet }: { onInsertSnippet?: (snippet: string) 
                         aria-label={`Inserir ${entry.code.split("\n")[0]} no código`}
                         className="grid size-6 shrink-0 place-items-center rounded-md text-muted hover:bg-surface hover:text-primary"
                       >
-                        <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+                        <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
                       </button>
                     )}
                   </div>
@@ -199,7 +199,7 @@ function ImportPane({ onApply }: { onApply: MermaidGuidePanelProps["onApply"] })
           onChange={(e) => void onFile(e.target.files?.[0])}
         />
         <Button size="sm" variant="secondary" className="mt-2" onClick={() => fileRef.current?.click()}>
-          <FileUp aria-hidden="true" strokeWidth={1.5} />
+          <FileUp aria-hidden="true" strokeWidth={1.6} />
           Importar ficheiro .mmd / .txt
         </Button>
         {message && (
@@ -231,7 +231,7 @@ function ImportPane({ onApply }: { onApply: MermaidGuidePanelProps["onApply"] })
             setPasted("");
           }}
         >
-          <ClipboardPaste aria-hidden="true" strokeWidth={1.5} />
+          <ClipboardPaste aria-hidden="true" strokeWidth={1.6} />
           Usar este código
         </Button>
       </div>
@@ -250,7 +250,7 @@ function PromptAssistant() {
     <div className="grid gap-4 md:grid-cols-[1fr_1.2fr]">
       <div className="space-y-2">
         <p className="flex items-center gap-1.5 text-xs text-muted">
-          <Sparkles aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={1.5} />
+          <Sparkles aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={1.6} />
           Descreva em português o diagrama; o Vellum prepara um prompt rigoroso para qualquer IA.
         </p>
         <label htmlFor={`${id}-desc`} className="sr-only">
@@ -289,9 +289,9 @@ function PromptAssistant() {
           <span className="text-xs text-muted">Prompt pronto a copiar</span>
           <Button size="sm" variant="secondary" onClick={() => copy("prompt", prompt)} disabled={!description.trim()}>
             {copied === "prompt" ? (
-              <Check aria-hidden="true" strokeWidth={1.5} />
+              <Check aria-hidden="true" strokeWidth={1.6} />
             ) : (
-              <Copy aria-hidden="true" strokeWidth={1.5} />
+              <Copy aria-hidden="true" strokeWidth={1.6} />
             )}
             {copied === "prompt" ? "Copiado" : "Copiar prompt"}
           </Button>

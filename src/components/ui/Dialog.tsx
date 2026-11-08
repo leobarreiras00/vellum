@@ -1,6 +1,6 @@
 /**
  * Vellum — Primitiva <Dialog />
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * <dialog> nativo controlado (foco preso, Esc e fundo inerte grátis), com a
@@ -88,7 +88,7 @@ export function Dialog({
               aria-label="Fechar"
               className="grid size-8 shrink-0 place-items-center rounded-lg text-muted transition-colors duration-150 hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             >
-              <X aria-hidden="true" className="size-4" strokeWidth={1.5} />
+              <X aria-hidden="true" className="size-4" strokeWidth={1.6} />
             </button>
           </header>
           <div className="min-h-0 overflow-y-auto px-6 py-5">{children}</div>

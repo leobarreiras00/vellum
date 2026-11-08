@@ -1,6 +1,6 @@
 /**
  * Vellum — Bloco Callout (citação editorial / nota / aviso)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import { Node, mergeAttributes } from "@tiptap/core";

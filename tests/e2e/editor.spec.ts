@@ -1,6 +1,6 @@
 /**
  * Vellum — E2E do Editor Rico, Folha A4 e Estúdio Mermaid (Fase 3)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { expect, test, type Page } from "@playwright/test";
 
@@ -67,7 +67,10 @@ test("Editor Rico: barra de formatação, menu «/», tabelas, checklist e grava
   await expect(body.locator('mark[data-mark="salvia"]')).toHaveText("medida");
   await toolbar.getByLabel("Tamanho de letra").selectOption("18pt");
   await expect(body.locator('[data-size="18pt"]')).toHaveText("medida");
-  await toolbar.getByLabel("Família de fonte").selectOption("mono");
+  // Seletor de fonte com pesquisa e lista com scroll (Combobox).
+  await toolbar.getByLabel("Família de fonte").click();
+  await page.getByPlaceholder("Pesquisar fonte").fill("mono");
+  await page.getByRole("option", { name: /JetBrains Mono/ }).click();
   await expect(body.locator('[data-font="mono"]')).toHaveText("medida");
 
   // Alinhamento e callout.
@@ -85,21 +88,26 @@ test("Editor Rico: barra de formatação, menu «/», tabelas, checklist e grava
   await expect(page.getByText(/^v\d+$/)).toBeVisible();
 });
 
-test("Folha A4 com régua e Modo Fluido sincronizado com a barra de estado", async ({ page }) => {
+test("Folha A4 com régua não selecionável e Modo Fluido só no cabeçalho do documento", async ({ page }) => {
   await loginAs(page, PROFILES.leo);
   await page.goto(DOC);
-  const sheet = page.getByTestId("a4-sheet");
+  const sheet = page.locator("#conteudo").getByTestId("a4-sheet");
   await expect(sheet).toBeVisible();
   const box = await sheet.boundingBox();
   expect(Math.round(box!.width)).toBeGreaterThanOrEqual(792);
   expect(Math.round(box!.width)).toBeLessThanOrEqual(796);
   await expect(page.getByText(/Quebra de página · 2/)).toBeVisible();
+  // A régua não entra em seleções nem em citações.
+  const ruler = page.getByTestId("a4-ruler");
+  expect(await ruler.evaluate((el) => getComputedStyle(el).userSelect)).toBe("none");
+  expect(await ruler.evaluate((el) => getComputedStyle(el).pointerEvents)).toBe("none");
 
-  await page.getByRole("radiogroup", { name: "Vista de página" }).getByRole("radio", { name: "Modo Fluido" }).click();
+  // Um só seletor A4 | Fluido (no cabeçalho do documento), nenhum na barra de estado.
+  await expect(page.getByRole("radiogroup", { name: "Vista de página" })).toHaveCount(1);
+  await expect(page.getByRole("radiogroup", { name: "Modo de documento" })).toHaveCount(0);
+  await page.getByRole("radiogroup", { name: "Vista de página" }).getByRole("radio", { name: "Fluido" }).click();
   await expect(page.locator('[data-page-mode="FLUID"]')).toBeVisible();
-  const status = page.getByRole("radiogroup", { name: "Modo de documento" });
-  await expect(status.getByRole("radio", { name: "Fluido" })).toHaveAttribute("aria-checked", "true");
-  await status.getByRole("radio", { name: "Folha A4" }).click();
+  await page.getByRole("radiogroup", { name: "Vista de página" }).getByRole("radio", { name: /A4/ }).click();
   await expect(page.locator('[data-page-mode="A4"]')).toBeVisible();
 });
 
@@ -202,7 +210,7 @@ test("RBAC no documento: Comentador revê e comenta; Leitor lê sem edição nem
   await expect(page.getByRole("toolbar", { name: "Formatação do documento" })).toHaveCount(0);
   await expect(page.locator(".ProseMirror")).toHaveAttribute("contenteditable", "false");
   await expect(page.getByTestId("doc-title")).toHaveAttribute("contenteditable", "false");
-  await expect(page.getByTestId("document-export")).toBeVisible();
+  await expect(page.getByTestId("topbar-export")).toBeVisible();
 
   const drawer = page.getByRole("complementary", { name: "Comentários e anotações editoriais" });
   await expect(drawer).toBeVisible();
@@ -230,7 +238,6 @@ test("RBAC no documento: Comentador revê e comenta; Leitor lê sem edição nem
   await page.goto(DOC);
   await expect(page.getByText("Modo de leitura")).toBeVisible();
   await expect(page.getByRole("toolbar", { name: "Formatação do documento" })).toHaveCount(0);
-  await expect(page.getByTestId("document-export")).toHaveCount(0);
   await expect(page.getByTestId("topbar-export")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /^Comentários/ })).toHaveCount(0);
   await expect(page.getByRole("complementary", { name: "Comentários e anotações editoriais" })).toHaveCount(0);

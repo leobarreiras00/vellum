@@ -1,6 +1,6 @@
 /**
  * Vellum — Comandos de bloco (menu «/» do Editor Rico)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import type { Editor, Range } from "@tiptap/core";
@@ -10,6 +10,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  ImageIcon,
   List,
   ListOrdered,
   Minus,
@@ -21,6 +22,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { pickAndInsertImage } from "@/components/editor/extensions/VellumImage";
+
+/** Erros de blocos inseridos fora do fluxo React (ex.: «/imagem»): o editor mostra-os como toast. */
+export const EDITOR_ERROR_EVENT = "vellum:editor-error";
 import { normalizeSearch } from "@/lib/workspace-types";
 
 export interface BlockCommand {
@@ -97,7 +102,7 @@ export const BLOCK_COMMANDS: readonly BlockCommand[] = [
   {
     id: "citacao",
     label: "Citação",
-    hint: "Excerto em itálico",
+    hint: "Excerto ou citação",
     keywords: "citacao quote aspas",
     icon: Quote,
     run: (e, r) => chainAt(e, r).toggleBlockquote().run(),
@@ -117,6 +122,19 @@ export const BLOCK_COMMANDS: readonly BlockCommand[] = [
     keywords: "tabela grelha colunas linhas",
     icon: Table2,
     run: (e, r) => chainAt(e, r).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+  },
+  {
+    id: "imagem",
+    label: "Imagem",
+    hint: "Carregar, colar (⌘V) ou arrastar",
+    keywords: "imagem foto figura fotografia picture upload",
+    icon: ImageIcon,
+    run: (e, r) => {
+      chainAt(e, r).run();
+      pickAndInsertImage(e, (message) =>
+        window.dispatchEvent(new CustomEvent(EDITOR_ERROR_EVENT, { detail: message })),
+      );
+    },
   },
   {
     id: "divisoria",

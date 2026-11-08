@@ -1,6 +1,6 @@
 /**
  * Vellum — Calendário (/calendar)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Calendário Built-in Personalizável (Fase 4): Vista Calendário (mês/semana)

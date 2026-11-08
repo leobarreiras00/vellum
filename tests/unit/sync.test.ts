@@ -1,6 +1,6 @@
 /**
  * Vellum — Testes do Hub de Sincronização (Fase 5): .ics, Markdown e .vellum.json
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { describe, expect, it } from "vitest";
 
@@ -231,7 +231,7 @@ describe("snapshot .vellum.json", () => {
     exportedAt: "2026-11-07T23:00:00.000Z",
     exportedBy: { name: "Leonardo Barreiras" },
     app: "Vellum 1.0.0",
-    copyright: "© 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.",
+    copyright: "© 2026 Leonardo Barreiras. Todos os direitos reservados.",
     workspace: { name: "Atelier Vellum" },
     projects: [],
     documents: [],

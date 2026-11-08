@@ -1,6 +1,6 @@
 # Arquitetura do Vellum — Os 6 Módulos
 
-> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 > Complementa o `CLAUDE.md`. Em caso de conflito, prevalece o `CLAUDE.md`.
 
 ---
@@ -114,4 +114,4 @@ Todos os módulos vivem em `src/modules/<módulo>/` e comunicam apenas através 
 
 ---
 
-© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.

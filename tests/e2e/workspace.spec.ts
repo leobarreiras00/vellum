@@ -1,6 +1,6 @@
 /**
  * Vellum — E2E do App Shell e do Workspace (Fases 1C e 2)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { expect, test } from "@playwright/test";
 
@@ -123,8 +123,8 @@ test("Notas Rápidas: criar, fixar, pesquisar e converter em documento", async (
   // Barra de filtros no topo; o compositor é o primeiro cartão da grelha.
   await expect(page.getByTestId("notes-filters")).toBeVisible();
   const composer = page.getByRole("form", { name: "Nova nota rápida" });
-  await composer.getByLabel("Título da nota").fill("Glossário de termos editoriais");
-  await composer.getByLabel("Conteúdo da nota").fill("Mancha gráfica, entrelinha, medida, viúvas e órfãs.");
+  await composer.getByLabel("Nova nota").fill("Glossário de termos editoriais");
+  await composer.getByLabel("Conteúdo").fill("Mancha gráfica, entrelinha, medida, viúvas e órfãs.");
   await composer.getByRole("radio", { name: "Sálvia" }).click();
   await composer
     .getByLabel("Projeto", { exact: true })
@@ -136,7 +136,7 @@ test("Notas Rápidas: criar, fixar, pesquisar e converter em documento", async (
   const note = page.getByRole("article", { name: "Glossário de termos editoriais" });
   await expect(note.getByLabel("Fixada")).toBeVisible();
 
-  await page.getByRole("searchbox", { name: "Pesquisar notas" }).fill("orfas");
+  await page.getByRole("searchbox", { name: "Pesquisar" }).fill("orfas");
   await expect(page.getByRole("article")).toHaveCount(1);
 
   await note.getByRole("button", { name: "Converter" }).click();

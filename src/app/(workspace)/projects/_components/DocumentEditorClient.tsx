@@ -1,6 +1,6 @@
 /**
  * Vellum — Página de documento com o Editor Rico (Fase 3)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * RBAC estrito (src/lib/rbac.ts), sempre com o papel efetivo no projeto:
@@ -15,34 +15,41 @@
 
 import {
   Copy,
-  Download,
   Eye,
   FilePlus2,
   FileText,
+  Keyboard,
   MessageSquareText,
   Server,
   Trash2,
   UserPen,
   type LucideIcon,
-  Share2,
 } from "lucide-react";
+import { CoverBanner } from "@/components/illustrations/CoverBanner";
+import { AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { createDocumentAction, deleteDocumentAction, saveDocumentContentAction } from "@/app/(workspace)/actions";
+import { BlockPlusButton } from "@/components/editor/BlockPlusButton";
+import { EDITOR_ERROR_EVENT } from "@/components/editor/block-commands";
 import { CommentsDrawer } from "@/components/editor/CommentsDrawer";
+import { DocumentFindBar } from "@/components/editor/DocumentFindBar";
+import { EditorBubbleMenu } from "@/components/editor/EditorBubbleMenu";
+import { EditorShortcutsDialog } from "@/components/editor/EditorShortcutsDialog";
+import { LinkDialog } from "@/components/editor/LinkDialog";
+import { PageModeSwitch } from "@/components/editor/PageModeSwitch";
 import { DocumentCanvas } from "@/components/editor/DocumentCanvas";
 import { DocumentHeader, type DocumentHeaderHandle, type SaveState } from "@/components/editor/DocumentHeader";
 import { RichWordToolbar } from "@/components/editor/RichWordToolbar";
-import { VellumEditor, useVellumEditor } from "@/components/editor/VellumEditor";
+import { VellumEditor, editorQuote, useVellumEditor } from "@/components/editor/VellumEditor";
 import { useShell } from "@/components/layout/ShellContext";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { docToPlainText, plainTextToDoc, type DocContent } from "@/lib/document-content";
-import { PAGE_MODES, PAGE_MODE_LABELS } from "@/lib/page-mode";
-import { canCommentDocument, canDeleteDocument, canEditDocument, canExportDocument, hasPermission } from "@/lib/rbac";
+import { canCommentDocument, canDeleteDocument, canEditDocument, hasPermission } from "@/lib/rbac";
 import { usePageMode } from "@/lib/use-page-mode";
 import { claimDocument, dequeueSave, enqueueSave, queuedSave } from "@/lib/offline-queue";
 import { cn, countWords, formatNumber } from "@/lib/utils";
@@ -61,14 +68,13 @@ interface DocumentEditorClientProps {
 export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentEditorClientProps) {
   const router = useRouter();
   const { snapshot, run, subjectFor, isPending, notify } = useWorkspace();
-  const { openExport, openShare, registerFlush, isExporting } = useShell();
+  const { registerFlush } = useShell();
   const project = snapshot.projects.find((p) => p.id === projectId);
   const doc = snapshot.documents.find((d) => d.id === documentId);
 
   const subject = subjectFor(projectId);
   const canEdit = canEditDocument(subject);
   const canComment = canCommentDocument(subject);
-  const canExport = canExportDocument(subject);
   const canCreate = hasPermission(subject, "document:create");
   const canDelete = doc ? canDeleteDocument(subject, { createdById: doc.createdById }) : false;
 
@@ -76,6 +82,10 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
   const [drawerOpen, setDrawerOpen] = useState(!canEdit && canComment);
   const [quote, setQuote] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [find, setFind] = useState<{ mode: "find" | "replace"; key: number } | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [proseEl, setProseEl] = useState<HTMLDivElement | null>(null);
 
   // O Comentador começa com a gaveta aberta; o Leitor nunca a vê.
   useEffect(() => {
@@ -196,7 +206,38 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
       setWords(countWords(docToPlainText(json)));
       markDirty();
     },
+    onRequestLink: () => setLinkOpen(true),
+    onError: (message) => notify(message, "error"),
   });
+
+  // ⌘F / Ctrl+F e ⌘H: Localizar (e Substituir) dentro da folha, não no navegador.
+  // «?» fora de campos de texto abre a folha de atalhos.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const mod = event.metaKey || event.ctrlKey;
+      const key = event.key.toLowerCase();
+      if (mod && !event.altKey && (key === "f" || (key === "h" && canEdit))) {
+        event.preventDefault();
+        setFind((f) => ({ mode: key === "h" ? "replace" : "find", key: (f?.key ?? 0) + 1 }));
+        return;
+      }
+      if (event.key === "?" && !mod) {
+        const target = event.target as HTMLElement | null;
+        if (target?.closest("input, textarea, select, [contenteditable='true']")) return;
+        event.preventDefault();
+        setShortcutsOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [canEdit]);
+
+  // Erros de «/imagem» e do botão Imagem (fora do fluxo React do editor).
+  useEffect(() => {
+    const onError = (event: Event) => notify(String((event as CustomEvent).detail), "error");
+    window.addEventListener(EDITOR_ERROR_EVENT, onError);
+    return () => window.removeEventListener(EDITOR_ERROR_EVENT, onError);
+  }, [notify]);
 
   // Grava ao sair da página; avisa antes de fechar o separador com alterações.
   const saveRef = useRef(save);
@@ -323,11 +364,10 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
   const canvasRef = useRef<HTMLDivElement>(null);
   const captureQuote = useCallback(() => {
     if (!canComment) return;
-    const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || !canvasRef.current?.contains(selection.anchorNode)) return;
-    const text = selection.toString().replace(/\s+/g, " ").trim();
-    if (text.length >= 2) setQuote(text.slice(0, 600));
-  }, [canComment]);
+    // Só o texto do documento: a régua A4 e a interface nunca entram na citação.
+    const text = editorQuote(editor);
+    if (text.length >= 2) setQuote(text);
+  }, [canComment, editor]);
 
   if (!project || !doc) {
     return (
@@ -373,7 +413,12 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
       <div className="min-w-0 flex-1">
         {canEdit && editor && (
           <div className="sticky top-0 z-30">
-            <RichWordToolbar editor={editor} />
+            <RichWordToolbar
+              editor={editor}
+              onFind={() => setFind((f) => ({ mode: "find", key: (f?.key ?? 0) + 1 }))}
+              onShortcuts={() => setShortcutsOpen(true)}
+              onImageError={(message) => notify(message, "error")}
+            />
           </div>
         )}
 
@@ -386,34 +431,16 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
             {modeLabel && (
               <span className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-subtle px-1.5 py-0.5 text-muted">
                 {canComment ? (
-                  <MessageSquareText aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                  <MessageSquareText aria-hidden="true" className="size-3" strokeWidth={1.6} />
                 ) : (
-                  <Eye aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                  <Eye aria-hidden="true" className="size-3" strokeWidth={1.6} />
                 )}
                 {modeLabel}
               </span>
             )}
 
-            <div
-              role="radiogroup"
-              aria-label="Vista de página"
-              className="mr-auto flex items-center rounded-lg border border-subtle bg-elevated p-0.5"
-            >
-              {PAGE_MODES.map((mode) => (
-                <button
-                  key={mode}
-                  type="button"
-                  role="radio"
-                  aria-checked={pageMode === mode}
-                  onClick={() => setPageMode(mode)}
-                  className={cn(
-                    "h-6 rounded-md px-2.5 transition-colors duration-150",
-                    pageMode === mode ? "bg-surface text-primary" : "text-muted hover:text-primary",
-                  )}
-                >
-                  {mode === "A4" ? "Modo Folha A4" : `Modo ${PAGE_MODE_LABELS[mode]}`}
-                </button>
-              ))}
+            <div className="mr-auto">
+              <PageModeSwitch value={pageMode} onChange={setPageMode} />
             </div>
 
             {canComment && (
@@ -423,7 +450,7 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
                 aria-pressed={drawerOpen}
                 onClick={() => setDrawerOpen((v) => !v)}
               >
-                <MessageSquareText aria-hidden="true" strokeWidth={1.5} />
+                <MessageSquareText aria-hidden="true" strokeWidth={1.6} />
                 Comentários
                 <span className="nums font-mono text-[10.5px] text-muted">{openComments}</span>
               </Button>
@@ -432,39 +459,36 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
             <Button
               size="sm"
               variant="ghost"
-              data-testid="document-share"
-              onClick={() => openShare({ projectId, documentId: doc.id })}
-              title="Partilhar por link ou convidar por email"
+              onClick={() => setShortcutsOpen(true)}
+              aria-label="Atalhos do editor"
+              title="Atalhos do editor (?)"
+              data-testid="shortcuts-button"
             >
-              <Share2 aria-hidden="true" strokeWidth={1.5} />
-              Partilhar
+              <Keyboard aria-hidden="true" strokeWidth={1.6} />
+              <kbd className="h-4 min-w-4 px-1 text-[10px]">?</kbd>
             </Button>
-
-            {canExport && (
-              <Button
-                size="sm"
-                variant="ghost"
-                data-testid="document-export"
-                disabled={isExporting}
-                onClick={() => openExport(doc.id)}
-                title="PDF paginado, Word, Markdown ou HTML autónomo"
-              >
-                <Download aria-hidden="true" strokeWidth={1.5} />
-                Exportar
-              </Button>
-            )}
 
             {canCreate && (
               <Button size="sm" variant="ghost" onClick={createChild} disabled={isPending}>
-                <FilePlus2 aria-hidden="true" strokeWidth={1.5} />
+                <FilePlus2 aria-hidden="true" strokeWidth={1.6} />
                 Nova subpágina
               </Button>
             )}
             {canDelete && (
               <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)} aria-label="Eliminar documento">
-                <Trash2 aria-hidden="true" strokeWidth={1.5} />
+                <Trash2 aria-hidden="true" strokeWidth={1.6} />
               </Button>
             )}
+          </div>
+
+          <div className={cn("mb-4 print:hidden", pageMode === "A4" && "mx-auto max-w-[210mm]")}>
+            <CoverBanner
+              kind="document"
+              targetId={doc.id}
+              title={doc.title}
+              spec={snapshot.covers[doc.id]}
+              editable={canEdit}
+            />
           </div>
 
           <div ref={canvasRef} onMouseUp={captureQuote} onKeyUp={captureQuote}>
@@ -496,10 +520,12 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
                 }}
                 onTitleEnter={() => editor?.commands.focus("start")}
               />
-              <VellumEditor editor={editor} readingFont={snapshot.preferences.readingFont} />
+              <div ref={setProseEl} className="relative">
+                {canEdit && editor && <BlockPlusButton editor={editor} container={proseEl} />}
+                <VellumEditor editor={editor} readingFont={snapshot.preferences.readingFont} />
+              </div>
               <p className="mt-12 hidden border-t border-subtle pt-3 font-sans text-[9pt] text-muted print:block">
-                © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos
-                reservados.
+                © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
               </p>
             </DocumentCanvas>
           </div>
@@ -516,7 +542,7 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
                       href={routes.page(projectId, child.id)}
                       className="flex items-center gap-3 px-1 py-3 transition-colors hover:bg-surface/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
                     >
-                      <FileText aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.5} />
+                      <FileText aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.6} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-serif text-[17px]">{child.title}</span>
                         {child.summary && <span className="block truncate text-xs text-muted">{child.summary}</span>}
@@ -544,6 +570,40 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
           />
         </div>
       )}
+
+      {/* Contentor estável: o tippy move o nó do BubbleMenu para o body e o React
+          não pode usá-lo como âncora quando a gaveta de comentários monta. */}
+      <div>
+        {editor && canEdit && (
+          <EditorBubbleMenu
+            editor={editor}
+            onLink={() => setLinkOpen(true)}
+            onComment={
+              canComment
+                ? () => {
+                    const text = editorQuote(editor);
+                    if (text) setQuote(text);
+                    setDrawerOpen(true);
+                  }
+                : undefined
+            }
+          />
+        )}
+      </div>
+      <AnimatePresence>
+        {editor && find && (
+          <DocumentFindBar
+            key="find"
+            editor={editor}
+            mode={find.mode}
+            focusKey={find.key}
+            canReplace={canEdit}
+            onClose={() => setFind(null)}
+          />
+        )}
+      </AnimatePresence>
+      {editor && <LinkDialog editor={editor} open={linkOpen} onClose={() => setLinkOpen(false)} />}
+      <EditorShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
 
       <Dialog
         open={conflict !== null}
@@ -599,7 +659,7 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
               Cancelar
             </Button>
             <Button variant="danger" onClick={remove} disabled={isPending}>
-              <Trash2 aria-hidden="true" strokeWidth={1.5} />
+              <Trash2 aria-hidden="true" strokeWidth={1.6} />
               Eliminar
             </Button>
           </>
@@ -639,7 +699,7 @@ function ConflictChoice({
       disabled={disabled}
       className="flex items-start gap-3 rounded-lg border border-subtle bg-elevated px-3 py-2.5 text-left transition-colors duration-150 hover:border-accent-primary/60 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:opacity-60"
     >
-      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.5} />
+      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.6} />
       <span>
         <span className="block text-sm font-medium text-primary">{label}</span>
         <span className="block text-xs text-muted">{detail}</span>

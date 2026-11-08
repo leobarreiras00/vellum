@@ -1,6 +1,6 @@
 /**
  * Vellum — Ficha de nota rápida
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Tira de papel com régua de tinta no topo (etiqueta cromática da nota).
@@ -50,12 +50,24 @@ export function NoteSlip({ note, compact = false, actions, highlight = false, cl
           <h3
             className={cn("min-w-0 flex-1 font-serif font-normal leading-snug", compact ? "text-base" : "text-[17px]")}
           >
-            {note.title || <span className="italic text-muted">Sem título</span>}
+            {note.title || <span className="text-muted">Sem título</span>}
           </h3>
           {note.isPinned && (
-            <Pin aria-label="Fixada" className="mt-1 size-3.5 shrink-0 fill-ink/20 text-ink" strokeWidth={1.5} />
+            <Pin aria-label="Fixada" className="mt-1 size-3.5 shrink-0 fill-ink/20 text-ink" strokeWidth={1.6} />
           )}
         </div>
+        {note.image && (
+          // eslint-disable-next-line @next/next/no-img-element -- data URL comprimido guardado com a nota
+          <img
+            src={note.image}
+            alt=""
+            loading="lazy"
+            className={cn(
+              "mt-2 w-full rounded-lg border border-subtle object-cover",
+              compact ? "max-h-28" : "max-h-48",
+            )}
+          />
+        )}
         {note.content && (
           <p
             className={cn(
@@ -69,7 +81,12 @@ export function NoteSlip({ note, compact = false, actions, highlight = false, cl
         <div className="mt-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-[11px] text-muted">
           {author && (
             <span className="inline-flex items-center gap-1.5">
-              <Avatar initials={author.initials} name={author.name} size="xs" />
+              <Avatar
+                initials={author.initials}
+                name={author.name}
+                src={"avatar" in author ? (author.avatar as string | null) : null}
+                size="xs"
+              />
               <span className="hidden sm:inline">{author.name.split(" ")[0]}</span>
             </span>
           )}
@@ -80,7 +97,7 @@ export function NoteSlip({ note, compact = false, actions, highlight = false, cl
               href={routes.page(linkedDoc.projectId, linkedDoc.id)}
               className="inline-flex items-center gap-1 rounded text-accent-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             >
-              <FileText aria-hidden="true" className="size-3" strokeWidth={1.5} />
+              <FileText aria-hidden="true" className="size-3" strokeWidth={1.6} />
               Documento
             </Link>
           )}

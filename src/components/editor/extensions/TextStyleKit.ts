@@ -1,6 +1,6 @@
 /**
  * Vellum — Atributos de estilo de texto (família, tamanho, cor)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Acrescenta ao mark `textStyle` três atributos validados contra listas

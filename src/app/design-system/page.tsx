@@ -1,16 +1,16 @@
 /**
  * Vellum — Página temporária de verificação do Design System (Fase 1A)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Movida de / para /design-system na Fase 1B (a raiz passa a redirecionar para /login ou /dashboard).
  */
 import type { ReactNode } from "react";
 
+import { ButtonSpecimen, DesignSystemNav } from "@/app/design-system/_components/DesignSystemChrome";
 import { ThemeGallery } from "@/app/design-system/_components/ThemeGallery";
 import { WorkspacePreview } from "@/app/design-system/_components/WorkspacePreview";
 import { AppFooter } from "@/components/layout/AppFooter";
-import { VellumMark } from "@/components/layout/VellumMark";
 import { APP_VERSION, cn } from "@/lib/utils";
 
 const TOKENS = [
@@ -35,16 +35,7 @@ export const metadata = { title: "Design System" };
 export default function DesignSystemPage() {
   return (
     <div className="flex min-h-dvh flex-col">
-      {/* Cabeçalho */}
-      <header className="border-b border-subtle">
-        <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6 md:px-12">
-          <VellumMark className="text-lg" />
-          <p className="hidden items-center gap-2 text-xs text-muted sm:flex">
-            Procurar <kbd>⌘</kbd>
-            <kbd>K</kbd>
-          </p>
-        </div>
-      </header>
+      <DesignSystemNav />
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-6 md:px-12">
         {/* Abertura */}
@@ -70,7 +61,7 @@ export default function DesignSystemPage() {
         </section>
 
         {/* I. Tipografia */}
-        <Section numeral="I" title="Tipografia editorial" dek="Três vozes, nunca uma quarta.">
+        <Section numeral="I" id="tipografia" title="Tipografia editorial" dek="Três vozes, nunca uma quarta.">
           <div className="divide-y divide-subtle border-y border-subtle">
             <Specimen
               family="Newsreader"
@@ -87,34 +78,7 @@ export default function DesignSystemPage() {
             </Specimen>
 
             <Specimen family="Plus Jakarta Sans" variable="--font-sans" role="Interface, menus, calendário, tabelas">
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className="h-9 rounded-lg bg-accent-primary px-4 text-sm font-medium text-canvas shadow-paper transition-[filter,transform] duration-150 ease-editorial hover:brightness-110 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-                >
-                  Novo documento
-                </button>
-                <button
-                  type="button"
-                  className="h-9 rounded-lg border border-subtle bg-elevated px-4 text-sm font-medium text-primary shadow-paper transition-colors duration-150 ease-editorial hover:bg-surface active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
-                >
-                  Importar
-                </button>
-                <button
-                  type="button"
-                  className="h-9 rounded-lg px-3 text-sm text-muted transition-colors duration-150 ease-editorial hover:bg-accent-primary/[0.06] hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                >
-                  Cancelar
-                </button>
-                <label className="sr-only" htmlFor="ds-input">
-                  Título do documento
-                </label>
-                <input
-                  id="ds-input"
-                  placeholder="Título do documento…"
-                  className="h-9 w-56 rounded-lg border border-subtle bg-elevated px-3 text-sm text-primary placeholder:text-muted/70 transition-shadow duration-150 focus-visible:border-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary/25"
-                />
-              </div>
+              <ButtonSpecimen />
               <dl className="mt-5 grid max-w-xl grid-cols-2 gap-px overflow-hidden rounded-lg border border-subtle bg-subtle sm:grid-cols-4">
                 {STATS.map((s) => (
                   <div key={s.label} className="bg-elevated px-3 py-2.5">
@@ -147,6 +111,7 @@ export default function DesignSystemPage() {
         {/* II. Temas */}
         <Section
           numeral="II"
+          id="temas"
           title="Os cinco temas"
           dek="Lista fechada. Escolha um papel; a interface inteira muda consigo."
         >
@@ -156,6 +121,7 @@ export default function DesignSystemPage() {
         {/* III. Tokens */}
         <Section
           numeral="III"
+          id="tokens"
           title="Tokens semânticos"
           dek="Os componentes conhecem o papel da cor, nunca o seu valor."
         >
@@ -180,6 +146,7 @@ export default function DesignSystemPage() {
         {/* IV. Workspace */}
         <Section
           numeral="IV"
+          id="workspace"
           title="Barra de estado do Workspace"
           dek="Telemetria, direitos reservados, tema e modo de página em 30 píxeis."
           wide
@@ -194,12 +161,14 @@ export default function DesignSystemPage() {
 }
 
 function Section({
+  id,
   numeral,
   title,
   dek,
   wide = false,
   children,
 }: {
+  id: string;
   numeral: string;
   title: string;
   dek: string;
@@ -208,11 +177,17 @@ function Section({
   children: ReactNode;
 }) {
   return (
-    <section className={cn("grid gap-8 border-t border-subtle py-14", !wide && "md:grid-cols-[12rem_1fr] md:gap-12")}>
+    <section
+      id={id}
+      className={cn(
+        "scroll-mt-16 grid gap-8 border-t border-subtle py-14",
+        !wide && "md:grid-cols-[12rem_1fr] md:gap-12",
+      )}
+    >
       <div>
         <p className="font-mono text-xs text-accent-primary">{numeral}.</p>
         <h2 className="mt-2 text-2xl leading-snug">{title}</h2>
-        <p className="mt-2 font-serif text-base italic leading-snug text-muted">{dek}</p>
+        <p className="mt-2 font-serif text-base leading-snug text-muted">{dek}</p>
       </div>
       <div className="min-w-0">{children}</div>
     </section>

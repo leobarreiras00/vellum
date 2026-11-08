@@ -1,6 +1,6 @@
 /**
  * Vellum — Matriz RBAC (apresentação)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Mostra a matriz de src/lib/rbac.ts com a coluna do papel atual realçada.
@@ -71,7 +71,7 @@ export function PermissionMatrix({ role }: { role: EffectiveRole | null }) {
                     {allowed ? (
                       <Check aria-label="Permitido" className="mx-auto size-3.5 text-primary" strokeWidth={2} />
                     ) : ownOnly ? (
-                      <span className="text-[10.5px] italic text-muted">só os seus</span>
+                      <span className="text-[10.5px] text-muted">só os seus</span>
                     ) : (
                       <span aria-label="Sem permissão" className="text-muted/60">
                         —

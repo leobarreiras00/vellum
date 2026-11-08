@@ -1,6 +1,6 @@
 /**
  * Vellum — PDF paginado no servidor (Módulo 6 · Exportação Fiel)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Recebe o HTML já paginado pela pré-visualização (folhas A4, fontes e SVGs

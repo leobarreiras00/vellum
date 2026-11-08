@@ -1,6 +1,6 @@
 /**
  * Vellum — Atualização de dados gravados por versões anteriores
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import { buildCalendarSeed } from "@/lib/calendar-seed";
@@ -52,5 +52,9 @@ export function upgradeStoreData(data: StoreData): StoreData {
     event.recurrence ??= null;
     event.exdates ??= [];
   }
+  // Perfis com fotografia e capas ilustradas.
+  data.profiles ??= {};
+  for (const note of data.notes) note.image ??= null;
+  data.covers ??= [];
   return data;
 }

@@ -1,6 +1,6 @@
 /**
  * Vellum — Menu rápido «/» do Editor Rico
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
@@ -80,7 +80,7 @@ export const SlashMenu = forwardRef<SlashMenuHandle, SlashMenuProps>(function Sl
               )}
             >
               <span className="grid size-8 shrink-0 place-items-center rounded-md border border-subtle bg-canvas text-muted">
-                <Icon aria-hidden="true" className="size-4" strokeWidth={1.5} />
+                <Icon aria-hidden="true" className="size-4" strokeWidth={1.6} />
               </span>
               <span className="min-w-0">
                 <span className="block text-sm text-primary">{item.label}</span>

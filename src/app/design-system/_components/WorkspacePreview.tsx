@@ -1,6 +1,6 @@
 /**
  * Vellum — Pré-visualização do Workspace com a barra de estado
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Simula o Motor de Telemetria apenas para verificação visual da Fase 1A.
@@ -11,6 +11,7 @@ import { Pause, Play } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
+import { PageModeSwitch } from "@/components/editor/PageModeSwitch";
 import { AppFooter } from "@/components/layout/AppFooter";
 import type { PageMode } from "@/lib/page-mode";
 import { EASE_EDITORIAL, cn, countWords } from "@/lib/utils";
@@ -40,15 +41,16 @@ export function WorkspacePreview() {
           Atelier <span aria-hidden="true">/</span> Ensaios <span aria-hidden="true">/</span>{" "}
           <span className="text-primary">Manifesto do Vellum</span>
         </p>
+        <PageModeSwitch value={pageMode} onChange={setPageMode} />
         <button
           type="button"
           onClick={() => setIsActive((v) => !v)}
           className="inline-flex h-7 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-subtle bg-elevated px-2.5 text-xs text-primary transition-colors duration-150 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
         >
           {isActive ? (
-            <Pause aria-hidden="true" className="size-3" strokeWidth={1.5} />
+            <Pause aria-hidden="true" className="size-3" strokeWidth={1.6} />
           ) : (
-            <Play aria-hidden="true" className="size-3" strokeWidth={1.5} />
+            <Play aria-hidden="true" className="size-3" strokeWidth={1.6} />
           )}
           {isActive ? "Pausar" : "Retomar"}
           <span className="hidden sm:inline">telemetria</span>
@@ -84,12 +86,7 @@ export function WorkspacePreview() {
         </AnimatePresence>
       </div>
 
-      <AppFooter
-        variant="statusbar"
-        telemetry={{ isActive, focusedSecondsToday: seconds, wordCount: words }}
-        pageMode={pageMode}
-        onPageModeChange={setPageMode}
-      />
+      <AppFooter variant="statusbar" telemetry={{ isActive, focusedSecondsToday: seconds, wordCount: words }} />
     </div>
   );
 }
@@ -99,7 +96,7 @@ function DocumentBody() {
     <>
       <p className="eyebrow">Ensaio · Rascunho 3</p>
       <h3 className="mt-3 text-4xl leading-tight tracking-tight">Manifesto do Vellum</h3>
-      <p className="mt-1 font-serif text-lg italic text-muted">Sobre escrever devagar e exportar sem perdas.</p>
+      <p className="mt-1 font-serif text-lg text-muted">Sobre escrever devagar e exportar sem perdas.</p>
       <p className="mt-6 font-serif text-[17px] leading-[1.65] text-primary">{SAMPLE_TEXT}</p>
       <p className="mt-4 font-serif text-[17px] leading-[1.65] text-primary">
         Cada página é uma folha. Cada folha tem margens, ritmo e silêncio. A interface recua para que o texto avance.

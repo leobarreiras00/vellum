@@ -1,6 +1,6 @@
 /**
  * Vellum — Barra de formatação do Editor Rico (estilo Microsoft Word)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Fixa no topo do documento, só para quem pode editar (canEditDocument).
@@ -24,12 +24,15 @@ import {
   Heading2,
   Heading3,
   Highlighter,
+  ImageIcon,
   Italic,
+  Keyboard,
   List,
   ListOrdered,
   Minus,
   Quote,
   Redo2,
+  Search,
   StickyNote,
   Strikethrough,
   Table2,
@@ -50,6 +53,8 @@ import {
   markVar,
   type DocInk,
 } from "@/components/editor/palette";
+import { pickAndInsertImage } from "@/components/editor/extensions/VellumImage";
+import { Combobox } from "@/components/ui/Combobox";
 import { Popover, PopoverItem } from "@/components/ui/Popover";
 import { CALLOUT_LABELS, CALLOUT_VARIANTS } from "@/lib/document-content";
 import { cn } from "@/lib/utils";
@@ -57,9 +62,14 @@ import { cn } from "@/lib/utils";
 interface RichWordToolbarProps {
   editor: Editor;
   className?: string;
+  onFind?: () => void;
+  onShortcuts?: () => void;
+  onImageError?: (message: string) => void;
 }
 
-export function RichWordToolbar({ editor, className }: RichWordToolbarProps) {
+const FONT_PREVIEW = { serif: "var(--font-serif)", sans: "var(--font-sans)", mono: "var(--font-mono)" } as const;
+
+export function RichWordToolbar({ editor, className, onFind, onShortcuts, onImageError }: RichWordToolbarProps) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -95,7 +105,7 @@ export function RichWordToolbar({ editor, className }: RichWordToolbarProps) {
       aria-label="Formatação do documento"
       data-print="hide"
       className={cn(
-        "flex flex-wrap items-center gap-x-0.5 gap-y-1 border-b border-subtle bg-canvas px-3 py-1.5 font-sans text-sm md:px-4",
+        "liquid-glass-bar flex flex-wrap items-center gap-x-0.5 gap-y-1 px-3 py-1.5 font-sans text-sm md:px-4",
         className,
       )}
     >
@@ -105,29 +115,30 @@ export function RichWordToolbar({ editor, className }: RichWordToolbarProps) {
       </Group>
 
       <Group label="Fonte">
-        <label className="sr-only" htmlFor="vellum-font-family">
-          Família de fonte
-        </label>
-        <select
+        <Combobox
           id="vellum-font-family"
+          label="Família de fonte"
           value={s.font}
-          onChange={(e) => {
-            const v = e.target.value;
+          keepEditorFocus
+          searchPlaceholder="Pesquisar fonte"
+          buttonClassName="h-7 w-[176px] px-2 text-xs"
+          options={[
+            { value: "", label: "Fonte do documento", hint: "Segue as Definições de leitura" },
+            ...DOC_FONTS.map((f) => ({
+              value: f,
+              label: DOC_FONT_LABELS[f],
+              hint: f === "serif" ? "Corpo editorial" : f === "sans" ? "Interface e notas" : "Código e dados técnicos",
+              style: { fontFamily: FONT_PREVIEW[f] },
+            })),
+          ]}
+          onChange={(v) => {
             if (v)
               chain()
                 .setDocFont(v as (typeof DOC_FONTS)[number])
                 .run();
             else chain().unsetDocFont().run();
           }}
-          className="h-7 w-[132px] rounded-md border border-subtle bg-elevated px-1.5 text-xs text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-        >
-          <option value="">Fonte do documento</option>
-          {DOC_FONTS.map((f) => (
-            <option key={f} value={f}>
-              {DOC_FONT_LABELS[f]}
-            </option>
-          ))}
-        </select>
+        />
         <label className="sr-only" htmlFor="vellum-font-size">
           Tamanho de letra
         </label>
@@ -172,7 +183,7 @@ export function RichWordToolbar({ editor, className }: RichWordToolbarProps) {
                 aria-label="Estilos de sublinhado"
                 className="grid h-7 w-6 place-items-center rounded-md text-muted hover:bg-surface hover:text-primary"
               >
-                <ChevronDown aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                <ChevronDown aria-hidden="true" className="size-3" strokeWidth={1.6} />
               </button>
             )}
           >
@@ -338,6 +349,19 @@ export function RichWordToolbar({ editor, className }: RichWordToolbarProps) {
         </Popover>
         <TableMenu editor={editor} inTable={s.table} />
         <ToolButton icon={Minus} label="Linha divisória" onClick={() => chain().setHorizontalRule().run()} />
+        <ToolButton
+          icon={ImageIcon}
+          label="Imagem (também ⌘V ou arrastar)"
+          data-testid="toolbar-image"
+          onClick={() => pickAndInsertImage(editor, onImageError)}
+        />
+      </Group>
+
+      <Group label="Documento">
+        {onFind && (
+          <ToolButton icon={Search} label="Localizar e substituir (⌘F)" onClick={onFind} data-testid="toolbar-find" />
+        )}
+        {onShortcuts && <ToolButton icon={Keyboard} label="Atalhos do editor (?)" onClick={onShortcuts} />}
       </Group>
 
       <button
@@ -346,7 +370,7 @@ export function RichWordToolbar({ editor, className }: RichWordToolbarProps) {
         aria-label="Inserir Diagrama Mermaid"
         className="ml-auto inline-flex h-7 items-center gap-1.5 rounded-md bg-accent-primary px-2.5 text-xs font-medium text-canvas shadow-paper transition-colors duration-150 hover:bg-accent-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
       >
-        <Workflow aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+        <Workflow aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
         <span className="hidden 2xl:inline">Inserir</span> Diagrama Mermaid
       </button>
     </div>
@@ -384,15 +408,15 @@ function ToolButton({ icon: Icon, label, active, caret, swatch, className, ...pr
       aria-pressed={active === undefined ? undefined : active}
       onMouseDown={(e) => e.preventDefault()}
       className={cn(
-        "relative inline-flex h-7 min-w-7 items-center justify-center gap-0.5 rounded-md px-1 transition-colors duration-150",
+        "relative inline-flex h-7 min-w-7 items-center justify-center gap-0.5 rounded-md px-1 transition-[background-color,color,transform] duration-150 active:scale-[0.97] active:duration-0",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:pointer-events-none disabled:opacity-40",
         active ? "bg-accent-primary/10 text-accent-primary" : "text-primary/80 hover:bg-surface hover:text-primary",
         className,
       )}
       {...props}
     >
-      <Icon aria-hidden="true" className="size-4" strokeWidth={1.5} />
-      {caret && <ChevronDown aria-hidden="true" className="size-3 text-muted" strokeWidth={1.5} />}
+      <Icon aria-hidden="true" className="size-4" strokeWidth={1.6} />
+      {caret && <ChevronDown aria-hidden="true" className="size-3 text-muted" strokeWidth={1.6} />}
       {swatch && (
         <span
           aria-hidden="true"

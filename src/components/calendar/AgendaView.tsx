@@ -1,6 +1,6 @@
 /**
  * Vellum — Vista Agenda com Notas
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Coluna esquerda com mini-calendário e filtros (Todos, Com notas, Com
@@ -96,7 +96,8 @@ export function AgendaView({
     if (filter === "notas") return f.hasNote;
     if (filter === "eventos") return f.hasEvents;
     if (filter === "importantes") return f.important;
-    return f.hasNote || f.hasEvents || f.important || day === today || day === selected;
+    // «Todos»: todos os dias do mês, com ou sem conteúdo.
+    return true;
   });
 
   // Mantém o dia escolhido à vista quando muda (não ao abrir a vista, para não saltar o cabeçalho).
@@ -141,9 +142,9 @@ export function AgendaView({
             >
               <span className="flex items-center gap-2">
                 {f === "importantes" ? (
-                  <Star aria-hidden="true" className="size-3 text-accent-primary" strokeWidth={1.5} />
+                  <Star aria-hidden="true" className="size-3 text-accent-primary" strokeWidth={1.6} />
                 ) : f === "notas" ? (
-                  <NotebookPen aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                  <NotebookPen aria-hidden="true" className="size-3" strokeWidth={1.6} />
                 ) : (
                   <span
                     aria-hidden="true"
@@ -162,7 +163,7 @@ export function AgendaView({
       <section aria-label="Agenda do mês" className="min-w-0">
         {days.length === 0 ? (
           <div className="grid place-items-center rounded-xl border border-dashed border-subtle px-6 py-14 text-center">
-            <CalendarX2 aria-hidden="true" className="size-6 text-muted" strokeWidth={1.5} />
+            <CalendarX2 aria-hidden="true" className="size-6 text-muted" strokeWidth={1.6} />
             <p className="mt-3 font-serif text-lg">Nada a mostrar neste filtro.</p>
             <p className="mt-1 max-w-xs text-sm text-muted">
               Em {monthLabel(year, month)} não há dias {FILTER_LABELS[filter].toLowerCase()}. Escolha outro filtro ou
@@ -217,18 +218,16 @@ export function AgendaView({
                         )}
                         {f.important && (
                           <span className="inline-flex items-center gap-1 text-[10.5px] font-medium uppercase tracking-[0.1em] text-accent-primary">
-                            <Star aria-hidden="true" className="size-2.5 fill-current" strokeWidth={1.5} />
+                            <Star aria-hidden="true" className="size-2.5 fill-current" strokeWidth={1.6} />
                             Importante
                           </span>
                         )}
-                        {holiday && (
-                          <span className="font-serif text-[12.5px] italic text-primary">{holiday.name}</span>
-                        )}
+                        {holiday && <span className="font-serif text-[12.5px] text-primary">{holiday.name}</span>}
                         {isWeekend(day) && !holiday && <span className="text-[10.5px] text-muted">fim de semana</span>}
                         {seconds > 0 && (
                           <span
                             className={cn(
-                              "nums ml-auto font-mono text-[10.5px]",
+                              "nums ml-auto text-[11px]",
                               seconds >= goalSeconds ? "text-accent-primary" : "text-muted",
                             )}
                           >
@@ -250,7 +249,7 @@ export function AgendaView({
                                 }}
                                 className="flex items-center gap-2 rounded px-0.5 text-[13.5px] hover:bg-surface/70"
                               >
-                                <span className="nums w-[76px] shrink-0 font-mono text-[10.5px] text-muted">
+                                <span className="nums w-[76px] shrink-0 text-[11px] text-muted">
                                   {timeRangeLabel(event)}
                                 </span>
                                 {legend ? <InkDot color={legend.color} /> : <span className="size-2 shrink-0" />}
@@ -270,18 +269,18 @@ export function AgendaView({
                       )}
 
                       {summary ? (
-                        <span className="flex items-start gap-1.5 border-t border-dashed border-subtle pt-1.5 font-serif text-[13.5px] italic leading-snug text-muted">
-                          <NotebookPen aria-hidden="true" className="mt-[3px] size-3 shrink-0" strokeWidth={1.5} />
+                        <span className="flex items-start gap-1.5 border-t border-dashed border-subtle pt-1.5 font-serif text-[13.5px] leading-snug text-muted">
+                          <NotebookPen aria-hidden="true" className="mt-[3px] size-3 shrink-0" strokeWidth={1.6} />
                           <span className="line-clamp-2 flex-1">{summary}</span>
                           {progress.total > 0 && (
-                            <span className="nums shrink-0 font-mono text-[10.5px] not-italic">
+                            <span className="nums shrink-0 text-[11px]">
                               {progress.done}/{progress.total}
                             </span>
                           )}
                         </span>
                       ) : (
                         events.length === 0 && (
-                          <span className="block font-serif text-sm italic text-muted">
+                          <span className="block font-serif text-sm text-muted">
                             Página em branco · escreva a nota do dia.
                           </span>
                         )
@@ -322,7 +321,7 @@ function MiniCalendar({ year, month, weekStart, today, selected, facts, onSelect
             onClick={() => onShiftMonth(-1)}
             className="grid size-6 place-items-center rounded text-muted hover:bg-surface hover:text-primary"
           >
-            <ChevronLeft aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <ChevronLeft aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           </button>
           <button
             type="button"
@@ -330,7 +329,7 @@ function MiniCalendar({ year, month, weekStart, today, selected, facts, onSelect
             onClick={() => onShiftMonth(1)}
             className="grid size-6 place-items-center rounded text-muted hover:bg-surface hover:text-primary"
           >
-            <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <ChevronRight aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           </button>
         </span>
       </div>

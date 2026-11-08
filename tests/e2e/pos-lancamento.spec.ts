@@ -1,6 +1,6 @@
 /**
  * Vellum — E2E do roteiro pós-lançamento: fila offline com conflitos e repetição de eventos
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { expect, test, type Page } from "@playwright/test";
 

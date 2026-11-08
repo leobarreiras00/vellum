@@ -1,6 +1,6 @@
 // =============================================================================
 // Vellum — Esquema da Base de Dados (PostgreSQL · Prisma)
-// © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+// © 2026 Leonardo Barreiras. Todos os direitos reservados.
 // Licença proprietária — ver LICENSE na raiz do repositório.
 //
 // Dois blocos:
@@ -278,6 +278,8 @@ model QuickNote {
   content     String
   color       InkColor
   isPinned    Boolean
+  /// Imagem colada na nota (data URL comprimido); opcional.
+  image       String?
   createdAt   DateTime
   updatedAt   DateTime
   deletedAt   DateTime?
@@ -411,4 +413,30 @@ model ShareLink {
 
   @@index([workspaceId, projectId])
   @@map("share_link")
+}
+
+/// Perfil público (fotografia 256×256 em data URL, cargo, bio, coleção de ilustrações).
+/// Guardado na base de dados: o Railway não tem disco persistente.
+model UserProfile {
+  userId            String   @id
+  avatar            String?
+  title             String   @default("")
+  bio               String   @default("")
+  illustrationTheme String   @default("velino")
+  updatedAt         DateTime @default(now())
+
+  @@map("user_profile")
+}
+
+/// Capa ilustrada de um projeto ou documento (gerada localmente ou carregada).
+model CoverArt {
+  targetId    String   @id
+  workspaceId String
+  kind        String
+  spec        Json
+  updatedById String
+  updatedAt   DateTime @default(now())
+
+  @@index([workspaceId])
+  @@map("cover_art")
 }

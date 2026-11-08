@@ -1,6 +1,6 @@
 /**
  * Vellum — Ecrãs de entrada de um link partilhado (palavra-passe e indisponível)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
@@ -61,13 +61,11 @@ export function SharedPasswordGate({
         }}
       >
         <p className="eyebrow flex items-center gap-1.5">
-          <KeyRound aria-hidden="true" className="size-3" strokeWidth={1.5} />
+          <KeyRound aria-hidden="true" className="size-3" strokeWidth={1.6} />
           Link protegido
         </p>
         <h1 className="text-[26px] font-normal leading-tight tracking-tight">{projectName}</h1>
-        <p className="font-serif text-[15px] italic text-muted">
-          {ownerName} protegeu este link com uma palavra-passe.
-        </p>
+        <p className="font-serif text-[15px] text-muted">{ownerName} protegeu este link com uma palavra-passe.</p>
         {error && <FormNotice>{error}</FormNotice>}
         <PasswordField
           label="Palavra-passe do link"
@@ -79,7 +77,7 @@ export function SharedPasswordGate({
         />
         <SubmitButton pending={pending} pendingLabel="A abrir…" disabled={!password}>
           Abrir documento
-          <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.5} />
+          <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.6} />
         </SubmitButton>
       </form>
     </Frame>
@@ -96,9 +94,9 @@ export function SharedUnavailable({ reason }: { reason: keyof typeof REASONS }) 
   return (
     <Frame>
       <section className="w-[min(440px,calc(100vw-2rem))] rounded-xl border border-subtle bg-elevated px-6 py-7 text-center shadow-sheet sm:px-8">
-        <Link2Off aria-hidden="true" className="mx-auto size-6 text-accent-primary" strokeWidth={1.5} />
+        <Link2Off aria-hidden="true" className="mx-auto size-6 text-accent-primary" strokeWidth={1.6} />
         <h1 className="mt-3 text-[26px] font-normal leading-tight tracking-tight">Link indisponível</h1>
-        <p className="mt-2 font-serif text-[15px] italic text-muted" data-testid="shared-unavailable">
+        <p className="mt-2 font-serif text-[15px] text-muted" data-testid="shared-unavailable">
           {REASONS[reason]}
         </p>
         <Link
@@ -106,7 +104,7 @@ export function SharedUnavailable({ reason }: { reason: keyof typeof REASONS }) 
           className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-lg border border-subtle px-3 text-sm text-primary hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
         >
           Ir para o Vellum
-          <ArrowRight aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          <ArrowRight aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
         </Link>
       </section>
     </Frame>

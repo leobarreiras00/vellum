@@ -1,6 +1,6 @@
 /**
  * Vellum — Estúdio Mermaid (bloco do Editor Rico)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Três modos: Vista Diagrama (zoom −/+/100% e legenda), Vista Dividida (código
@@ -174,7 +174,7 @@ export function MermaidStudioBlock({ node, updateAttributes, editor, deleteNode,
       role="alert"
       className="flex gap-2.5 border-t border-accent-primary/30 bg-accent-primary/[0.05] px-3 py-2.5 font-sans"
     >
-      <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.5} />
+      <AlertTriangle aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.6} />
       <div className="min-w-0 text-xs leading-snug">
         <p className="font-medium text-primary">{error.message}</p>
         {error.excerpt && (
@@ -212,7 +212,7 @@ export function MermaidStudioBlock({ node, updateAttributes, editor, deleteNode,
       )}
       {errorBox}
       <figcaption className="flex items-center gap-2 border-t border-subtle px-3 py-2 font-sans text-xs text-muted">
-        <ImageIcon aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.5} />
+        <ImageIcon aria-hidden="true" className="size-3.5 shrink-0" strokeWidth={1.6} />
         {editable ? (
           <>
             <label htmlFor={`${baseId}-caption`} className="sr-only">
@@ -254,7 +254,7 @@ export function MermaidStudioBlock({ node, updateAttributes, editor, deleteNode,
     >
       {fullscreen ? (
         <div className="flex h-40 items-center justify-center gap-2 font-sans text-sm text-muted">
-          <Maximize2 aria-hidden="true" className="size-4" strokeWidth={1.5} />
+          <Maximize2 aria-hidden="true" className="size-4" strokeWidth={1.6} />
           Diagrama aberto em ecrã inteiro.
         </div>
       ) : (
@@ -309,10 +309,10 @@ function BlockHeader(props: BlockHeaderProps) {
       <span className="flex min-w-0 items-center gap-1.5 text-muted">
         {editable && !fullscreen && (
           <span data-drag-handle="" className="cursor-grab text-muted/70" title="Arrastar bloco">
-            <GripVertical aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <GripVertical aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           </span>
         )}
-        <Workflow aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={1.5} />
+        <Workflow aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={1.6} />
         <span className="truncate">
           <span className="text-primary">Mermaid</span> · {typeLabel}
         </span>
@@ -330,7 +330,7 @@ function BlockHeader(props: BlockHeaderProps) {
             props.onView("diagram");
           }}
         >
-          <Workflow aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          <Workflow aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           Vista Diagrama
         </ModeButton>
         {editable && (
@@ -341,15 +341,15 @@ function BlockHeader(props: BlockHeaderProps) {
               props.onView("split");
             }}
           >
-            <Columns2 aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <Columns2 aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
             Vista Dividida
           </ModeButton>
         )}
         <ModeButton active={fullscreen} onClick={() => props.onFullscreen(!fullscreen)}>
           {fullscreen ? (
-            <Minimize2 aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <Minimize2 aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           ) : (
-            <Maximize2 aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <Maximize2 aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           )}
           {fullscreen ? "Sair do ecrã inteiro" : "Ecrã Inteiro"}
         </ModeButton>
@@ -357,7 +357,7 @@ function BlockHeader(props: BlockHeaderProps) {
 
       <div role="group" aria-label="Zoom do diagrama" className="flex items-center gap-0.5">
         <IconButton label="Reduzir zoom" onClick={() => props.onZoom(zoom - ZOOM_STEP)} disabled={zoom <= ZOOM_MIN}>
-          <Minus aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          <Minus aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
         </IconButton>
         <button
           type="button"
@@ -368,7 +368,7 @@ function BlockHeader(props: BlockHeaderProps) {
           {Math.round(zoom * 100)}%
         </button>
         <IconButton label="Aumentar zoom" onClick={() => props.onZoom(zoom + ZOOM_STEP)} disabled={zoom >= ZOOM_MAX}>
-          <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
         </IconButton>
       </div>
 
@@ -382,12 +382,12 @@ function BlockHeader(props: BlockHeaderProps) {
             guideOpen ? "bg-accent-primary/10 text-accent-primary" : "text-muted hover:bg-elevated hover:text-primary",
           )}
         >
-          <BookOpen aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          <BookOpen aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           Como gerar ou importar
         </button>
         {editable && !fullscreen && (
           <IconButton label="Eliminar diagrama" onClick={props.onDelete}>
-            <Trash2 aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <Trash2 aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
           </IconButton>
         )}
       </div>

@@ -1,7 +1,7 @@
 /**
  * Vellum — E2E de autenticação (Better-Auth): registo com confirmação por
  * código, início de sessão com código ou ligação mágica, recuperação
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  *
  * Os emails saem pelo Brevo contra um servidor falso local; os códigos são
  * lidos dessa caixa (helpers.ts → lastCode).
@@ -32,6 +32,10 @@ test("Registo cria conta e atelier próprios; terminar sessão fecha o acesso", 
   await page.getByLabel("Email", { exact: true }).fill(USER.email);
   await page.getByLabel("Palavra-passe", { exact: true }).fill(USER.password);
   await page.getByRole("radiogroup", { name: "Tema inicial" }).getByRole("radio").nth(1).click();
+  // Sem aceitar os Termos, o registo é recusado com mensagem clara.
+  await page.getByRole("button", { name: "Criar conta" }).last().click();
+  await expect(page.getByText("Para criar conta, aceite os Termos e a Política de Privacidade.")).toBeVisible();
+  await page.getByTestId("accept-terms").check();
   const sent = Date.now();
   await page.getByRole("button", { name: "Criar conta" }).last().click();
 
@@ -66,6 +70,7 @@ test("Registo cria conta e atelier próprios; terminar sessão fecha o acesso", 
   await other.getByLabel("Username", { exact: true }).fill(USER.username);
   await other.getByLabel("Email", { exact: true }).fill(`outra.${stamp}@vellum.local`);
   await other.getByLabel("Palavra-passe", { exact: true }).fill(USER.password);
+  await other.getByTestId("accept-terms").check();
   await other.getByRole("button", { name: "Criar conta" }).last().click();
   await expect(other.getByText("Esse username já está em uso.")).toBeVisible();
   await context.close();

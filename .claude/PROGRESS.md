@@ -1,6 +1,6 @@
 # PROGRESS — Vellum
 
-> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
 **Estado atual:** ✅ Todas as fases do Vellum (0 a 5) 100% Concluídas, o primeiro bloco do Roteiro pós-lançamento e a Refatoração UX/UI + E-mails + Partilha por link (2026-11-08). Em produção no Railway: https://vellumpt.up.railway.app (Neon `production`): PostgreSQL + Prisma + Better-Auth, repetição de eventos, fila offline com resolução de conflitos, auditoria AA nos 5 temas e preparação de deploy (Docker, health check, build standalone). O que ainda depende do Leonardo (base de dados de produção, segredos, email, alojamento) está em «Para pôr em produção».
@@ -194,7 +194,7 @@
 
 - [x] `tests/unit/exporters.test.ts` (12) e `tests/unit/sync.test.ts` (8): segurança das marcas, HTML escapado, CSS A4, docx (estilos, tabela, numeração, imagem, rodapé), Markdown, .ics (estrutura, dobragem, ida e volta, Google/Outlook/Apple), Markdown importado e snapshot
 - [x] `tests/e2e/fase5.spec.ts` (4): login **com** a animação da caneta → Dashboard → Projetos → Editor com Mermaid → Exportar (pré-visualização paginada, PDF A4 com N folhas, docx com imagem, Markdown com frontmatter e Mermaid, HTML offline) → Calendário (.ics com VALARM, importação Google sem duplicar) → Definições (Markdown, snapshot, restauro único) → direitos no `<AppFooter />`; RBAC Marta exporta, Pedro não
-- [x] `<AppFooter variant="statusbar" />`: o texto curto passa a ter como `title` a linha completa «Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras)»
+- [x] `<AppFooter variant="statusbar" />`: o texto curto passa a ter como `title` a linha completa «Arquitetado e Desenvolvido por Leonardo Barreiras»
 - [x] Validado: `tsc --noEmit`, ESLint (0 erros; os 5 avisos `exhaustive-deps` antigos), Prettier, Vitest 60/60, `next build`, Playwright 25/25 (desktop + Pixel 7)
 
 ## Roteiro pós-lançamento (fora do âmbito das Fases 0–5)
@@ -322,6 +322,41 @@ Plataforma escolhida: **Railway** (Docker com Chromium para o PDF; a Vercel limi
 
 ---
 
+## Fase 6 — Acabamento editorial, perfil, ilustrações e informação legal ✅ CONCLUÍDA (2026-11-08)
+
+Guião completo (vistoria antes/depois e especificação): `.claude/GUIAO_VISTORIA_E_IMPLEMENTACAO.md`.
+
+**Etapa 1 — Skills e vistoria**
+- [x] Skills novas `taste-skill.md` (20 regras de acabamento) e `ux-forms-psychology.md`; `motion-choreography.md` reescrita (20 leis); `frontend-design.md` e `editorial-typography.md` alinhadas (Liquid Glass, cores de estado, itálicos, mono)
+- [x] Vistoria Playwright das 10 rotas pedidas (login, dashboard, calendário, notas, projetos, projeto, documento, definições, design-system, partilha)
+
+**Etapa 2 — Implementação**
+- [x] Autoria exclusivamente «Leonardo Barreiras» (204 ficheiros; mantidos só o caminho `/Users/leo_barreiras/…` e o URL `github.com/leobarreiras00/vellum`; username de demonstração `leo` mantém-se)
+- [x] Editor: Tab/Shift+Tab nunca saem da folha (listas: afundar/subir; tabelas: célula seguinte/anterior, cria linha no fim; parágrafos e títulos: recuo de 2em até 6 níveis; código: 2 espaços); ⌘F localizar com destaque, «1 de X», Enter/Shift+Enter, ⌘H substituir/substituir tudo, Esc devolve o foco; ⌘D duplica o bloco; ⌘K com seleção abre ligação (sem seleção, a paleta); ⌘⇧H realce; botão «?» com os atalhos
+- [x] Imagens: ⌘V, arrastar, botão na barra e `/imagem`; compressão Canvas (≤ 1600 px, JPEG 0,84 ou PNG com transparência); barra Liquid Glass (25/50/75/100 %, alinhamento, legenda, ecrã inteiro, eliminar); exportação PDF/HTML (figura + legenda), Word (ImageRun proporcional + legenda) e Markdown (`![alt](src "legenda")`); validação no servidor (só data URL de imagem ou https; 8 MB por documento)
+- [x] Notas Rápidas: imagem colada/arrastada/escolhida, guardada com a nota e levada para o documento ao converter
+- [x] Régua A4 sem seleção nem eventos; Partilhar/Exportar só na Topbar; A4 | Fluido só no cabeçalho do documento (fora da barra de estado); seletor de fonte com pesquisa e scroll; placeholder com espaço; botão «+» na margem; bubble toolbar Liquid Glass
+- [x] Ilustrações: 6 coleções, gerador local em SVG (determinístico, sem rede nem chave), 4 estilos, galeria curada de 12, carregamento próprio; capas em projetos e documentos; vinheta no topo do Dashboard; escolha em Definições › Aparência
+- [x] Perfil (`ProfileModal`): abre do avatar/nome na Sidebar e do avatar na Topbar (troca RBAC de demonstração passou para botão próprio); fotografia PNG/JPEG/WEBP ≤ 2 MB com erros em PT, recorte 1:1 com zoom e arrasto, pré-visualização circular, 256×256 WEBP; servidor confirma o tipo pelos bytes; guardada na base de dados (sem disco local); nome, username, cargo, bio, tema, meta diária (`HH:MM`) e mudança de palavra-passe
+- [x] `/termos` e `/privacidade` (PT formal, RGPD, aviso «modelo a rever por jurista»); Centro de Suporte (FAQ, atalhos, pedido por Brevo/Resend para `SUPPORT_EMAIL` ou cópia de diagnóstico) no login, na Sidebar e no rodapé; aceitação obrigatória no registo (validada no servidor)
+- [x] Design System com «← Voltar ao Atelier» e sem botões mortos; itálicos removidos dos metadados; rótulos visíveis (Notas, Day Studio, localizar, perfil, suporte); máscara `000 000` nos códigos; Skeletons; Agenda «Todos» com todos os dias do mês; singular «1 palavra»; `--text-muted` `#57534C`; cores de estado; Liquid Glass; ícones a 1,6
+
+**Etapa 3 — Validação**
+- [x] `tsc --noEmit` 0 erros · ESLint 0 erros (3 avisos antigos) · Prettier · Vitest 90/90 · `next build` · `prisma migrate diff` sem diferenças
+- [x] Playwright 52/52 em JSON e 52/52 em PostgreSQL (migrações aplicadas com `prisma migrate deploy`). Corrigido no fim: a gaveta de comentários fazia cair o editor (`insertBefore`) por causa do nó do BubbleMenu movido pelo tippy; o menu passou a viver num contentor próprio.
+
+**Exceção ao nome único:** o comentário da migração já aplicada `20261108160000_partilha_confirmacao` mantém «(Leo Barreiras)», porque alterar um ficheiro de migração já aplicado muda o checksum do Prisma em produção.
+
+**Base de dados:** migração aditiva `20261108190000_perfil_ilustracoes` (tabelas novas `user_profile` e `cover_art`, coluna anulável `quick_note.image`), aplicada pelo `prisma migrate deploy` no arranque do Railway.
+
+**Variáveis novas (opcionais, só no Railway):** `SUPPORT_EMAIL` (destino dos pedidos de suporte; sem ela vai para `EMAIL_FROM_ADDRESS`); `ILLUSTRATION_API_URL`, `ILLUSTRATION_API_KEY`, `ILLUSTRATION_PROVIDER` (serviço externo de imagens; sem elas usa-se o gerador local).
+
+**Não feito / limites honestos**
+- O «gerador por IA» é local e procedimental (formas editoriais a partir de palavras-chave em PT), não um modelo de imagem; o serviço externo só funciona se as variáveis acima forem definidas e o serviço responder no formato documentado em `src/lib/illustration-provider.ts`
+- Mudar o email da conta não está no perfil (exige nova confirmação): faz-se pelo Suporte
+- Imagens WEBP ou remotas (https) não são incorporadas no Word (fica «[Imagem: …]»); as imagens coladas são sempre convertidas para JPEG/PNG, por isso o caso é raro
+- Termos e Política de Privacidade são modelos e precisam de revisão jurídica
+
 ## Registo de decisões
 
 | Data       | Decisão                                                                 |
@@ -376,7 +411,13 @@ Plataforma escolhida: **Railway** (Docker com Chromium para o PDF; a Vercel limi
 | 2026-11-08 | E-mail por `fetch` direto às APIs do Brevo/Resend (sem SDK); em produção sem chave o modo é `off` e a confirmação por código não é exigida, para nunca bloquear contas. |
 | 2026-11-08 | Partilha por link: token aleatório guardado com hash (pesquisa) e selado (para o Proprietário copiar de novo); convidados anónimos nunca recebem sessão Better-Auth, só acesso ao documento/projeto do link. |
 | 2026-11-08 | Separador RBAC sai do dashboard; matriz e membros vivem em Definições › Equipa e no diálogo de Partilha. |
+| 2026-11-08 | Fase 6: perfil e capas em tabelas novas (`user_profile`, `cover_art`) em vez de colunas novas nas tabelas existentes: migração 100% aditiva para o Neon de produção. Fotografias e imagens em data URL na base de dados (o Railway não tem disco persistente). |
+| 2026-11-08 | Ilustrações por gerador SVG local e determinístico; serviço externo só por variáveis de ambiente (`ILLUSTRATION_API_URL`…), sem chave no código. |
+| 2026-11-08 | `MAX_CONTENT_BYTES` do documento sobe de 1 MB para 8 MB por causa das imagens; cada imagem é comprimida no navegador e só data URLs de imagem ou https passam a validação. |
+| 2026-11-08 | Partilhar/Exportar só na Topbar e A4 | Fluido só no cabeçalho do documento (a barra de estado fica só com telemetria e direitos). |
+| 2026-11-08 | `--text-muted` do `warm-cream` passa a `#57534C`; cores de estado (Sálvia, Âmbar, Carmim, Ardósia) fora dos 7 tokens de tema; Liquid Glass só em elementos flutuantes. |
+
 
 ---
 
-© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.

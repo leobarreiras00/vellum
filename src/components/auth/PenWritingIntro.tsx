@@ -1,6 +1,6 @@
 /**
  * Vellum — <PenWritingIntro /> · Coreografia da Caneta SVG (ecrã de entrada)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Ver .claude/skills/motion-choreography.md §3.
@@ -506,7 +506,7 @@ export function PenWritingIntro({ children, footer }: PenWritingIntroProps) {
                   onClick={replay}
                   className="mt-5 inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs text-muted transition-colors duration-150 ease-editorial hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary focus-visible:ring-offset-2 focus-visible:ring-offset-canvas"
                 >
-                  <RotateCcw aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+                  <RotateCcw aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
                   Repetir animação da caneta
                 </button>
               )}

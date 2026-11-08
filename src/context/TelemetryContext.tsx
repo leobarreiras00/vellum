@@ -1,6 +1,6 @@
 /**
  * Vellum — Contexto do Motor de Telemetria de Uso e Esforço (Módulo 5)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Mede o tempo ativo (useActivityTracker, pausa ao fim de 120 s sem

@@ -1,6 +1,6 @@
 /**
  * Vellum — Renderização Mermaid no cliente (securityLevel "strict")
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * - Mermaid e DOMPurify carregados só quando há um diagrama (import dinâmico).

@@ -1,6 +1,6 @@
 /**
  * Vellum — Preferência de modo de página (Folha A4 / Fluido)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Preferência de apresentação por pessoa e dispositivo (localStorage), partilhada

@@ -1,6 +1,6 @@
 /**
  * Vellum — Avisos (toasts) do workspace
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
@@ -39,7 +39,7 @@ export function Toaster() {
               <CircleAlert
                 aria-hidden="true"
                 className="mt-0.5 size-4 shrink-0 text-accent-primary"
-                strokeWidth={1.5}
+                strokeWidth={1.6}
               />
             ) : (
               <span aria-hidden="true" className="mt-[7px] size-1.5 shrink-0 rounded-full bg-accent-primary" />
@@ -51,7 +51,7 @@ export function Toaster() {
               aria-label="Dispensar aviso"
               className="-mr-1 grid size-6 shrink-0 place-items-center rounded-md text-muted hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             >
-              <X aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+              <X aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
             </button>
           </motion.div>
         ))}

@@ -1,6 +1,6 @@
 /**
  * Vellum — Vista Calendário Semanal (grelha horária)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Sete colunas com faixa de dia inteiro, régua horária 07:00–22:00 com os
@@ -64,7 +64,7 @@ export function WeekGrid({ anchor, label, ...props }: DayGridProps & { anchor: s
                     <Star
                       aria-label="Dia importante"
                       className="size-3 fill-current text-accent-primary"
-                      strokeWidth={1.5}
+                      strokeWidth={1.6}
                     />
                   )}
                   {canEdit && (
@@ -74,7 +74,7 @@ export function WeekGrid({ anchor, label, ...props }: DayGridProps & { anchor: s
                       aria-label={`Novo evento em ${dayLongLabel(day)}`}
                       className="ml-auto grid size-5 place-items-center rounded text-muted hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
                     >
-                      <Plus aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                      <Plus aria-hidden="true" className="size-3" strokeWidth={1.6} />
                     </button>
                   )}
                 </div>
@@ -160,7 +160,7 @@ export function WeekGrid({ anchor, label, ...props }: DayGridProps & { anchor: s
                           <Star
                             aria-hidden="true"
                             className="mr-0.5 inline size-2.5 fill-current text-ink"
-                            strokeWidth={1.5}
+                            strokeWidth={1.6}
                           />
                         )}
                         {event.title}
@@ -178,7 +178,7 @@ export function WeekGrid({ anchor, label, ...props }: DayGridProps & { anchor: s
         {/* Notas do Dia */}
         <div role="row" className="grid grid-cols-[52px_repeat(7,minmax(0,1fr))] border-t border-subtle bg-surface/40">
           <span role="rowheader" className="grid place-items-center text-muted">
-            <NotebookPen aria-label="Notas do dia" className="size-3.5" strokeWidth={1.5} />
+            <NotebookPen aria-label="Notas do dia" className="size-3.5" strokeWidth={1.6} />
           </span>
           {days.map((day) => {
             const note = notes.get(day);
@@ -187,7 +187,7 @@ export function WeekGrid({ anchor, label, ...props }: DayGridProps & { anchor: s
                 <button
                   type="button"
                   onClick={() => props.onOpenDay(day)}
-                  className="line-clamp-3 min-h-10 w-full rounded px-1 py-0.5 text-left font-serif text-[11.5px] italic leading-snug text-muted hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                  className="line-clamp-3 min-h-10 w-full rounded px-1 py-0.5 text-left font-serif text-[11.5px] leading-snug text-muted hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
                   aria-label={
                     note?.content
                       ? `Nota do dia: ${note.content.slice(0, 80)}`

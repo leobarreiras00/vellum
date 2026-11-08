@@ -1,4 +1,4 @@
-# Vellum — gerador do logótipo. © 2026 Leonardo Barreiras (Leo Barreiras).
+# Vellum — gerador do logótipo. © 2026 Leonardo Barreiras.
 V="M365 1372 220 1410 226 1430H720L714 1410L556 1374L694 210H670L1410 1367L1254 1410L1260 1430H1652L1646 1410L1475 1364L576 -20H540Z"
 VB=(220,-20,1652,1430)  # caixa do V (unidades da fonte, 2000/em)
 INK="#1C1B18"; SURF="#F2ECE1"; ELEV="#FFFDF9"; BORDER="#E4DDD0"; ACC="#AC4C2A"
@@ -29,7 +29,7 @@ def mark(x,y,w,h,fold,r,vh,cls):
             f'<path class="{cls[1]}" d="{ear(x,y,w,fold,r*0.5)}"/>' + vp +
             f'<circle class="{cls[3]}" cx="{cx:.3f}" cy="{cy:.3f}" r="{dot_r:.3f}"/>')
 
-HDR="<!-- Vellum — © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados. -->"
+HDR="<!-- Vellum — © 2026 Leonardo Barreiras. Todos os direitos reservados. -->"
 
 # 1) favicon / ícone de separador: folha cheia em tinta, V creme (claro); inverte no escuro
 fav=f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">{HDR}

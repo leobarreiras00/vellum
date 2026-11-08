@@ -1,6 +1,6 @@
 /**
  * Vellum — Dados de exemplo para ateliers novos
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Três projetos editoriais realistas (com documentos ricos e diagramas

@@ -1,6 +1,6 @@
 /**
  * Vellum — Calendário Built-in Personalizável (Módulo 4)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Template base duplo, alternável no cabeçalho:
@@ -236,7 +236,7 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
           <h1 className="mt-2 text-4xl font-normal leading-tight tracking-tight first-letter:uppercase">
             {view === "grelha" && scale === "semana" ? weekLabel : label}
           </h1>
-          <p className="nums mt-1.5 font-serif text-lg italic text-muted">
+          <p className="nums mt-1.5 font-serif text-lg text-muted">
             {formatNumber(monthEvents.length)} eventos · {formatNumber(monthImportant)}{" "}
             {monthImportant === 1 ? "dia importante" : "dias importantes"} · {formatDuration(monthEffort)} de esforço
             focado
@@ -249,11 +249,11 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
             value={view}
             onChange={chooseView}
             options={[
-              { value: "grelha", label: "Calendário", icon: <CalendarDays aria-hidden="true" strokeWidth={1.5} /> },
+              { value: "grelha", label: "Calendário", icon: <CalendarDays aria-hidden="true" strokeWidth={1.6} /> },
               {
                 value: "agenda",
                 label: "Agenda com Notas",
-                icon: <NotebookTabs aria-hidden="true" strokeWidth={1.5} />,
+                icon: <NotebookTabs aria-hidden="true" strokeWidth={1.6} />,
               },
             ]}
             reduce={Boolean(reduce)}
@@ -280,7 +280,7 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
               aria-label={view === "grelha" && scale === "semana" ? "Semana anterior" : "Mês anterior"}
               onClick={() => move(-1)}
             >
-              <ChevronLeft aria-hidden="true" strokeWidth={1.5} />
+              <ChevronLeft aria-hidden="true" strokeWidth={1.6} />
             </Button>
             <Button size="sm" onClick={goToday}>
               Hoje
@@ -291,12 +291,12 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
               aria-label={view === "grelha" && scale === "semana" ? "Semana seguinte" : "Mês seguinte"}
               onClick={() => move(1)}
             >
-              <ChevronRight aria-hidden="true" strokeWidth={1.5} />
+              <ChevronRight aria-hidden="true" strokeWidth={1.6} />
             </Button>
           </div>
           {canEdit && (
             <Button variant="primary" size="md" onClick={() => setDialog({ open: true, date: selected })}>
-              <Plus aria-hidden="true" strokeWidth={1.5} />
+              <Plus aria-hidden="true" strokeWidth={1.6} />
               Novo evento
             </Button>
           )}
@@ -341,18 +341,18 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
           onClick={() => setSyncOpen(true)}
           data-testid="calendar-sync"
         >
-          <ArrowLeftRight aria-hidden="true" strokeWidth={1.5} />
+          <ArrowLeftRight aria-hidden="true" strokeWidth={1.6} />
           Sincronizar .ics
         </Button>
         <Button variant="ghost" size="sm" onClick={() => setLegendsOpen(true)}>
-          <SlidersHorizontal aria-hidden="true" strokeWidth={1.5} />
+          <SlidersHorizontal aria-hidden="true" strokeWidth={1.6} />
           Gerir legendas
         </Button>
       </div>
 
       {nextImportant && (
         <p className="nums mt-3 flex items-center gap-1.5 text-xs text-muted">
-          <Star aria-hidden="true" className="size-3 fill-current text-accent-primary" strokeWidth={1.5} />
+          <Star aria-hidden="true" className="size-3 fill-current text-accent-primary" strokeWidth={1.6} />
           Próximo dia importante:{" "}
           <button
             type="button"
@@ -511,7 +511,7 @@ function ViewCustomizer({
       panelClassName="w-[300px] p-3"
       trigger={(props) => (
         <Button {...props} variant="secondary" size="sm" data-testid="calendar-customize">
-          <Settings2 aria-hidden="true" strokeWidth={1.5} />
+          <Settings2 aria-hidden="true" strokeWidth={1.6} />
           Personalizar Vista
         </Button>
       )}
@@ -600,7 +600,7 @@ function ViewCustomizer({
             onClick={onReset}
             className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-accent-primary"
           >
-            <RotateCcw aria-hidden="true" className="size-3" strokeWidth={1.5} />
+            <RotateCcw aria-hidden="true" className="size-3" strokeWidth={1.6} />
             Repor predefinições
           </button>
         </div>

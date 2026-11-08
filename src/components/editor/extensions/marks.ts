@@ -1,6 +1,6 @@
 /**
  * Vellum — Sublinhado (clássico ou colorido) e realce com a paleta curada
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import Highlight from "@tiptap/extension-highlight";

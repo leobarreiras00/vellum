@@ -1,6 +1,6 @@
 /**
  * Vellum — Modal de Criar / Editar Projeto
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Protegido por canManageProject (interface) e assertCan("project:manage") no servidor.
@@ -97,7 +97,7 @@ export function ProjectFormDialog({ open, projectId, onClose }: ProjectFormDialo
                 disabled={isPending}
                 onClick={() => (confirmDelete ? remove() : setConfirmDelete(true))}
               >
-                <Trash2 aria-hidden="true" strokeWidth={1.5} />
+                <Trash2 aria-hidden="true" strokeWidth={1.6} />
                 {confirmDelete ? "Confirmar eliminação" : "Eliminar"}
               </Button>
             )}
@@ -165,7 +165,7 @@ export function ProjectFormDialog({ open, projectId, onClose }: ProjectFormDialo
                           : "border-subtle text-muted hover:text-primary",
                       )}
                     >
-                      <Icon aria-hidden="true" className="size-4" strokeWidth={1.5} />
+                      <Icon aria-hidden="true" className="size-4" strokeWidth={1.6} />
                     </button>
                   );
                 })}
@@ -179,7 +179,7 @@ export function ProjectFormDialog({ open, projectId, onClose }: ProjectFormDialo
         </form>
       ) : (
         <p className="flex items-center gap-2 text-sm text-muted">
-          <Lock aria-hidden="true" className="size-4" strokeWidth={1.5} />
+          <Lock aria-hidden="true" className="size-4" strokeWidth={1.6} />
           Pode consultar o projeto, mas não alterá-lo.
         </p>
       )}

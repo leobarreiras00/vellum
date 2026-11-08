@@ -1,6 +1,6 @@
 /**
  * Vellum — Configuração Playwright (E2E)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Corre sobre o build de produção (`npm run build` antes) com perfis de

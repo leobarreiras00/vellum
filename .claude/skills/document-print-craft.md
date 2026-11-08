@@ -1,6 +1,6 @@
 # Skill — Document & Print Craft
 
-> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 > Skill obrigatória para o Editor Híbrido, a vista de Folha A4 e o motor de exportação.
 
 ---

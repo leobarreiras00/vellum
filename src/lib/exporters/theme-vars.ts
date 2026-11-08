@@ -1,6 +1,6 @@
 /**
  * Vellum — Variáveis de tema para ficheiros exportados (cliente)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Os valores das cores vivem só em globals.css: aqui lêem-se os tokens já

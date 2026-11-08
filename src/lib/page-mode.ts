@@ -1,6 +1,6 @@
 /**
  * Vellum — Modos de página do documento
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Espelha o enum Prisma `PageMode` (ver .claude/skills/document-print-craft.md).

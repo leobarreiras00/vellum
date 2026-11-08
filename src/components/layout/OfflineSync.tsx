@@ -1,6 +1,6 @@
 /**
  * Vellum — Envio da fila offline em segundo plano
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Ao abrir o workspace e sempre que a ligação volta, envia as gravações em fila

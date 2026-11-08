@@ -1,6 +1,6 @@
 # Skill — Frontend Design · "Tactile Editorial Atelier"
 
-> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 > Skill obrigatória. Ler antes de criar ou alterar qualquer componente visual do Vellum.
 
 ---
@@ -20,9 +20,9 @@ Três palavras que orientam qualquer decisão: **calma · tátil · rigorosa**.
 | Gradientes roxos, azuis ou "aurora"; texto com gradiente                 | Cores planas dos tokens; profundidade vem de papel e sombra quente   |
 | Sombras pretas pesadas (`rgba(0,0,0,.25+)`, `shadow-2xl`)                | `--shadow-paper` (ver §4)                                            |
 | Fundo `#FFFFFF` clínico em áreas de trabalho                             | `bg-canvas` / `bg-surface` / `bg-elevated` (nunca branco puro)       |
-| Glassmorphism, blur de fundo decorativo, néon, glow                      | Superfícies opacas com textura de papel                              |
+| Glassmorphism decorativo em superfícies de conteúdo, néon, glow          | Superfícies opacas com textura de papel; **Liquid Glass Editorial** só em elementos flutuantes (§4.4, `taste-skill.md` §V) |
 | Cartões genéricos com ícone + título + texto em grelha de 3              | Composição editorial: colunas, réguas, numeração, hierarquia serif   |
-| Emojis como ícones de interface                                          | `lucide-react` com `strokeWidth={1.5}`                               |
+| Emojis como ícones de interface                                          | `lucide-react` com `strokeWidth={1.6}`                               |
 | Cores hexadecimais diretamente nos componentes                           | Classes Tailwind semânticas mapeadas aos tokens CSS                  |
 | `rounded-full` em contentores, `rounded-3xl`                             | `rounded-lg` (controlos) e `rounded-xl` (painéis, folhas, modais)    |
 | Animações de "bounce", spring exagerada, parallax                        | Ver `motion-choreography.md`                                         |
@@ -70,10 +70,18 @@ A textura deve ser **sentida, não vista**. Se for percetível numa captura de e
 
 - `:hover` — mudança de fundo para `bg-surface` ou `bg-accent-primary/[0.06]`, transição 150–200 ms.
 - `:focus-visible` — anel de 2px em `--accent-primary` com `ring-offset` da cor do fundo (`ring-offset-canvas`). Nunca remover o foco sem substituto.
-- `:active` — `translate-y-px`, nunca `scale` agressivo.
+- `:active` — `scale-[0.97]` imediato (sem transição enquanto premido), nunca escalas agressivas (ver `motion-choreography.md` leis 9–10).
 - Desativado — `opacity-50`, `cursor-not-allowed`, sem alteração de cor.
 
 ---
+
+### 4.4 Liquid Glass Editorial (só elementos flutuantes)
+
+Modais, Command Palette (`⌘K`), barra Localizar (`⌘F`), Bubble Toolbar, barra de imagem, Popovers, Dropdowns e Topbar usam a classe `.liquid-glass` (`globals.css`): `bg-elevated/78` + `backdrop-blur-xl backdrop-saturate-150` + borda `border-subtle/80` + borda especular interna `inset 0 1px 0 0 rgba(255,253,249,0.65)` + `shadow-sheet`. Folhas, cartões e barra lateral continuam opacos. Receita completa em `taste-skill.md` §V.
+
+### 4.5 Cores de estado (psicologia da cor)
+
+`--state-success` (Verde Sálvia `#2D6A4F`), `--state-warning` (Âmbar `#B45309`), `--state-danger` (Carmim `#9B2C2C`), `--state-info` (Ardósia `#2B5B84`), com pares `*-rgb` e versões aclaradas no `dark-espresso`. Classes `text-success`, `bg-danger/10`, etc. Não são tokens de tema (a lista de 7 mantém-se).
 
 ## 5. Os 5 temas restritos
 
@@ -81,11 +89,13 @@ Apenas estes temas existem. Aplicam-se com `data-theme` no `<html>` (ou em qualq
 
 | Tema               | Canvas    | Surface   | Elevated  | Text      | Muted     | Accent    | Border    |
 | ------------------ | --------- | --------- | --------- | --------- | --------- | --------- | --------- |
-| `warm-cream` ★     | `#FAF7F2` | `#F2ECE1` | `#FFFDF9` | `#1C1B18` | `#6E6A63` | `#C85A32` | `#E4DDD0` |
+| `warm-cream` ★     | `#FAF7F2` | `#F2ECE1` | `#FFFDF9` | `#1C1B18` | `#57534C` | `#C85A32`¹ | `#E4DDD0` |
 | `sage-paper`       | `#F4F6F3` | `#E8EDE6` | `#FAFCFA` | `#1A211B` | `#5C665E` | `#3B6E52` | `#D8E0D5` |
 | `nordic-slate`     | `#F3F5F8` | `#E6E9EF` | `#FAFBFD` | `#161920` | `#5A6270` | `#2B5B84` | `#D5DAE2` |
 | `sand-dune`        | `#F7F3EB` | `#EDE5D5` | `#FCF9F4` | `#24201A` | `#70675A` | `#B06D3B` | `#DFD5C3` |
 | `dark-espresso` ☾  | `#181615` | `#221F1D` | `#2A2624` | `#EAE5DF` | `#9A928A` | `#D97757` | `#332E2A` |
+
+¹ Valor de marca; no ecrã usa-se `#B4461F` (mais saturado e AA ≥ 4,5:1 em canvas, surface e elevated). `--text-muted` escurecido para `#57534C` (`taste-skill.md` regra 5).
 
 ★ padrão · ☾ único tema escuro (define `color-scheme: dark`; sombras passam a usar `rgba(0,0,0,…)` muito suaves e a textura de papel mantém-se).
 
@@ -98,7 +108,7 @@ Nomes de interface (PT-PT): Creme Quente · Papel Sálvia · Ardósia Nórdica �
 - Grelha editorial: colunas de leitura com `max-w-[68ch]`; margens laterais generosas (`px-6 md:px-12`).
 - Réguas finas (`border-t border-subtle`) e numeração romana/árabe em `font-mono` para separar secções, em vez de cartões.
 - Densidade: interface compacta (`text-sm`, alturas de 32–36px), conteúdo arejado.
-- Ícones `lucide-react`, 16px na UI, `strokeWidth={1.5}`, cor `text-muted` por omissão.
+- Ícones `lucide-react`, 16px na UI, `strokeWidth={1.6}`, cor `text-muted` por omissão.
 
 ## 7. Checklist antes de entregar
 
@@ -107,3 +117,4 @@ Nomes de interface (PT-PT): Creme Quente · Papel Sálvia · Ardósia Nórdica �
 - [ ] Foco visível em todos os controlos.
 - [ ] Sem branco puro, sem sombras pretas, sem gradientes.
 - [ ] Texto da interface em PT-PT.
+- [ ] Regras de `taste-skill.md`, `motion-choreography.md` e `ux-forms-psychology.md` verificadas.

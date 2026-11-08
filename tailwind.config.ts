@@ -1,6 +1,6 @@
 /**
  * Vellum — Tailwind CSS (Design System "Tactile Editorial Atelier")
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Todas as cores são tokens semânticos ligados a variáveis CSS definidas em
@@ -33,6 +33,11 @@ const config: Config = {
         // Tintas de conteúdo (etiquetas de projetos e notas) → bg-ink · text-ink · border-ink/30
         // Não são tokens de tema: o valor vem de [data-ink] em globals.css.
         ink: "rgb(var(--ink-rgb) / <alpha-value>)",
+        // Cores de estado (taste-skill regra 7) → text-success · bg-danger/10 · border-warning/40
+        success: "rgb(var(--state-success-rgb) / <alpha-value>)",
+        warning: "rgb(var(--state-warning-rgb) / <alpha-value>)",
+        danger: "rgb(var(--state-danger-rgb) / <alpha-value>)",
+        info: "rgb(var(--state-info-rgb) / <alpha-value>)",
       },
       fontFamily: {
         serif: ["var(--font-serif)", "Georgia", "serif"],
@@ -54,6 +59,7 @@ const config: Config = {
       },
       transitionTimingFunction: {
         editorial: "cubic-bezier(0.22, 1, 0.36, 1)",
+        move: "cubic-bezier(0.65, 0, 0.35, 1)",
       },
       transitionDuration: {
         DEFAULT: "180ms",

@@ -1,6 +1,6 @@
 /**
  * Vellum — Gestor de Legendas do Calendário (Módulo 4)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Criar, renomear, recolorir e eliminar legendas (permissão legend:manage,
@@ -77,11 +77,11 @@ export function LegendManager({ open, onClose, hidden, onToggle }: LegendManager
       <InkPicker value={draft.color} onChange={(color) => setDraft((d) => ({ ...d, color }))} label="Cor da legenda" />
       <div className="flex justify-end gap-2">
         <Button variant="ghost" size="sm" onClick={() => setEditing(null)}>
-          <X aria-hidden="true" strokeWidth={1.5} />
+          <X aria-hidden="true" strokeWidth={1.6} />
           Cancelar
         </Button>
         <Button variant="primary" size="sm" onClick={() => void save()} disabled={isPending}>
-          <Check aria-hidden="true" strokeWidth={1.5} />
+          <Check aria-hidden="true" strokeWidth={1.6} />
           Guardar legenda
         </Button>
       </div>
@@ -130,9 +130,9 @@ export function LegendManager({ open, onClose, hidden, onToggle }: LegendManager
                 onClick={() => onToggle(legend.id)}
               >
                 {isHidden ? (
-                  <EyeOff aria-hidden="true" strokeWidth={1.5} />
+                  <EyeOff aria-hidden="true" strokeWidth={1.6} />
                 ) : (
-                  <Eye aria-hidden="true" strokeWidth={1.5} />
+                  <Eye aria-hidden="true" strokeWidth={1.6} />
                 )}
               </Button>
               {canManage && (
@@ -143,7 +143,7 @@ export function LegendManager({ open, onClose, hidden, onToggle }: LegendManager
                     aria-label={`Editar «${legend.name}»`}
                     onClick={() => startEdit(legend)}
                   >
-                    <Pencil aria-hidden="true" strokeWidth={1.5} />
+                    <Pencil aria-hidden="true" strokeWidth={1.6} />
                   </Button>
                   <Button
                     variant="ghost"
@@ -151,7 +151,7 @@ export function LegendManager({ open, onClose, hidden, onToggle }: LegendManager
                     aria-label={`Eliminar «${legend.name}»`}
                     onClick={() => void run(() => deleteLegendAction(legend.id), { success: "Legenda eliminada." })}
                   >
-                    <Trash2 aria-hidden="true" strokeWidth={1.5} />
+                    <Trash2 aria-hidden="true" strokeWidth={1.6} />
                   </Button>
                 </>
               )}
@@ -160,7 +160,7 @@ export function LegendManager({ open, onClose, hidden, onToggle }: LegendManager
         })}
       </ul>
       {snapshot.legends.length === 0 && (
-        <p className="py-4 font-serif italic text-muted">Ainda não há legendas neste workspace.</p>
+        <p className="py-4 font-serif text-muted">Ainda não há legendas neste workspace.</p>
       )}
       {canManage && (
         <div className="mt-4">
@@ -168,7 +168,7 @@ export function LegendManager({ open, onClose, hidden, onToggle }: LegendManager
             editor
           ) : (
             <Button variant="secondary" size="sm" onClick={() => startEdit(null)}>
-              <Plus aria-hidden="true" strokeWidth={1.5} />
+              <Plus aria-hidden="true" strokeWidth={1.6} />
               Nova legenda
             </Button>
           )}

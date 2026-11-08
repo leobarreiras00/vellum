@@ -1,6 +1,6 @@
 # Skill — Security & RBAC Guard
 
-> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+> © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 > Skill obrigatória para qualquer código de servidor, rotas, renderização de conteúdo do utilizador e Mermaid.
 
 ---

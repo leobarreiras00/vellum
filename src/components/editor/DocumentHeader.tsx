@@ -1,6 +1,6 @@
 /**
  * Vellum — Cabeçalho estruturado do documento
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Breadcrumb (projeto e páginas-mãe), título editável em Newsreader, descrição
@@ -89,7 +89,7 @@ export const DocumentHeader = forwardRef<DocumentHeaderHandle, DocumentHeaderPro
             </li>
             {props.ancestors.map((a) => (
               <li key={a.id} className="flex items-center gap-1">
-                <ChevronRight aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                <ChevronRight aria-hidden="true" className="size-3" strokeWidth={1.6} />
                 <Link
                   href={routes.page(props.projectId, a.id)}
                   className="max-w-[22ch] truncate hover:text-accent-primary"
@@ -154,13 +154,19 @@ export const DocumentHeader = forwardRef<DocumentHeaderHandle, DocumentHeaderPro
               <div className="flex items-center gap-1.5">
                 <dt className="sr-only">Autor</dt>
                 <dd className="flex items-center gap-1.5 text-primary">
-                  <Avatar initials={props.author.initials} name={props.author.name} size="xs" />
+                  <Avatar
+                    initials={props.author.initials}
+                    name={props.author.name}
+                    src={"avatar" in props.author ? (props.author.avatar as string | null) : null}
+                    size="xs"
+                  />
                   {props.author.name}
                 </dd>
               </div>
             )}
             <Meta icon={Hash} label="Palavras">
-              <span data-testid="doc-words">{formatNumber(props.words)}</span> palavras
+              <span data-testid="doc-words">{formatNumber(props.words)}</span>{" "}
+              {props.words === 1 ? "palavra" : "palavras"}
             </Meta>
             <Meta icon={BookOpenText} label="Tempo de leitura">
               {readingMinutes(props.words)} min de leitura
@@ -192,7 +198,7 @@ function Meta({ icon: Icon, label, children }: { icon: typeof Hash; label: strin
     <div className="flex items-center gap-1">
       <dt className="sr-only">{label}</dt>
       <dd className="flex items-center gap-1">
-        <Icon aria-hidden="true" className="size-3" strokeWidth={1.5} />
+        <Icon aria-hidden="true" className="size-3" strokeWidth={1.6} />
         <span>{children}</span>
       </dd>
     </div>
@@ -218,7 +224,7 @@ function SaveIndicator({ state, savedAt }: { state: SaveState; savedAt: string |
       data-save-state={state}
     >
       <span className="sr-only">Gravação automática:</span>
-      <Icon aria-hidden="true" className={cn("size-3", state === "saving" && "animate-spin")} strokeWidth={1.5} />
+      <Icon aria-hidden="true" className={cn("size-3", state === "saving" && "animate-spin")} strokeWidth={1.6} />
       <span>{content.text}</span>
     </div>
   );

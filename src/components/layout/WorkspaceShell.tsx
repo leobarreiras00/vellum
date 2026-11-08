@@ -1,6 +1,6 @@
 /**
  * Vellum — App Shell do Workspace
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Esqueleto de todas as rotas autenticadas: Sidebar retrátil, Topbar
@@ -19,6 +19,7 @@ import { AppFooter } from "@/components/layout/AppFooter";
 import { OfflineSync } from "@/components/layout/OfflineSync";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { ShellContext, type ShellContextValue } from "@/components/layout/ShellContext";
+import { ProfileModalHost } from "@/components/profile/ProfileModal";
 import { Sidebar, type SwitchableProfile } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
 import { useTheme } from "@/components/providers/ThemeProvider";
@@ -102,6 +103,7 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
   // Atalhos globais: ⌘K / Ctrl+K (paleta) e ⌘\ / Ctrl+\ (barra lateral).
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (event.defaultPrevented) return; // o editor já tratou (ex.: ⌘K com texto selecionado)
       const mod = event.metaKey || event.ctrlKey;
       if (mod && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -223,6 +225,7 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
           await flushRef.current?.();
         }}
       />
+      <ProfileModalHost />
       <Toaster />
     </ShellContext.Provider>
   );

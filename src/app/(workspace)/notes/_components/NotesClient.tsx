@@ -1,6 +1,6 @@
 /**
  * Vellum — Mural de Notas Rápidas (cliente)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Captura rápida à maneira do OneNote, com estética editorial: barra de
@@ -10,6 +10,7 @@
  */
 "use client";
 
+import { NoteImagePreview, useNoteImage } from "@/components/workspace/NoteImageField";
 import { FileOutput, Lock, PenLine, Pin, PinOff, Search, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
@@ -108,13 +109,13 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
           }
         >
           {note.isPinned ? (
-            <PinOff aria-hidden="true" strokeWidth={1.5} />
+            <PinOff aria-hidden="true" strokeWidth={1.6} />
           ) : (
-            <Pin aria-hidden="true" strokeWidth={1.5} />
+            <Pin aria-hidden="true" strokeWidth={1.6} />
           )}
         </Button>
         <Button variant="ghost" size="icon-sm" aria-label="Editar nota" title="Editar" onClick={() => setEditing(note)}>
-          <PenLine aria-hidden="true" strokeWidth={1.5} />
+          <PenLine aria-hidden="true" strokeWidth={1.6} />
         </Button>
         {!note.documentId && (
           <Button
@@ -123,7 +124,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
             onClick={() => setConverting(note)}
             title="Converter em Documento de Projeto"
           >
-            <FileOutput aria-hidden="true" strokeWidth={1.5} />
+            <FileOutput aria-hidden="true" strokeWidth={1.6} />
             Converter
           </Button>
         )}
@@ -137,7 +138,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
             disabled={isPending}
             onClick={() => run(() => deleteNoteAction(note.id), { success: "Nota eliminada." })}
           >
-            <Trash2 aria-hidden="true" strokeWidth={1.5} />
+            <Trash2 aria-hidden="true" strokeWidth={1.6} />
           </Button>
         )}
       </>
@@ -158,7 +159,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
       permission="document:edit"
       fallback={
         <p className="flex items-start gap-2 rounded-xl border border-dashed border-subtle p-4 text-sm text-muted">
-          <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} />O seu papel permite ler o
+          <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" strokeWidth={1.6} />O seu papel permite ler o
           mural, mas não criar ou editar notas.
         </p>
       }
@@ -173,7 +174,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
         <div>
           <p className="eyebrow">{snapshot.workspace.name}</p>
           <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight">Notas Rápidas</h1>
-          <p className="nums mt-2 font-serif text-lg italic text-muted">
+          <p className="nums mt-2 font-serif text-lg text-muted">
             Capture agora, organize depois · {formatNumber(snapshot.notes.length)} notas no mural
           </p>
         </div>
@@ -185,25 +186,28 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
         data-testid="notes-filters"
         className="sticky top-0 z-20 -mx-2 mt-7 flex flex-wrap items-center gap-2.5 border-y border-subtle bg-canvas/95 px-2 py-2.5 backdrop-blur"
       >
-        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+        <label htmlFor="notes-search" className="text-xs font-medium text-primary">
+          Pesquisar
+        </label>
+        <div className="relative min-w-[200px] flex-1 sm:max-w-sm">
           <Search
             aria-hidden="true"
             className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
-            strokeWidth={1.5}
+            strokeWidth={1.6}
           />
           <Input
             ref={searchRef}
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Pesquisar notas…"
-            aria-label="Pesquisar notas"
+            id="notes-search"
+            placeholder="título, conteúdo ou projeto"
             className="h-8 pl-8 pr-10 text-[13px]"
           />
           <kbd className="absolute right-2 top-1/2 -translate-y-1/2">/</kbd>
         </div>
-        <label htmlFor="notes-project-filter" className="sr-only">
-          Filtrar por projeto
+        <label htmlFor="notes-project-filter" className="text-xs font-medium text-primary">
+          Projeto
         </label>
         <Select
           id="notes-project-filter"
@@ -248,7 +252,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
         </span>
         {filtering && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
-            <X aria-hidden="true" strokeWidth={1.5} />
+            <X aria-hidden="true" strokeWidth={1.6} />
             Limpar filtros
           </Button>
         )}
@@ -259,7 +263,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
         <section aria-labelledby="notes-pinned">
           {pinned.length > 0 && (
             <p id="notes-pinned" className="eyebrow mb-3 flex items-center gap-1.5">
-              <Pin aria-hidden="true" className="size-3" strokeWidth={1.5} />
+              <Pin aria-hidden="true" className="size-3" strokeWidth={1.6} />
               Fixadas
             </p>
           )}
@@ -290,7 +294,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
 
         {filtered.length === 0 && (
           <div className="rounded-xl border border-dashed border-subtle px-6 py-10 text-center">
-            <p className="font-serif text-xl italic text-muted">
+            <p className="font-serif text-xl text-muted">
               {filtering
                 ? query
                   ? `Nenhuma nota com «${query}».`
@@ -329,6 +333,7 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
   const [isPinned, setPinned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
+  const img = useNoteImage();
   const id = useId();
 
   useEffect(() => {
@@ -337,12 +342,12 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
 
   async function submit(event?: React.FormEvent) {
     event?.preventDefault();
-    if (!title.trim() && !content.trim()) {
+    if (!title.trim() && !content.trim() && !img.image) {
       setError("Escreva um título ou algum conteúdo.");
       return;
     }
     const result = await run(
-      () => createNoteAction({ title, content, color, projectId: projectId || null, isPinned }),
+      () => createNoteAction({ title, content, color, projectId: projectId || null, isPinned, image: img.image }),
       { success: "Nota guardada no mural." },
     );
     if (result.ok) {
@@ -350,6 +355,7 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
       setContent("");
       setPinned(false);
       setError(null);
+      img.setImage(null);
       titleRef.current?.focus();
     }
   }
@@ -365,12 +371,21 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
       }}
       data-ink={color}
       aria-label="Nova nota rápida"
+      onPaste={(e) => {
+        setOpen(true);
+        img.handlers.onPaste(e);
+      }}
+      onDragOver={img.handlers.onDragOver}
+      onDrop={(e) => {
+        setOpen(true);
+        img.handlers.onDrop(e);
+      }}
       className="relative overflow-hidden rounded-xl border border-subtle bg-elevated shadow-paper"
     >
       <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[3px] bg-ink" />
       <div className="space-y-2 px-4 pb-3 pt-4">
-        <label htmlFor={`${id}-title`} className="sr-only">
-          Título da nota
+        <label htmlFor={`${id}-title`} className="eyebrow block">
+          Nova nota
         </label>
         <input
           ref={titleRef}
@@ -384,8 +399,8 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
         />
         {open && (
           <>
-            <label htmlFor={`${id}-content`} className="sr-only">
-              Conteúdo da nota
+            <label htmlFor={`${id}-content`} className="block text-xs font-medium text-primary">
+              Conteúdo
             </label>
             <textarea
               id={`${id}-content`}
@@ -396,10 +411,17 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
               maxLength={4000}
               className="w-full resize-none bg-transparent text-sm leading-relaxed text-primary placeholder:text-muted/70 focus:outline-none focus-visible:outline-none"
             />
+            <NoteImagePreview
+              image={img.image}
+              busy={img.busy}
+              error={img.error}
+              onRemove={() => img.setImage(null)}
+              onPick={(f) => void img.accept(f)}
+            />
             <div className="space-y-3 border-t border-subtle pt-3">
               <InkPicker value={color} onChange={setColor} label="Cor da nota" />
               <div className="flex items-center gap-2">
-                <label htmlFor={`${id}-project`} className="sr-only">
+                <label htmlFor={`${id}-project`} className="text-xs font-medium text-primary">
                   Projeto
                 </label>
                 <Select
@@ -424,7 +446,7 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
                   onClick={() => setPinned((v) => !v)}
                   className={cn(isPinned && "text-ink")}
                 >
-                  <Pin aria-hidden="true" strokeWidth={1.5} className={cn(isPinned && "fill-ink/20")} />
+                  <Pin aria-hidden="true" strokeWidth={1.6} className={cn(isPinned && "fill-ink/20")} />
                 </Button>
               </div>
               {error && <FieldError>{error}</FieldError>}
@@ -457,21 +479,25 @@ function NoteEditorDialog({ note, onClose }: { note: NoteView | null; onClose: (
   const [projectId, setProjectId] = useState("");
   const [isPinned, setPinned] = useState(false);
   const formId = useId();
+  const img = useNoteImage();
+  const setNoteImage = img.setImage;
 
   useEffect(() => {
     if (!note) return;
+    setNoteImage(note.image ?? null);
     setTitle(note.title);
     setContent(note.content);
     setColor(note.color);
     setProjectId(note.projectId ?? "");
     setPinned(note.isPinned);
-  }, [note]);
+  }, [note, setNoteImage]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (!note) return;
     const result = await run(
-      () => updateNoteAction(note.id, { title, content, color, projectId: projectId || null, isPinned }),
+      () =>
+        updateNoteAction(note.id, { title, content, color, projectId: projectId || null, isPinned, image: img.image }),
       { success: "Nota atualizada." },
     );
     if (result.ok) onClose();
@@ -494,7 +520,14 @@ function NoteEditorDialog({ note, onClose }: { note: NoteView | null; onClose: (
         </>
       }
     >
-      <form id={formId} onSubmit={submit} className="space-y-4">
+      <form
+        id={formId}
+        onSubmit={submit}
+        className="space-y-4"
+        onPaste={img.handlers.onPaste}
+        onDragOver={img.handlers.onDragOver}
+        onDrop={img.handlers.onDrop}
+      >
         <div>
           <Label htmlFor={`${formId}-t`}>Título</Label>
           <Input id={`${formId}-t`} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={100} />
@@ -507,6 +540,16 @@ function NoteEditorDialog({ note, onClose }: { note: NoteView | null; onClose: (
             onChange={(e) => setContent(e.target.value)}
             maxLength={4000}
             className="min-h-40"
+          />
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-primary">Imagem</p>
+          <NoteImagePreview
+            image={img.image}
+            busy={img.busy}
+            error={img.error}
+            onRemove={() => img.setImage(null)}
+            onPick={(f) => void img.accept(f)}
           />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -582,7 +625,7 @@ function ConvertDialog({ note, onClose }: { note: NoteView | null; onClose: () =
             Cancelar
           </Button>
           <Button variant="primary" onClick={convert} disabled={isPending || !projectId}>
-            <FileOutput aria-hidden="true" strokeWidth={1.5} />
+            <FileOutput aria-hidden="true" strokeWidth={1.6} />
             Converter
           </Button>
         </>

@@ -1,6 +1,6 @@
 /**
  * Vellum — JSON ProseMirror → HTML semântico de exportação
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Módulo puro: todo o texto é escapado; cores, fontes e tamanhos só vêm das
@@ -9,6 +9,7 @@
  */
 import { CALLOUT_LABELS, CALLOUT_VARIANTS, type CalloutVariant, type DocNode } from "@/lib/document-content";
 import { inlineRuns, type TextRun } from "@/lib/exporters/inline";
+import { isSafeImageSrc } from "@/lib/image-tools";
 import type { ExportDiagram } from "@/lib/exporters/types";
 
 export function escapeHtml(value: string): string {
@@ -50,9 +51,16 @@ function inline(node: DocNode): string {
 }
 
 function alignAttr(node: DocNode): string {
+  const styles: string[] = [];
   const align = node.attrs?.textAlign;
-  return align === "center" || align === "right" || align === "justify" ? ` style="text-align: ${align}"` : "";
+  if (align === "center" || align === "right" || align === "justify") styles.push(`text-align: ${align}`);
+  // Recuo de parágrafo (Tab no editor): 0–6 níveis de 2em.
+  const indent = Math.min(6, Math.max(0, Math.trunc(Number(node.attrs?.indent ?? 0)) || 0));
+  if (indent) styles.push(`margin-left: ${indent * 2}em`);
+  return styles.length ? ` style="${styles.join("; ")}"` : "";
 }
+
+const IMAGE_WIDTHS = new Set([25, 50, 75, 100]);
 
 const isVariant = (v: unknown): v is CalloutVariant => (CALLOUT_VARIANTS as readonly unknown[]).includes(v);
 
@@ -134,6 +142,17 @@ function block(node: DocNode, state: RenderState): string {
       return `<figure class="vx-mermaid vx-mermaid-error"><pre><code>${code}</code></pre><figcaption>${
         caption ? `${escapeHtml(caption)} · ` : ""
       }Diagrama com erros de sintaxe: exportado como código.</figcaption></figure>`;
+    }
+    case "image": {
+      const src = String(node.attrs?.src ?? "");
+      if (!isSafeImageSrc(src)) return "";
+      const width = IMAGE_WIDTHS.has(Number(node.attrs?.widthPct)) ? Number(node.attrs?.widthPct) : 100;
+      const align = node.attrs?.align === "left" || node.attrs?.align === "right" ? node.attrs.align : "center";
+      const caption = String(node.attrs?.caption ?? "").trim();
+      const alt = String(node.attrs?.alt ?? caption);
+      return `<figure class="vx-figure" data-align="${align}" style="width: ${width}%"><img src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" />${
+        caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : ""
+      }</figure>`;
     }
     case "text":
       return escapeHtml(node.text ?? "");

@@ -1,6 +1,6 @@
 /**
  * Vellum — Esquemas de autenticação (Zod) partilhados entre cliente e servidor
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Mensagens de validação em PT-PT. O servidor volta sempre a validar.
@@ -37,6 +37,8 @@ export const registerSchema = z.object({
   email: z.string().trim().toLowerCase().email("Indique um email válido."),
   password: passwordSchema,
   theme: z.enum(THEME_IDS, { error: "Escolha um dos 5 temas." }),
+  /** Aceitação expressa dos Termos e Condições e da Política de Privacidade. */
+  acceptTerms: z.literal(true, { error: "Para criar conta, aceite os Termos e a Política de Privacidade." }),
 });
 
 export const resetRequestSchema = z.object({ identifier });

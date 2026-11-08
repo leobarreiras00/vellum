@@ -313,7 +313,7 @@ Consulte o ficheiro [`LICENSE`](LICENSE) para os termos completos (PT + EN). Ped
 
 **Vellum** — Workspace & Knowledge Platform
 
-© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
 
 <sub>Licença proprietária · Uso comercial, redistribuição e obras derivadas proibidos sem autorização escrita.</sub>
 

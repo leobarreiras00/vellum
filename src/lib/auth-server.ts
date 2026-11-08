@@ -1,6 +1,6 @@
 /**
  * Vellum — Better-Auth (Módulo 1 · Auth & RBAC)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Contas, sessões e códigos de recuperação geridos pelo Better-Auth:

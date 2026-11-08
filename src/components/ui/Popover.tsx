@@ -1,6 +1,6 @@
 /**
  * Vellum — Primitiva <Popover /> (menu leve, sem dependências)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Fecha com Esc, clique fora ou ao escolher. Entrada 180 ms com a curva editorial.
@@ -78,12 +78,20 @@ export function Popover({
             id={panelId}
             role={role}
             aria-label={label}
-            initial={reduce ? { opacity: 0 } : { opacity: 0, y: side === "bottom" ? -4 : 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, transition: { duration: 0.12 } }}
-            transition={{ duration: 0.18, ease: EASE_EDITORIAL }}
+            // Entra a partir do gatilho e sai para ele (motion-choreography leis 6–8).
+            style={{
+              transformOrigin: `${side === "bottom" ? "top" : "bottom"} ${align === "start" ? "left" : "right"}`,
+            }}
+            initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={
+              reduce
+                ? { opacity: 0 }
+                : { opacity: 0, scale: 0.95, transition: { duration: 0.16, ease: EASE_EDITORIAL } }
+            }
+            transition={{ duration: 0.2, ease: EASE_EDITORIAL }}
             className={cn(
-              "absolute z-50 min-w-56 rounded-xl border border-subtle bg-elevated p-1.5 shadow-sheet",
+              "liquid-glass absolute z-50 min-w-56 rounded-xl p-1.5",
               side === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5",
               align === "start" ? "left-0" : "right-0",
               panelClassName,
@@ -108,7 +116,7 @@ export function PopoverItem({
       type="button"
       role="menuitem"
       className={cn(
-        "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm text-primary transition-colors duration-150",
+        "flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-left text-sm text-primary transition-colors duration-150",
         "hover:bg-surface focus-visible:bg-surface focus-visible:outline-none disabled:opacity-50",
         className,
       )}

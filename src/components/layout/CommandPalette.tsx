@@ -1,6 +1,6 @@
 /**
  * Vellum — Command Palette (⌘K / Ctrl+K)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Pesquisa global instantânea (projetos, documentos — título e texto — e
@@ -55,7 +55,7 @@ const GROUP_ORDER: PaletteItem["group"][] = ["Ações", "Navegação", "Projetos
 const PER_GROUP = 6;
 
 function iconOf(Icon: LucideIcon) {
-  return <Icon aria-hidden="true" className="size-4 text-muted" strokeWidth={1.5} />;
+  return <Icon aria-hidden="true" className="size-4 text-muted" strokeWidth={1.6} />;
 }
 
 export function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -274,10 +274,10 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, transition: { duration: 0.14 } }}
             transition={{ duration: 0.24, ease: EASE_EDITORIAL }}
-            className="relative w-full max-w-[620px] overflow-hidden rounded-xl border border-subtle bg-elevated shadow-sheet"
+            className="liquid-glass relative w-full max-w-[620px] overflow-hidden rounded-xl"
           >
             <div className="flex items-center gap-3 border-b border-subtle px-4">
-              <Search aria-hidden="true" className="size-4 shrink-0 text-muted" strokeWidth={1.5} />
+              <Search aria-hidden="true" className="size-4 shrink-0 text-muted" strokeWidth={1.6} />
               <input
                 ref={inputRef}
                 autoFocus
@@ -303,9 +303,7 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
               className="max-h-[min(420px,55vh)] overflow-y-auto p-1.5"
             >
               {results.length === 0 && (
-                <p className="px-3 py-8 text-center font-serif text-base italic text-muted">
-                  Nada encontrado para «{query}».
-                </p>
+                <p className="px-3 py-8 text-center font-serif text-base text-muted">Nada encontrado para «{query}».</p>
               )}
               {results.map((item, index) => {
                 const header = item.group !== lastGroup ? item.group : null;
@@ -339,12 +337,12 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
                         <span className="hidden max-w-[40%] truncate text-xs text-muted sm:block">{item.hint}</span>
                       )}
                       {active ? (
-                        <CornerDownLeft aria-hidden="true" className="size-3.5 shrink-0 text-muted" strokeWidth={1.5} />
+                        <CornerDownLeft aria-hidden="true" className="size-3.5 shrink-0 text-muted" strokeWidth={1.6} />
                       ) : (
                         <ArrowRight
                           aria-hidden="true"
                           className="size-3.5 shrink-0 text-transparent"
-                          strokeWidth={1.5}
+                          strokeWidth={1.6}
                         />
                       )}
                     </div>

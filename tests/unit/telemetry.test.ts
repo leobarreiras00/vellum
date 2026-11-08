@@ -1,6 +1,6 @@
 /**
  * Vellum — Testes do Motor de Telemetria (Fase 4)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { describe, expect, it } from "vitest";
 

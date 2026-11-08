@@ -1,6 +1,6 @@
 /**
  * Vellum — URL pública da aplicação
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Lida em tempo de execução (servidor) a partir das variáveis de ambiente, por

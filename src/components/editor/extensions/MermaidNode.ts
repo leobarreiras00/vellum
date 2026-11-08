@@ -1,6 +1,6 @@
 /**
  * Vellum — Nó Mermaid (bloco atómico com o Estúdio Mermaid)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * O código fica no atributo `code` (texto simples); o SVG nunca é guardado:

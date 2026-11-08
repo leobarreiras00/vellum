@@ -1,6 +1,6 @@
 /**
  * Vellum — Testes do conteúdo estruturado (JSON ProseMirror)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { describe, expect, it } from "vitest";
 
@@ -92,7 +92,8 @@ describe("docContentSchema", () => {
       type: "doc",
       content: [{ type: "paragraph", content: [{ type: "text", text: "x".repeat(199_000) }] }],
     };
-    const many = { type: "doc", content: Array.from({ length: 6 }, () => huge.content[0]) };
+    // Limite de 8 MB (texto + imagens comprimidas): 42 × ~199 kB ultrapassa-o.
+    const many = { type: "doc", content: Array.from({ length: 42 }, () => huge.content[0]) };
     expect(docContentSchema.safeParse(many).success).toBe(false);
   });
 });

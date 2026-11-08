@@ -1,6 +1,6 @@
 /**
  * Vellum — Repositório do Workspace Engine (Módulo 2)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Repositório tipado com os mesmos modelos de prisma/schema.prisma, persistido
@@ -18,7 +18,14 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 
 import type { SessionUser } from "@/lib/auth";
 import { ForbiddenError, assertCan, canDeleteDocument, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
-import { docContentSchema, docStats, docToMarkdown, docToPlainText, type DocContent } from "@/lib/document-content";
+import {
+  docContentSchema,
+  docStats,
+  docToMarkdown,
+  docToPlainText,
+  plainTextToDoc,
+  type DocContent,
+} from "@/lib/document-content";
 import { APP_VERSION, countWords } from "@/lib/utils";
 import { COPYRIGHT_LINE, exportFilename, type ExportBundle } from "@/lib/exporters/types";
 import { buildIcs, parseIcs } from "@/lib/sync/ics";
@@ -34,6 +41,7 @@ import { absoluteUrl } from "@/lib/app-url";
 import { hashPassword, verifyPassword } from "@/lib/auth-password";
 import { derivedKey } from "@/lib/auth-server";
 import { addExampleData, isExampleId, removeExampleData, workspaceHasExampleData } from "@/lib/example-seed";
+import { DEFAULT_ILLUSTRATION_COLLECTION, type CoverSpec } from "@/lib/illustrations";
 import {
   initialsOf,
   lisbonDay,
@@ -60,6 +68,7 @@ import {
   type ShareRole,
   type StoreData,
   type UserPreferences,
+  type UserProfileRecord,
   type WorkspaceSnapshot,
 } from "@/lib/workspace-types";
 
@@ -131,6 +140,10 @@ function workspaceIdFor(data: StoreData, user: SessionUser): string {
   // Ateliers novos abrem com três projetos de exemplo (removíveis nas Definições).
   if (process.env.VELLUM_EXAMPLE_DATA !== "false") addExampleData(data, workspaceId, user.userId);
   return workspaceId;
+}
+
+function defaultProfile(): UserProfileRecord {
+  return { avatar: null, title: "", bio: "", illustrationTheme: DEFAULT_ILLUSTRATION_COLLECTION, updatedAt: now() };
 }
 
 function defaultPreferences(user: SessionUser): UserPreferences {
@@ -206,6 +219,8 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
         initials: initialsOf(name),
         role: m.role,
         platformRole: person?.platformRole ?? "USER",
+        avatar: data.profiles?.[m.userId]?.avatar ?? null,
+        title: data.profiles?.[m.userId]?.title ?? "",
       };
     });
 
@@ -266,6 +281,12 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
     hasExampleData: workspaceHasExampleData(data, workspaceId),
     diagramCount,
     preferences: data.preferences[user.userId] ?? defaultPreferences(user),
+    profile: data.profiles?.[user.userId] ?? defaultProfile(),
+    covers: Object.fromEntries(
+      (data.covers ?? [])
+        .filter((c) => c.workspaceId === workspaceId && (liveProjectIds.has(c.targetId) || liveDocIds.has(c.targetId)))
+        .map((c) => [c.targetId, c.spec]),
+    ),
     effort,
     generatedAt: now(),
   };
@@ -640,6 +661,7 @@ export async function createNote(user: SessionUser, input: NoteInput): Promise<Q
       content: input.content,
       color: input.color,
       isPinned: input.isPinned,
+      image: input.image ?? null,
       createdAt: timestamp,
       updatedAt: timestamp,
       deletedAt: null,
@@ -683,10 +705,69 @@ export async function convertNoteToDocument(
       summary: "",
       plainText: note.content,
     });
+    if (note.image) {
+      const base = plainTextToDoc(note.content);
+      doc.contentJson = {
+        type: "doc",
+        content: [
+          ...base.content,
+          { type: "image", attrs: { src: note.image, alt: note.title, caption: "", widthPct: 100, align: "center" } },
+        ],
+      };
+    }
     note.documentId = doc.id;
     note.projectId = projectId;
     note.updatedAt = now();
     return doc;
+  });
+}
+
+/* ==========================================================================
+   Perfil (Bloco 6) e capas ilustradas (Bloco 5)
+   ========================================================================== */
+
+/** Atualiza cargo, bio, fotografia e/ou coleção. O nome vive também em `people`. */
+export async function updateProfile(
+  user: SessionUser,
+  patch: Partial<Pick<UserProfileRecord, "avatar" | "title" | "bio" | "illustrationTheme">> & { name?: string },
+): Promise<void> {
+  await mutate((data) => {
+    workspaceIdFor(data, user);
+    data.profiles ??= {};
+    const { name, ...rest } = patch;
+    data.profiles[user.userId] = { ...(data.profiles[user.userId] ?? defaultProfile()), ...rest, updatedAt: now() };
+    if (name) {
+      const person = data.people.find((p) => p.id === user.userId);
+      if (person) person.name = name;
+    }
+  });
+}
+
+export async function setCover(
+  user: SessionUser,
+  input: { kind: "project" | "document"; targetId: string; spec: CoverSpec | null },
+): Promise<void> {
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    if (input.kind === "project") {
+      const project = liveProject(data, workspaceId, input.targetId);
+      assertCan(subjectIn(user, project), "project:manage");
+    } else {
+      const doc = liveDocument(data, workspaceId, input.targetId);
+      assertCan(subjectIn(user, liveProject(data, workspaceId, doc.projectId)), "document:edit");
+    }
+    data.covers ??= [];
+    data.covers = data.covers.filter((c) => c.targetId !== input.targetId);
+    if (input.spec) {
+      data.covers.push({
+        targetId: input.targetId,
+        workspaceId,
+        kind: input.kind,
+        spec: input.spec,
+        updatedById: user.userId,
+        updatedAt: now(),
+      });
+    }
   });
 }
 
@@ -711,7 +792,7 @@ function documentMarkdown(doc: DocumentRecord, depth: number): string {
 }
 
 const MARKDOWN_FOOTER =
-  "\n\n---\n\n© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.\n";
+  "\n\n---\n\n© 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.\n";
 
 /** Exporta um documento (com subpáginas) ou um projeto inteiro em Markdown. */
 export async function exportMarkdown(

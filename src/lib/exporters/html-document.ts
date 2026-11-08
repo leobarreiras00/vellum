@@ -1,6 +1,6 @@
 /**
  * Vellum — Documento HTML de exportação (Folha A4 paginada e HTML autónomo)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Módulo puro. Gera um documento HTML completo e autocontido (fontes em
@@ -152,6 +152,14 @@ body {
   color: var(--text-muted); font-style: normal;
 }
 .vx-mermaid-error pre { text-align: left; }
+.vx-figure { margin: 1em auto 0; }
+.vx-figure[data-align="left"] { margin-left: 0; }
+.vx-figure[data-align="right"] { margin-right: 0; }
+.vx-figure img { display: block; width: 100%; height: auto; border-radius: 4px; }
+.vx-figure figcaption {
+  margin-top: 0.45em; font-family: var(--font-sans), sans-serif; font-size: 8pt; line-height: 1.4;
+  color: var(--text-muted); text-align: center;
+}
 
 /* Cabeçalho editorial do documento */
 .vx-head { margin: 0 0 1.6em; }

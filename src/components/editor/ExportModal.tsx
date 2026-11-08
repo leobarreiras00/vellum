@@ -1,6 +1,6 @@
 /**
  * Vellum — Modal de Exportação Imutável (Módulo 6 · Exportação Fiel)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Quatro formatos com pré-visualização da paginação:
@@ -54,7 +54,7 @@ import {
   type PaperTone,
 } from "@/lib/exporters/types";
 import { THEMES, type ThemeId } from "@/lib/themes";
-import { cn, formatNumber } from "@/lib/utils";
+import { cn, countLabel } from "@/lib/utils";
 
 const FORMAT_ICONS: Record<ExportFormat, typeof FileText> = {
   pdf: FileType2,
@@ -326,7 +326,7 @@ export function ExportModal({ open, documentId, onClose, beforeExport }: ExportM
               </h2>
               {bundle && (
                 <p className="nums mt-1 font-mono text-[11px] text-muted">
-                  {bundle.projectName} · v{bundle.version} · {formatNumber(bundle.wordCount)} palavras ·{" "}
+                  {bundle.projectName} · v{bundle.version} · {countLabel(bundle.wordCount, "palavra", "palavras")} ·{" "}
                   {diagramList.length} {diagramList.length === 1 ? "diagrama" : "diagramas"}
                 </p>
               )}
@@ -337,7 +337,7 @@ export function ExportModal({ open, documentId, onClose, beforeExport }: ExportM
               aria-label="Fechar"
               className="grid size-8 shrink-0 place-items-center rounded-lg text-muted transition-colors duration-150 hover:bg-surface hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             >
-              <X aria-hidden="true" className="size-4" strokeWidth={1.5} />
+              <X aria-hidden="true" className="size-4" strokeWidth={1.6} />
             </button>
           </header>
 
@@ -370,7 +370,7 @@ export function ExportModal({ open, documentId, onClose, beforeExport }: ExportM
                         <Icon
                           aria-hidden="true"
                           className={cn("mt-0.5 size-4 shrink-0", selected ? "text-accent-primary" : "text-muted")}
-                          strokeWidth={1.5}
+                          strokeWidth={1.6}
                         />
                         <span className="min-w-0 flex-1">
                           <span className="flex items-baseline justify-between gap-2">
@@ -537,7 +537,7 @@ export function ExportModal({ open, documentId, onClose, beforeExport }: ExportM
                 {phase === "loading" && (
                   <div className="absolute inset-0 grid place-items-center text-sm text-muted">
                     <span className="flex items-center gap-2">
-                      <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.5} />A serializar
+                      <Loader2 aria-hidden="true" className="size-4 animate-spin" strokeWidth={1.6} />A serializar
                       diagramas e fontes…
                     </span>
                   </div>
@@ -545,7 +545,7 @@ export function ExportModal({ open, documentId, onClose, beforeExport }: ExportM
                 {phase === "error" && (
                   <div role="alert" className="absolute inset-0 grid place-items-center px-6 text-center text-sm">
                     <p className="flex items-center gap-2 text-accent-primary">
-                      <AlertTriangle aria-hidden="true" className="size-4" strokeWidth={1.5} />
+                      <AlertTriangle aria-hidden="true" className="size-4" strokeWidth={1.6} />
                       {error}
                     </p>
                   </div>
@@ -583,7 +583,7 @@ export function ExportModal({ open, documentId, onClose, beforeExport }: ExportM
             <div className="flex flex-wrap items-center gap-2">
               {format === "pdf" && (
                 <Button variant="ghost" onClick={printFromPreview} disabled={!ready || busy !== null}>
-                  <Printer aria-hidden="true" strokeWidth={1.5} />
+                  <Printer aria-hidden="true" strokeWidth={1.6} />
                   Imprimir…
                 </Button>
               )}
@@ -594,9 +594,9 @@ export function ExportModal({ open, documentId, onClose, beforeExport }: ExportM
                 data-testid="export-download"
               >
                 {busy ? (
-                  <Loader2 aria-hidden="true" className="animate-spin" strokeWidth={1.5} />
+                  <Loader2 aria-hidden="true" className="animate-spin" strokeWidth={1.6} />
                 ) : (
-                  <Download aria-hidden="true" strokeWidth={1.5} />
+                  <Download aria-hidden="true" strokeWidth={1.6} />
                 )}
                 {primary.label}
               </Button>
@@ -628,7 +628,7 @@ function Guarantee({ ok, children }: { ok: boolean; children: React.ReactNode })
       {ok ? (
         <Check aria-hidden="true" className="mt-px size-3.5 shrink-0 text-accent-primary" strokeWidth={2} />
       ) : (
-        <AlertTriangle aria-hidden="true" className="mt-px size-3.5 shrink-0 text-accent-primary" strokeWidth={1.5} />
+        <AlertTriangle aria-hidden="true" className="mt-px size-3.5 shrink-0 text-accent-primary" strokeWidth={1.6} />
       )}
       <span className={ok ? "text-primary" : "text-accent-primary"}>{children}</span>
     </li>

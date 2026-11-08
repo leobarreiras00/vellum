@@ -1,6 +1,6 @@
 /**
  * Vellum — <ShareModal /> · Partilha de documentos e projetos
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Três secções, numa só folha:
@@ -205,7 +205,7 @@ function LinkSection({ projectId, documentId }: { projectId: string; documentId:
           />
         </div>
         <Button type="submit" variant="primary" size="lg" disabled={isPending} data-testid="share-link-create">
-          <Link2 aria-hidden="true" strokeWidth={1.5} />
+          <Link2 aria-hidden="true" strokeWidth={1.6} />
           Gerar link
         </Button>
         <div className="sm:col-span-3">
@@ -275,7 +275,7 @@ function ShareLinkRow({ link, highlight }: { link: ShareLinkView; highlight?: bo
         </span>
         {link.hasPassword && (
           <span className="inline-flex items-center gap-1 text-[11px] text-muted">
-            <KeyRound aria-hidden="true" className="size-3" strokeWidth={1.5} />
+            <KeyRound aria-hidden="true" className="size-3" strokeWidth={1.6} />
             Com palavra-passe
           </span>
         )}
@@ -285,7 +285,7 @@ function ShareLinkRow({ link, highlight }: { link: ShareLinkView; highlight?: bo
         </span>
         <span className="ml-auto flex items-center gap-1">
           <Button size="sm" variant={copied ? "secondary" : "primary"} onClick={copy} disabled={!link.url}>
-            {copied ? <Check aria-hidden="true" strokeWidth={2} /> : <Copy aria-hidden="true" strokeWidth={1.5} />}
+            {copied ? <Check aria-hidden="true" strokeWidth={2} /> : <Copy aria-hidden="true" strokeWidth={1.6} />}
             {copied ? "Copiado" : "Copiar link"}
           </Button>
           <Button
@@ -296,7 +296,7 @@ function ShareLinkRow({ link, highlight }: { link: ShareLinkView; highlight?: bo
             title="Revogar link"
             onClick={() => run(() => revokeShareLinkAction(link.id), { success: "Link revogado." })}
           >
-            <X aria-hidden="true" strokeWidth={1.5} />
+            <X aria-hidden="true" strokeWidth={1.6} />
           </Button>
         </span>
       </div>
@@ -384,7 +384,7 @@ function InviteSection({ projectId, documentId }: { projectId: string; documentI
           </Select>
         </div>
         <Button type="submit" variant="primary" size="lg" disabled={isPending || !email} data-testid="invite-send">
-          <Send aria-hidden="true" strokeWidth={1.5} />
+          <Send aria-hidden="true" strokeWidth={1.6} />
           Convidar
         </Button>
       </form>
@@ -410,7 +410,7 @@ function InviteRow({ invite }: { invite: ShareLinkView }) {
   const [copied, setCopied] = useState(false);
   return (
     <li className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-      <Mail aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.5} />
+      <Mail aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.6} />
       <span className="min-w-0 flex-1 truncate text-primary">{invite.email}</span>
       <span className="text-xs text-muted">
         {ROLE_LABELS[invite.role]} · {invite.openCount > 0 ? "aberto" : "por abrir"}
@@ -426,7 +426,7 @@ function InviteRow({ invite }: { invite: ShareLinkView }) {
           window.setTimeout(() => setCopied(false), 1500);
         }}
       >
-        {copied ? <Check aria-hidden="true" strokeWidth={2} /> : <Copy aria-hidden="true" strokeWidth={1.5} />}
+        {copied ? <Check aria-hidden="true" strokeWidth={2} /> : <Copy aria-hidden="true" strokeWidth={1.6} />}
         {copied ? "Copiado" : "Link"}
       </Button>
       <Button
@@ -437,7 +437,7 @@ function InviteRow({ invite }: { invite: ShareLinkView }) {
         title="Cancelar convite"
         onClick={() => run(() => revokeShareLinkAction(invite.id), { success: "Convite cancelado." })}
       >
-        <X aria-hidden="true" strokeWidth={1.5} />
+        <X aria-hidden="true" strokeWidth={1.6} />
       </Button>
     </li>
   );
@@ -502,7 +502,13 @@ function MembersSection({ projectId }: { projectId: string | null }) {
           const isMe = person.userId === user?.userId;
           return (
             <li key={person.userId} className="flex items-center gap-3 py-2.5">
-              <Avatar initials={person.initials} name={person.name} size="md" highlight={isMe} />
+              <Avatar
+                initials={person.initials}
+                name={person.name}
+                src={"avatar" in person ? (person.avatar as string | null) : null}
+                size="md"
+                highlight={isMe}
+              />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm text-primary">
                   {person.name}
@@ -536,7 +542,7 @@ function MembersSection({ projectId }: { projectId: string | null }) {
                     title="Remover acesso"
                     onClick={() => setRole(person.userId, null, person.name)}
                   >
-                    <UserMinus aria-hidden="true" strokeWidth={1.5} />
+                    <UserMinus aria-hidden="true" strokeWidth={1.6} />
                   </Button>
                 </>
               ) : (
@@ -599,7 +605,7 @@ function MembersSection({ projectId }: { projectId: string | null }) {
 function LockedNote({ children }: { children: React.ReactNode }) {
   return (
     <p className="mt-3 flex items-center gap-2 text-xs text-muted">
-      <Lock aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+      <Lock aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
       {children}
     </p>
   );

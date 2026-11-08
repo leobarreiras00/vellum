@@ -1,10 +1,11 @@
 /**
  * Vellum — Página do Projeto (cliente): árvore de documentos e notas associadas
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
 
+import { CoverBanner } from "@/components/illustrations/CoverBanner";
 import { Download, FilePlus2, FileText, PenLine, Plus, StickyNote, Users } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -88,31 +89,51 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
   return (
     <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-10 md:px-10">
       <header>
+        {snapshot.covers[project.id] && (
+          <CoverBanner
+            kind="project"
+            targetId={project.id}
+            title={project.name}
+            spec={snapshot.covers[project.id]}
+            editable={can("project:manage", project.id)}
+            className="mb-8"
+          />
+        )}
         <div className="flex items-center gap-3">
           <ProjectGlyph icon={project.icon} color={project.color} size="lg" />
           <InkTag color={project.color}>{INK_LABELS[project.color]}</InkTag>
+          {!snapshot.covers[project.id] && (
+            <CoverBanner
+              kind="project"
+              targetId={project.id}
+              title={project.name}
+              spec={undefined}
+              editable={can("project:manage", project.id)}
+              className="ml-auto"
+            />
+          )}
         </div>
         <h1 className="mt-5 max-w-3xl text-4xl font-normal leading-tight tracking-tight md:text-[44px]">
           {project.name}
         </h1>
         {project.description && (
-          <p className="mt-3 max-w-prose font-serif text-lg italic leading-snug text-muted">{project.description}</p>
+          <p className="mt-3 max-w-prose font-serif text-lg leading-snug text-muted">{project.description}</p>
         )}
 
         <div className="mt-6 flex flex-wrap items-center gap-2">
           <RoleGuard permission="document:create" subject={subject}>
             <Button variant="primary" onClick={() => createPage(null)} disabled={isPending}>
-              <FilePlus2 aria-hidden="true" strokeWidth={1.5} />
+              <FilePlus2 aria-hidden="true" strokeWidth={1.6} />
               Novo documento
             </Button>
           </RoleGuard>
           <Button onClick={() => openMembers(project.id)}>
-            <Users aria-hidden="true" strokeWidth={1.5} />
+            <Users aria-hidden="true" strokeWidth={1.6} />
             Membros
           </Button>
           <RoleGuard permission="project:manage" subject={subject}>
             <Button onClick={() => openProjectForm(project.id)}>
-              <PenLine aria-hidden="true" strokeWidth={1.5} />
+              <PenLine aria-hidden="true" strokeWidth={1.6} />
               Editar projeto
             </Button>
           </RoleGuard>
@@ -122,7 +143,7 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
               disabled={isExporting}
               onClick={() => exportMarkdown({ kind: "project", id: project.id })}
             >
-              <Download aria-hidden="true" strokeWidth={1.5} />
+              <Download aria-hidden="true" strokeWidth={1.6} />
               Exportar
             </Button>
           </RoleGuard>
@@ -164,7 +185,7 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
         <section aria-labelledby="proj-docs">
           <SectionHeading index="01" id="proj-docs" title="Árvore de documentos" />
           {tree.length === 0 ? (
-            <p className="mt-6 font-serif italic text-muted">
+            <p className="mt-6 font-serif text-muted">
               Ainda não há documentos.{canCreate && " Comece com «Novo documento»."}
             </p>
           ) : (
@@ -180,7 +201,7 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
                     <div className="flex min-w-0 gap-2.5">
                       <span className="mt-1.5 flex shrink-0 items-center text-muted">
                         {depth > 0 && <span aria-hidden="true" className="mr-1.5 h-px w-3 bg-subtle" />}
-                        <FileText aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+                        <FileText aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
                       </span>
                       <div className="min-w-0">
                         <Link
@@ -195,7 +216,9 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
                     <div className="flex items-center justify-end gap-3 pt-1 text-xs text-muted">
                       <span className="nums hidden font-mono sm:inline">{formatNumber(doc.wordCount)} pal.</span>
                       <span className="nums hidden items-center gap-1.5 md:inline-flex">
-                        {editor && <Avatar initials={editor.initials} name={editor.name} size="xs" />}
+                        {editor && (
+                          <Avatar initials={editor.initials} name={editor.name} src={editor.avatar} size="xs" />
+                        )}
                         {relativeTime(doc.updatedAt)}
                       </span>
                       {canCreate && (
@@ -207,7 +230,7 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
                           title="Nova subpágina"
                           className="grid size-6 place-items-center rounded-md text-muted opacity-0 transition-opacity hover:bg-surface hover:text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                         >
-                          <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+                          <Plus aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
                         </button>
                       )}
                     </div>
@@ -233,7 +256,7 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
             }
           />
           <div className="mt-4 space-y-3">
-            {notes.length === 0 && <p className="font-serif italic text-muted">Sem notas ligadas a este projeto.</p>}
+            {notes.length === 0 && <p className="font-serif text-muted">Sem notas ligadas a este projeto.</p>}
             {notes.map((note) => (
               <NoteSlip key={note.id} note={note} compact />
             ))}
@@ -242,7 +265,7 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
                 href={`${routes.notes}?nova=1&projeto=${projectId}`}
                 className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-accent-primary"
               >
-                <StickyNote aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+                <StickyNote aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
                 Nova nota neste projeto
               </Link>
             </RoleGuard>

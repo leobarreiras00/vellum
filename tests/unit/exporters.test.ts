@@ -1,6 +1,6 @@
 /**
  * Vellum — Testes do Motor de Exportação (Fase 5)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  */
 import { Packer } from "docx";
 import JSZip from "jszip";
@@ -174,7 +174,7 @@ describe("HTML de exportação", () => {
     expect(html).toContain("@page { background: #FAF7F2; }");
     expect(html).toContain('data-vx-cover="true"');
     expect(html).toContain('data-vx-footer="true"');
-    expect(html).toContain("Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.");
+    expect(html).toContain("Leonardo Barreiras. Todos os direitos reservados.");
     expect(html).toContain("Visão &lt;geral&gt;");
     expect(html).toContain("data:font/woff2");
   });
@@ -254,7 +254,7 @@ describe("Microsoft Word (.docx)", () => {
     const footerXml = footers.join("");
     expect(footerXml).toContain("PAGE");
     expect(footerXml).toContain("NUMPAGES");
-    expect(footerXml).toContain("Leonardo Barreiras (Leo Barreiras)");
+    expect(footerXml).toContain("Leonardo Barreiras");
   });
 
   it("diagramas ficam dentro da largura útil A4", () => {

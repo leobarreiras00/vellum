@@ -1,6 +1,6 @@
 /**
  * Vellum — Centro de Notificações (sino da Topbar · Módulo 4)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Lembretes de eventos próximos e prazos de Dias Importantes, com estado
@@ -66,7 +66,7 @@ export function NotificationCenter() {
                 <Star
                   aria-hidden="true"
                   className="mr-1 inline size-3 -translate-y-px text-accent-primary"
-                  strokeWidth={1.5}
+                  strokeWidth={1.6}
                 />
               )}
               {event.title}
@@ -104,9 +104,9 @@ export function NotificationCenter() {
           {...props}
         >
           {unreadCount > 0 ? (
-            <BellRing aria-hidden="true" strokeWidth={1.5} />
+            <BellRing aria-hidden="true" strokeWidth={1.6} />
           ) : (
-            <Bell aria-hidden="true" strokeWidth={1.5} />
+            <Bell aria-hidden="true" strokeWidth={1.6} />
           )}
           {unreadCount > 0 && (
             <span
@@ -130,7 +130,7 @@ export function NotificationCenter() {
               disabled={unreadCount === 0}
               className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs text-muted transition-colors hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:opacity-50"
             >
-              <Check aria-hidden="true" className="size-3" strokeWidth={1.5} />
+              <Check aria-hidden="true" className="size-3" strokeWidth={1.6} />
               Marcar tudo como lido
             </button>
           </div>
@@ -138,13 +138,13 @@ export function NotificationCenter() {
           <div className="min-h-0 overflow-y-auto p-1.5">
             <p className="eyebrow px-2.5 pb-1 pt-2">Lembretes de eventos</p>
             {reminders.length === 0 ? (
-              <p className="px-2.5 pb-2 font-serif text-sm italic text-muted">Sem lembretes nos próximos 7 dias.</p>
+              <p className="px-2.5 pb-2 font-serif text-sm text-muted">Sem lembretes nos próximos 7 dias.</p>
             ) : (
               <ul aria-label="Lembretes de eventos">{reminders.map((n) => renderItem(n, close))}</ul>
             )}
             <p className="eyebrow px-2.5 pb-1 pt-3">Próximos dias importantes</p>
             {important.length === 0 ? (
-              <p className="px-2.5 pb-2 font-serif text-sm italic text-muted">Nenhum marco nas próximas 3 semanas.</p>
+              <p className="px-2.5 pb-2 font-serif text-sm text-muted">Nenhum marco nas próximas 3 semanas.</p>
             ) : (
               <ul aria-label="Próximos dias importantes">{important.map((n) => renderItem(n, close))}</ul>
             )}
@@ -166,7 +166,7 @@ export function NotificationCenter() {
               </span>
             ) : (
               <Button size="sm" variant="secondary" onClick={() => void requestPermission()}>
-                <BellRing aria-hidden="true" strokeWidth={1.5} />
+                <BellRing aria-hidden="true" strokeWidth={1.6} />
                 Ativar alertas do navegador
               </Button>
             )}
@@ -175,7 +175,7 @@ export function NotificationCenter() {
               onClick={close}
               className="inline-flex items-center gap-1 rounded-md text-muted hover:text-accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
             >
-              <CalendarDays aria-hidden="true" className="size-3" strokeWidth={1.5} />
+              <CalendarDays aria-hidden="true" className="size-3" strokeWidth={1.6} />
               Abrir calendário
             </Link>
           </div>

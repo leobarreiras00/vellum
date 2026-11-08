@@ -1,6 +1,6 @@
 # =============================================================================
 # Vellum — Serviços locais e de produção
-# © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+# © 2026 Leonardo Barreiras. Todos os direitos reservados.
 #
 #   docker compose up -d db            → só o PostgreSQL 16 (desenvolvimento)
 #   docker compose --profile app up -d → PostgreSQL + Vellum (imagem de produção)

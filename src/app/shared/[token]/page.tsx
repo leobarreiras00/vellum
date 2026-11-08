@@ -1,6 +1,6 @@
 /**
  * Vellum — Acesso por link partilhado (/shared/[token])
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Abre o documento real (ou o projeto) com o papel concedido pelo link —

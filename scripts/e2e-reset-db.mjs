@@ -1,6 +1,6 @@
 /**
  * Vellum — Repõe a base de dados dos testes E2E (só bases cujo nome contém "e2e")
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Aplica as migrações e esvazia as tabelas, para cada execução de

@@ -1,6 +1,6 @@
 /**
  * Vellum — Definições (cliente)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Quatro separadores:
@@ -27,6 +27,7 @@ import {
   ShieldCheck,
   Sparkles,
   Trash2,
+  UserRound,
   Users,
   ArrowLeftRight,
 } from "lucide-react";
@@ -40,17 +41,23 @@ import {
   restoreExampleDataAction,
   revokeShareLinkAction,
   sendTestEmailAction,
+  setIllustrationThemeAction,
   setLoginConfirmationAction,
   updatePreferencesAction,
   type AccountEmailState,
 } from "@/app/(workspace)/actions";
 import { PermissionMatrix } from "@/components/auth/PermissionMatrix";
+import { openProfile } from "@/components/profile/ProfileModal";
+import { vignetteSpec } from "@/components/illustrations/AtelierVignette";
+import { IllustrationArt } from "@/components/illustrations/IllustrationArt";
+import { ILLUSTRATION_COLLECTIONS } from "@/lib/illustrations";
 import { useCopy } from "@/components/editor/useCopy";
 import { useShell } from "@/components/layout/ShellContext";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { SyncHub } from "@/components/settings/SyncHub";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
+import { SkeletonCard } from "@/components/ui/Skeleton";
 import { FieldError, Input, Label } from "@/components/ui/Field";
 import { InkTag } from "@/components/ui/Ink";
 import { RoleBadge } from "@/components/ui/RoleBadge";
@@ -100,7 +107,13 @@ export function SettingsClient() {
       <header>
         <p className="eyebrow">{user?.name}</p>
         <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight">Definições</h1>
-        <p className="mt-2 font-serif text-lg italic text-muted">O papel, a tinta e o ritmo do seu atelier.</p>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <p className="font-serif text-lg text-muted">O papel, a tinta e o ritmo do seu atelier.</p>
+          <Button size="sm" onClick={() => openProfile()} data-testid="settings-open-profile">
+            <UserRound aria-hidden="true" strokeWidth={1.6} />
+            Editar perfil
+          </Button>
+        </div>
       </header>
 
       <div
@@ -123,7 +136,7 @@ export function SettingsClient() {
               tab === id ? "text-primary" : "text-muted hover:text-primary",
             )}
           >
-            <Icon aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            <Icon aria-hidden="true" className="size-3.5" strokeWidth={1.6} />
             {label}
             {tab === id && (
               <motion.span
@@ -256,6 +269,49 @@ function AppearanceTab() {
           })}
         </div>
       </section>
+
+      <section aria-labelledby="set-illustrations" className="mt-14">
+        <SectionHeading
+          index="03"
+          id="set-illustrations"
+          title="Coleção de ilustrações"
+          description="Dá o tom à vinheta do Atelier e é a coleção inicial do Estúdio de ilustração (capas de projetos e documentos)."
+        />
+        <div
+          role="radiogroup"
+          aria-labelledby="set-illustrations"
+          className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          data-testid="illustration-collections"
+        >
+          {ILLUSTRATION_COLLECTIONS.map((c) => {
+            const selected = snapshot.profile.illustrationTheme === c.id;
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                disabled={isPending}
+                onClick={() => run(() => setIllustrationThemeAction(c.id), { success: `Coleção: ${c.label}.` })}
+                className={cn(
+                  "overflow-hidden rounded-xl border bg-elevated text-left transition-[border-color,box-shadow] duration-200 active:scale-[0.99]",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+                  selected ? "border-accent-primary/70 shadow-paper" : "border-subtle hover:border-muted/40",
+                )}
+              >
+                <span className="block h-24 border-b border-subtle">
+                  <IllustrationArt spec={vignetteSpec(c.id)} size={{ width: 480, height: 192 }} />
+                </span>
+                <span className="flex items-center justify-between gap-2 px-4 pt-3 text-sm font-medium text-primary">
+                  {c.label}
+                  {selected && <Check aria-hidden="true" className="size-3.5 text-accent-primary" strokeWidth={1.6} />}
+                </span>
+                <span className="block px-4 pb-3 pt-0.5 text-xs text-muted">{c.blurb}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
     </>
   );
 }
@@ -352,12 +408,8 @@ function AccountTab() {
           title="Envio de email"
           description="Brevo ou Resend, configurado só por variáveis de ambiente (nunca no código)."
         />
-        {loadError && <p className="mt-4 text-sm text-accent-primary">{loadError}</p>}
-        {!state && !loadError && (
-          <p className="mt-5 inline-flex items-center gap-2 text-sm text-muted">
-            <Loader2 aria-hidden="true" className="size-3.5 animate-spin" strokeWidth={1.5} />A ler o estado do envio…
-          </p>
-        )}
+        {loadError && <p className="mt-4 text-sm text-danger">{loadError}</p>}
+        {!state && !loadError && <SkeletonCard className="mt-5 max-w-xl" />}
         {state && mode && (
           <div
             className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]"
@@ -411,9 +463,9 @@ function AccountTab() {
                 data-testid="send-test-email"
               >
                 {busy === "test" ? (
-                  <Loader2 aria-hidden="true" className="animate-spin" strokeWidth={1.5} />
+                  <Loader2 aria-hidden="true" className="animate-spin" strokeWidth={1.6} />
                 ) : (
-                  <Send aria-hidden="true" strokeWidth={1.5} />
+                  <Send aria-hidden="true" strokeWidth={1.6} />
                 )}
                 Enviar email de teste
               </Button>
@@ -441,7 +493,7 @@ function AccountTab() {
           />
           <ul className="mt-5 divide-y divide-subtle rounded-xl border border-subtle bg-elevated">
             <li className="flex flex-wrap items-center gap-4 px-5 py-4">
-              <ShieldCheck aria-hidden="true" className="size-4 text-accent-primary" strokeWidth={1.5} />
+              <ShieldCheck aria-hidden="true" className="size-4 text-accent-primary" strokeWidth={1.6} />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-primary">Pedir código ao entrar</span>
                 <span className="block text-xs text-muted">
@@ -464,7 +516,7 @@ function AccountTab() {
               </label>
             </li>
             <li className="flex flex-wrap items-center gap-4 px-5 py-4">
-              <MonitorSmartphone aria-hidden="true" className="size-4 text-muted" strokeWidth={1.5} />
+              <MonitorSmartphone aria-hidden="true" className="size-4 text-muted" strokeWidth={1.6} />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-primary">Este dispositivo</span>
                 <span className="block text-xs text-muted">
@@ -483,7 +535,7 @@ function AccountTab() {
               </Button>
             </li>
             <li className="flex flex-wrap items-center gap-4 px-5 py-4">
-              <Mail aria-hidden="true" className="size-4 text-muted" strokeWidth={1.5} />
+              <Mail aria-hidden="true" className="size-4 text-muted" strokeWidth={1.6} />
               <span className="min-w-0 flex-1">
                 <span className="block text-sm font-medium text-primary">{state.email}</span>
                 <span className="block text-xs text-muted">
@@ -624,7 +676,7 @@ function TeamTab() {
                 onClick={() => openShare({ projectId: null, documentId: null })}
                 data-testid="settings-manage-members"
               >
-                <Users aria-hidden="true" strokeWidth={1.5} />
+                <Users aria-hidden="true" strokeWidth={1.6} />
                 Gerir membros e convites
               </Button>
             ) : undefined
@@ -636,7 +688,7 @@ function TeamTab() {
         >
           {snapshot.members.map((m) => (
             <li key={m.userId} className="flex items-center gap-3 px-4 py-3">
-              <Avatar name={m.name} initials={m.initials} size="sm" />
+              <Avatar name={m.name} initials={m.initials} src={m.avatar} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm text-primary">{m.name}</span>
                 <span className="block truncate text-xs text-muted">{m.email}</span>
@@ -669,7 +721,7 @@ function TeamTab() {
           description="Links e convites dos projetos que gere. Revogar corta o acesso de imediato."
         />
         {links.length === 0 ? (
-          <p className="mt-5 rounded-xl border border-dashed border-subtle px-5 py-6 font-serif italic text-muted">
+          <p className="mt-5 rounded-xl border border-dashed border-subtle px-5 py-6 font-serif text-muted">
             Nenhum link ativo. Use «Partilhar» num documento ou projeto para criar um.
           </p>
         ) : (
@@ -682,7 +734,7 @@ function TeamTab() {
               const doc = link.documentId ? documents.get(link.documentId) : undefined;
               return (
                 <li key={link.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                  <Link2 aria-hidden="true" className="size-4 shrink-0 text-muted" strokeWidth={1.5} />
+                  <Link2 aria-hidden="true" className="size-4 shrink-0 text-muted" strokeWidth={1.6} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-primary">
                       {doc ? doc.title : (project?.name ?? "Projeto")}
@@ -703,7 +755,7 @@ function TeamTab() {
                       {copied === link.id ? (
                         <Check aria-hidden="true" strokeWidth={2} />
                       ) : (
-                        <Copy aria-hidden="true" strokeWidth={1.5} />
+                        <Copy aria-hidden="true" strokeWidth={1.6} />
                       )}
                       {copied === link.id ? "Copiado" : "Copiar"}
                     </Button>
@@ -762,7 +814,7 @@ function ExampleDataControls({
   const [confirming, setConfirming] = useState(false);
   return (
     <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-subtle bg-surface/50 px-5 py-4">
-      <Sparkles aria-hidden="true" className="size-4 text-accent-primary" strokeWidth={1.5} />
+      <Sparkles aria-hidden="true" className="size-4 text-accent-primary" strokeWidth={1.6} />
       <p className="min-w-0 flex-1 text-sm text-muted">
         {hasExamples
           ? "O atelier tem dados de exemplo. Limpá-los não toca no que criou."
@@ -787,13 +839,13 @@ function ExampleDataControls({
                 if (result.ok) setConfirming(false);
               }}
             >
-              <Trash2 aria-hidden="true" strokeWidth={1.5} />
+              <Trash2 aria-hidden="true" strokeWidth={1.6} />
               Limpar
             </Button>
           </span>
         ) : (
           <Button size="sm" variant="secondary" onClick={() => setConfirming(true)} data-testid="clear-examples">
-            <Trash2 aria-hidden="true" strokeWidth={1.5} />
+            <Trash2 aria-hidden="true" strokeWidth={1.6} />
             Limpar dados de demonstração
           </Button>
         ))}
@@ -804,7 +856,7 @@ function ExampleDataControls({
         data-testid="restore-examples"
         onClick={() => run(() => restoreExampleDataAction(), { success: "Dados de exemplo restaurados." })}
       >
-        <RefreshCcw aria-hidden="true" strokeWidth={1.5} />
+        <RefreshCcw aria-hidden="true" strokeWidth={1.6} />
         Restaurar dados de exemplo
       </Button>
     </div>

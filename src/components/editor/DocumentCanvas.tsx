@@ -1,6 +1,6 @@
 /**
  * Vellum — Superfície do documento: Modo Folha A4 e Modo Fluido
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Folha A4: 210mm × ≥297mm, margens de 20mm, `bg-elevated` com borda capilar
@@ -68,7 +68,7 @@ export function DocumentCanvas({ mode, children }: { mode: PageMode; children: R
           <span
             aria-hidden="true"
             data-print="hide"
-            className="nums pointer-events-none absolute bottom-[8mm] right-[20mm] font-mono text-[10px] text-muted/70"
+            className="nums pointer-events-none absolute bottom-[8mm] right-[20mm] select-none font-sans text-[10px] text-muted/70"
           >
             {pages} {pages === 1 ? "página" : "páginas"} · A4
           </span>
@@ -87,7 +87,9 @@ function Ruler() {
       width="210mm"
       height="7mm"
       viewBox="0 0 210 7"
-      className="mb-[3mm] block font-mono text-muted"
+      className="pointer-events-none mb-[3mm] block select-none font-mono text-muted"
+      style={{ userSelect: "none", WebkitUserSelect: "none" }}
+      data-testid="a4-ruler"
     >
       <rect x="0" y="0" width="210" height="7" rx="0.6" className="fill-surface" />
       <rect x="20" y="0" width="170" height="7" className="fill-elevated" />
@@ -138,7 +140,7 @@ function PageBreakGuide({ page }: { page: number }) {
       style={{ top: `${(page - 1) * 297}mm` }}
     >
       <span className="h-0 flex-1 border-t border-dashed border-muted/35" />
-      <span className="nums rounded-sm bg-canvas px-1.5 font-mono text-[9.5px] uppercase tracking-[0.12em] text-muted/80">
+      <span className="nums select-none rounded-sm bg-canvas px-1.5 font-sans text-[9.5px] uppercase tracking-[0.12em] text-muted/80">
         Quebra de página · {page}
       </span>
       <span className="h-0 w-[12mm] border-t border-dashed border-muted/35" />

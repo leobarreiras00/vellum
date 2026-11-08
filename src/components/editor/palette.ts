@@ -1,6 +1,6 @@
 /**
  * Vellum — Paleta curada do Editor Rico
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Só chaves fechadas viajam no JSON do documento; o valor CSS vem das

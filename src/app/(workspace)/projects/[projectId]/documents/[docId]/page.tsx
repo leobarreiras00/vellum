@@ -1,6 +1,6 @@
 /**
  * Vellum — Documento no Editor Rico (/projects/[projectId]/documents/[docId])
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Verifica no servidor a sessão e que o documento pertence ao workspace de

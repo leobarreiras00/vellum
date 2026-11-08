@@ -1,6 +1,6 @@
 /**
  * Vellum — Contrato do repositório do Workspace Engine
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * O Workspace Engine trabalha sobre um agregado `StoreData` em memória; o

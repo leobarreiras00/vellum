@@ -1,6 +1,6 @@
 /**
  * Vellum — Pastilha de evento (cor da legenda + selo de Dia Importante)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 "use client";
@@ -43,7 +43,7 @@ export function EventChip({ event, legend, onOpen, showTime = true, className }:
       )}
     >
       {event.isImportant && (
-        <Star aria-hidden="true" className="size-2.5 shrink-0 fill-current text-ink" strokeWidth={1.5} />
+        <Star aria-hidden="true" className="size-2.5 shrink-0 fill-current text-ink" strokeWidth={1.6} />
       )}
       {showTime && !event.allDay && event.startTime && (
         <span className="nums shrink-0 font-mono text-[10px] text-primary">{event.startTime}</span>

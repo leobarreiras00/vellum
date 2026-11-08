@@ -1,6 +1,6 @@
 /**
  * Vellum — Sessão e contas (Módulo 1 · Auth & RBAC)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * API pública estável desde a Fase 1B (getSession, signIn, signInDemo,
@@ -450,5 +450,51 @@ export async function confirmPasswordReset(identifier: string, code: string, pas
   clearRateLimit(`reset-confirm:${user.id}`);
   clearRateLimit(`login:${user.username ?? ""}`);
   clearRateLimit(`login:${user.email}`);
+  return { ok: true };
+}
+
+/* ==========================================================================
+   Perfil: nome, username e palavra-passe (ProfileModal)
+   ========================================================================== */
+
+/** Atualiza nome e username na conta (username único, verificado aqui). */
+export async function updateAccountIdentity(
+  userId: string,
+  input: { name: string; username: string },
+): Promise<AuthResult> {
+  const ctx = await (await getAuth()).$context;
+  const taken = await ctx.adapter.findOne<AuthUserRow>({
+    model: "user",
+    where: [{ field: "username", value: input.username }],
+  });
+  if (taken && taken.id !== userId) return { ok: false, error: "Esse username já está em uso." };
+  await ctx.adapter.update({
+    model: "user",
+    where: [{ field: "id", value: userId }],
+    update: { name: input.name, username: input.username, displayUsername: input.username, updatedAt: new Date() },
+  });
+  return { ok: true };
+}
+
+/** Muda a palavra-passe confirmando a atual; termina as outras sessões. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<AuthResult> {
+  const session = await getSession();
+  if (!session) return { ok: false, error: "A sua sessão terminou. Entre de novo." };
+  if (isRateLimited(`change-password:${session.userId}`, 6, 15 * 60_000)) return { ok: false, error: RATE_LIMITED };
+  const auth = await getAuth();
+  try {
+    await auth.api.changePassword({
+      body: { currentPassword, newPassword, revokeOtherSessions: true },
+      headers: await headers(),
+    });
+  } catch (error) {
+    const code = errorCode(error);
+    if (code.includes("INVALID_PASSWORD") || code.includes("INVALID")) {
+      return { ok: false, error: "A palavra-passe atual não está correta." };
+    }
+    console.error("[vellum] Falha ao mudar a palavra-passe.", error);
+    return { ok: false, error: "Não foi possível mudar a palavra-passe. Tente de novo." };
+  }
+  clearRateLimit(`change-password:${session.userId}`);
   return { ok: true };
 }

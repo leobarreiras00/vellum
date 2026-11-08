@@ -1,6 +1,6 @@
 /**
  * Vellum — Seed do Calendário (Módulo 4)
- * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+ * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Legendas, eventos (com Dias Importantes e lembretes) e Notas do Dia do
