@@ -11,7 +11,7 @@
 import { z } from "zod";
 
 import { docContentSchema } from "@/lib/document-content";
-import { EFFORT_KINDS, INK_COLORS, PROJECT_ICONS } from "@/lib/workspace-types";
+import { EFFORT_KINDS, INK_COLORS, PROJECT_ICONS, recurrenceRuleSchema } from "@/lib/workspace-types";
 
 export const SNAPSHOT_FORMAT = "vellum.workspace-snapshot";
 export const SNAPSHOT_VERSION = 1;
@@ -102,6 +102,8 @@ export const snapshotSchema = z.object({
         reminderMinutes: z.number().int().min(0).max(10_080).nullable(),
         notes: z.string().max(4000),
         externalUid: z.string().max(400).nullable().optional(),
+        recurrence: recurrenceRuleSchema.nullable().optional(),
+        exdates: z.array(day).max(3000).optional(),
       }),
     )
     .max(20_000),

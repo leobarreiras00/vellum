@@ -1,0 +1,49 @@
+# =============================================================================
+# Vellum — Serviços locais e de produção
+# © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
+#
+#   docker compose up -d db            → só o PostgreSQL 16 (desenvolvimento)
+#   docker compose --profile app up -d → PostgreSQL + Vellum (imagem de produção)
+#
+# Sem ficheiros .env nem segredos no repositório: o compose lê as variáveis do
+# ambiente da shell (POSTGRES_PASSWORD, AUTH_SECRET, …) e falha se faltarem.
+# =============================================================================
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vellum
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}
+      POSTGRES_DB: vellum
+    ports:
+      - "5432:5432"
+    volumes:
+      - vellum-db:/var/lib/postgresql/data
+      - ./scripts/docker-init-db.sql:/docker-entrypoint-initdb.d/10-e2e.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vellum -d vellum"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    profiles: ["app"]
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://vellum:${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no ambiente}@db:5432/vellum?schema=public
+      VELLUM_STORE: postgres
+      AUTH_SECRET: ${AUTH_SECRET:?Defina AUTH_SECRET (openssl rand -base64 32)}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
+      VELLUM_DEMO_AUTH: ${VELLUM_DEMO_AUTH:-false}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    ports:
+      - "3000:3000"
+
+volumes:
+  vellum-db:

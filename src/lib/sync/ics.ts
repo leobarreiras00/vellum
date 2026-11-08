@@ -6,14 +6,15 @@
  * Módulo puro (servidor e testes).
  * - Exportação: VCALENDAR com VTIMEZONE Europe/Lisbon, VEVENT por evento
  *   (dia inteiro como VALUE=DATE), CATEGORIES com a legenda e «Dia Importante»,
- *   PRIORITY 1 nos marcos, COLOR (RFC 7986) e VALARM com o lembrete; linhas
+ *   PRIORITY 1 nos marcos, COLOR (RFC 7986), RRULE/EXDATE nas séries e VALARM com o lembrete; linhas
  *   dobradas a 75 octetos, CRLF e texto escapado.
  * - Importação: desdobra linhas, lê VEVENT/VALARM de Google Calendar, Apple
  *   Calendar e Outlook (UTC, TZID IANA ou Windows, datas flutuantes) e converte
  *   tudo para dia + hora de Lisboa, como o Vellum guarda os eventos.
  */
 import { CALENDAR_TZ, addDays, lisbonToMs } from "@/lib/calendar";
-import { REMINDER_OPTIONS, type InkColor } from "@/lib/workspace-types";
+import { parseRRule, toRRule } from "@/lib/recurrence";
+import { REMINDER_OPTIONS, type InkColor, type RecurrenceRule } from "@/lib/workspace-types";
 import { APP_VERSION } from "@/lib/utils";
 
 export const IMPORTANT_CATEGORY = "Dia Importante";
@@ -36,6 +37,8 @@ export interface IcsSourceEvent {
   createdAt: string;
   updatedAt: string;
   externalUid?: string | null;
+  recurrence?: RecurrenceRule | null;
+  exdates?: string[];
 }
 
 export interface IcsExportInput {
@@ -175,6 +178,18 @@ export function buildIcs(input: IcsExportInput): string {
       else lines.push("DURATION:PT1H");
       lines.push("TRANSP:OPAQUE");
     }
+    if (event.recurrence) {
+      const timed = !(event.allDay || !event.startTime);
+      lines.push(`RRULE:${toRRule(event.recurrence, event.date, !timed)}`);
+      const exdates = (event.exdates ?? []).filter((d) => d > event.date);
+      if (exdates.length) {
+        lines.push(
+          timed
+            ? `EXDATE;TZID=${CALENDAR_TZ}:${exdates.map((d) => `${compactDay(d)}T${compactTime(event.startTime!)}`).join(",")}`
+            : `EXDATE;VALUE=DATE:${exdates.map(compactDay).join(",")}`,
+        );
+      }
+    }
     lines.push(`SUMMARY:${escapeIcsText(event.title)}`);
     if (description) lines.push(`DESCRIPTION:${escapeIcsText(description)}`);
     if (categories.length) lines.push(`CATEGORIES:${categories.map(escapeIcsText).join(",")}`);
@@ -225,7 +240,12 @@ export interface ParsedIcsEvent {
   legendName: string | null;
   isImportant: boolean;
   reminderMinutes: number | null;
+  /** Tem RRULE/RDATE (repetição). */
   recurring: boolean;
+  /** Regra que o Vellum representa; `null` se não se repete ou se a regra não é suportada. */
+  recurrence: RecurrenceRule | null;
+  /** Exceções (EXDATE) já em dias de Lisboa. */
+  exdates: string[];
 }
 
 export interface ParsedIcs {
@@ -495,6 +515,8 @@ function toEvent(props: IcsProperty[], alarms: IcsProperty[][]): ParsedIcsEvent 
     }
   }
 
+  const rrule = get("RRULE");
+
   let reminderMinutes: number | null = null;
   for (const alarmProps of alarms) {
     const trigger = alarmProps.find((p) => p.name === "TRIGGER");
@@ -521,7 +543,21 @@ function toEvent(props: IcsProperty[], alarms: IcsProperty[][]): ParsedIcsEvent 
     isImportant,
     reminderMinutes,
     recurring: Boolean(get("RRULE") || get("RDATE")),
+    recurrence: rrule && !get("RDATE") ? parseRRule(rrule.value, date) : null,
+    exdates: rrule ? exdatesOf(props) : [],
   };
+}
+
+/** EXDATE (uma ou várias linhas, valores separados por vírgulas) em dias de Lisboa. */
+function exdatesOf(props: IcsProperty[]): string[] {
+  const days = new Set<string>();
+  for (const prop of props.filter((p) => p.name === "EXDATE")) {
+    for (const value of prop.value.split(",")) {
+      const instant = parseIcsDate({ ...prop, value });
+      if (instant) days.add(instant.date);
+    }
+  }
+  return [...days].sort();
 }
 
 /** Instante de início (para ordenação/avisos nos testes). */

@@ -4,29 +4,47 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Título, data, horas (ou dia inteiro), projeto e documento associados,
- * legenda, «Marcar como Dia Importante», lembrete e notas do evento.
+ * legenda, «Marcar como Dia Importante», repetição (diária, semanal, mensal,
+ * anual), lembrete e notas do evento. Numa série, eliminar pergunta se é só
+ * esta ocorrência ou a série inteira.
  * O servidor volta a validar tudo (Zod + calendar:edit no projeto).
  */
 "use client";
 
-import { Star, Trash2 } from "lucide-react";
+import { Repeat, Star, Trash2 } from "lucide-react";
 import { useEffect, useId, useState, type FormEvent } from "react";
 
-import { createEventAction, deleteEventAction, updateEventAction } from "@/app/(workspace)/actions";
+import {
+  createEventAction,
+  deleteEventAction,
+  skipEventOccurrenceAction,
+  updateEventAction,
+} from "@/app/(workspace)/actions";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { FieldError, Input, Label, Select, Textarea } from "@/components/ui/Field";
 import { InkDot } from "@/components/ui/Ink";
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { dayLongLabel, weekdayIndex } from "@/lib/calendar";
 import { canDeleteDocument } from "@/lib/rbac";
+import { RECURRENCE_LABELS, describeRecurrence } from "@/lib/recurrence";
 import { cn } from "@/lib/utils";
-import { REMINDER_LABELS, REMINDER_OPTIONS, lisbonDay } from "@/lib/workspace-types";
+import {
+  RECURRENCE_FREQS,
+  REMINDER_LABELS,
+  REMINDER_OPTIONS,
+  lisbonDay,
+  type RecurrenceFreq,
+  type RecurrenceRule,
+} from "@/lib/workspace-types";
 
 export interface EventDialogState {
   open: boolean;
   eventId?: string;
   date?: string;
+  /** Ocorrência clicada numa série (para «eliminar só esta»). */
+  occurrenceDate?: string;
 }
 
 interface FormState {
@@ -41,9 +59,35 @@ interface FormState {
   isImportant: boolean;
   reminder: string;
   notes: string;
+  repeat: RecurrenceFreq | typeof NO_REPEAT;
+  interval: string;
+  byWeekday: number[];
+  endMode: "never" | "until" | "count";
+  until: string;
+  count: string;
 }
 
 const NO_REMINDER = "none";
+const NO_REPEAT = "none";
+const WEEKDAY_INITIALS = ["S", "T", "Q", "Q", "S", "S", "D"] as const;
+const WEEKDAY_NAMES = ["segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo"] as const;
+const INTERVAL_UNITS: Record<RecurrenceFreq, [string, string]> = {
+  DAILY: ["dia", "dias"],
+  WEEKLY: ["semana", "semanas"],
+  MONTHLY: ["mês", "meses"],
+  YEARLY: ["ano", "anos"],
+};
+
+function ruleFromForm(form: FormState): RecurrenceRule | null {
+  if (form.repeat === NO_REPEAT) return null;
+  return {
+    freq: form.repeat,
+    interval: Math.max(1, Number(form.interval) || 1),
+    byWeekday: form.repeat === "WEEKLY" ? form.byWeekday : [],
+    until: form.endMode === "until" && form.until ? form.until : null,
+    count: form.endMode === "count" ? Math.max(1, Number(form.count) || 1) : null,
+  };
+}
 
 export function EventDialog({ state, onClose }: { state: EventDialogState; onClose: () => void }) {
   const { user } = useAuth();
@@ -55,6 +99,8 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
   const [form, setForm] = useState<FormState | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const occurrence =
+    existing?.recurrence && state.occurrenceDate && state.occurrenceDate > existing.date ? state.occurrenceDate : null;
 
   useEffect(() => {
     if (!state.open) return;
@@ -74,6 +120,14 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
             isImportant: existing.isImportant,
             reminder: existing.reminderMinutes === null ? NO_REMINDER : String(existing.reminderMinutes),
             notes: existing.notes,
+            repeat: existing.recurrence?.freq ?? NO_REPEAT,
+            interval: String(existing.recurrence?.interval ?? 1),
+            byWeekday: existing.recurrence?.byWeekday.length
+              ? existing.recurrence.byWeekday
+              : [weekdayIndex(existing.date)],
+            endMode: existing.recurrence?.until ? "until" : existing.recurrence?.count ? "count" : "never",
+            until: existing.recurrence?.until ?? "",
+            count: String(existing.recurrence?.count ?? 10),
           }
         : {
             title: "",
@@ -87,6 +141,12 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
             isImportant: false,
             reminder: "15",
             notes: "",
+            repeat: NO_REPEAT,
+            interval: "1",
+            byWeekday: [weekdayIndex(state.date ?? lisbonDay(new Date()))],
+            endMode: "never",
+            until: "",
+            count: "10",
           },
     );
     // Só ao abrir: as edições do formulário não devem ser repostas pelo instantâneo.
@@ -122,6 +182,7 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
       isImportant: form.isImportant,
       reminderMinutes: form.reminder === NO_REMINDER ? null : Number(form.reminder),
       notes: form.notes,
+      recurrence: ruleFromForm(form),
     };
     const result = existing
       ? await run(() => updateEventAction(existing.id, payload), { success: "Evento atualizado." })
@@ -132,9 +193,21 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
 
   async function remove() {
     if (!existing) return;
-    const result = await run(() => deleteEventAction(existing.id), { success: "Evento eliminado." });
+    const result = await run(() => deleteEventAction(existing.id), {
+      success: existing.recurrence ? "Série eliminada." : "Evento eliminado.",
+    });
     if (result.ok) onClose();
   }
+
+  async function skipOccurrence() {
+    if (!existing || !occurrence) return;
+    const result = await run(() => skipEventOccurrenceAction(existing.id, occurrence), {
+      success: "Ocorrência removida da série.",
+    });
+    if (result.ok) onClose();
+  }
+
+  const rule = ruleFromForm(form);
 
   const errorId = (key: string) => (errors[key] ? `${formId}-${key}-erro` : undefined);
 
@@ -149,9 +222,16 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
         <>
           {canDelete &&
             (confirmDelete ? (
-              <Button variant="danger" size="md" onClick={remove} disabled={isPending} className="mr-auto">
-                Confirmar eliminação
-              </Button>
+              <span className="mr-auto flex flex-wrap gap-2">
+                {occurrence && (
+                  <Button variant="danger" size="md" onClick={skipOccurrence} disabled={isPending}>
+                    Só esta ocorrência
+                  </Button>
+                )}
+                <Button variant="danger" size="md" onClick={remove} disabled={isPending}>
+                  {existing?.recurrence ? "Eliminar a série" : "Confirmar eliminação"}
+                </Button>
+              </span>
             ) : (
               <Button variant="ghost" onClick={() => setConfirmDelete(true)} className="mr-auto">
                 <Trash2 aria-hidden="true" strokeWidth={1.5} />
@@ -228,6 +308,138 @@ export function EventDialog({ state, onClose }: { state: EventDialogState; onClo
               <FieldError id={errorId("endTime")}>{errors.endTime}</FieldError>
             </div>
           </div>
+
+          {occurrence && (
+            <p className="-mt-2 text-xs text-muted">
+              Ocorrência de {dayLongLabel(occurrence)}. As alterações aplicam-se a toda a série.
+            </p>
+          )}
+
+          <fieldset className="grid gap-3 rounded-lg border border-subtle px-3.5 pb-3.5 pt-2">
+            <legend className="flex items-center gap-1.5 px-1 text-xs font-medium text-primary">
+              <Repeat aria-hidden="true" className="size-3.5 text-muted" strokeWidth={1.5} />
+              Repetição
+            </legend>
+            <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
+              <div>
+                <Label htmlFor={`${formId}-repeat`}>Repetir</Label>
+                <Select
+                  id={`${formId}-repeat`}
+                  value={form.repeat}
+                  onChange={(e) => set("repeat", e.target.value as FormState["repeat"])}
+                >
+                  <option value={NO_REPEAT}>Não se repete</option>
+                  {RECURRENCE_FREQS.map((f) => (
+                    <option key={f} value={f}>
+                      {RECURRENCE_LABELS[f]}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {form.repeat !== NO_REPEAT && (
+                <div>
+                  <Label htmlFor={`${formId}-interval`}>A cada</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id={`${formId}-interval`}
+                      type="number"
+                      min={1}
+                      max={999}
+                      value={form.interval}
+                      onChange={(e) => set("interval", e.target.value)}
+                      className="nums w-20"
+                    />
+                    <span className="text-sm text-muted">
+                      {INTERVAL_UNITS[form.repeat][Number(form.interval) === 1 ? 0 : 1]}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {form.repeat === "WEEKLY" && (
+              <div role="group" aria-label="Dias da semana" className="flex flex-wrap gap-1.5">
+                {WEEKDAY_INITIALS.map((initial, d) => {
+                  const on = form.byWeekday.includes(d);
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      aria-pressed={on}
+                      aria-label={WEEKDAY_NAMES[d]}
+                      onClick={() =>
+                        set(
+                          "byWeekday",
+                          on && form.byWeekday.length > 1
+                            ? form.byWeekday.filter((x) => x !== d)
+                            : [...new Set([...form.byWeekday, d])].sort(),
+                        )
+                      }
+                      className={cn(
+                        "size-8 rounded-full border text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+                        on
+                          ? "border-accent-primary bg-accent-primary text-canvas"
+                          : "border-subtle text-primary hover:bg-surface",
+                      )}
+                    >
+                      {initial}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {form.repeat !== NO_REPEAT && (
+              <div className="grid gap-3 sm:grid-cols-[1.4fr_1fr]">
+                <div>
+                  <Label htmlFor={`${formId}-end-mode`}>Termina</Label>
+                  <Select
+                    id={`${formId}-end-mode`}
+                    value={form.endMode}
+                    onChange={(e) => set("endMode", e.target.value as FormState["endMode"])}
+                  >
+                    <option value="never">Nunca</option>
+                    <option value="until">Numa data</option>
+                    <option value="count">Depois de N vezes</option>
+                  </Select>
+                </div>
+                {form.endMode === "until" && (
+                  <div>
+                    <Label htmlFor={`${formId}-until`}>Último dia</Label>
+                    <Input
+                      id={`${formId}-until`}
+                      type="date"
+                      min={form.date}
+                      value={form.until}
+                      onChange={(e) => set("until", e.target.value)}
+                      className="nums"
+                      aria-invalid={Boolean(errors.recurrence)}
+                    />
+                  </div>
+                )}
+                {form.endMode === "count" && (
+                  <div>
+                    <Label htmlFor={`${formId}-count`}>Número de vezes</Label>
+                    <Input
+                      id={`${formId}-count`}
+                      type="number"
+                      min={1}
+                      max={3000}
+                      value={form.count}
+                      onChange={(e) => set("count", e.target.value)}
+                      className="nums"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+            {rule && (
+              <p className="text-xs text-muted" aria-live="polite" data-testid="recurrence-summary">
+                {describeRecurrence(rule, form.date)}
+              </p>
+            )}
+            <FieldError>{errors.recurrence}</FieldError>
+          </fieldset>
 
           <div className="flex flex-wrap gap-x-6 gap-y-3">
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-primary">

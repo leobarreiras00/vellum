@@ -170,7 +170,7 @@ export function RichWordToolbar({ editor, className }: RichWordToolbarProps) {
                 type="button"
                 {...props}
                 aria-label="Estilos de sublinhado"
-                className="grid h-7 w-4 place-items-center rounded-md text-muted hover:bg-surface hover:text-primary"
+                className="grid h-7 w-6 place-items-center rounded-md text-muted hover:bg-surface hover:text-primary"
               >
                 <ChevronDown aria-hidden="true" className="size-3" strokeWidth={1.5} />
               </button>

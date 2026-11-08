@@ -20,9 +20,12 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:up": "docker compose up -d db",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "test:e2e": "playwright test",
+    "test:e2e:pg": "E2E_STORE=postgres playwright test",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -50,6 +53,7 @@
     "@tiptap/react": "^2.27.3",
     "@tiptap/starter-kit": "^2.27.3",
     "@tiptap/suggestion": "^2.27.3",
+    "better-auth": "^1.7.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "docx": "^9.5.1",
@@ -65,6 +69,7 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@eslint/eslintrc": "^3.3.7",
     "@playwright/test": "^1.63.0",
     "@types/node": "^22.0.0",

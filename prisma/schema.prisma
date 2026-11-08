@@ -3,8 +3,17 @@
 // © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 // Licença proprietária — ver LICENSE na raiz do repositório.
 //
-// Convenções (CLAUDE.md §6): id cuid, createdAt/updatedAt, eliminação lógica
-// (deletedAt) para conteúdo do utilizador. RBAC: .claude/skills/security-rbac-guard.md
+// Dois blocos:
+//  1. Auth (Better-Auth): user, session, account, verification. Os campos
+//     extra do utilizador (papéis, tema, atelier) são `additionalFields`.
+//  2. Workspace Engine: uma tabela por coleção de `StoreData`
+//     (src/lib/workspace-types.ts), com as mesmas colunas e os mesmos valores
+//     (as tintas e papéis usam os mesmos literais que o TypeScript). O
+//     repositório (src/lib/store/postgres.ts) lê e grava estas tabelas em
+//     transação, com bloqueio consultivo e número de revisão (`store_meta`).
+//
+// Eliminação lógica (`deletedAt`) para conteúdo do utilizador. RBAC:
+// .claude/skills/security-rbac-guard.md
 // =============================================================================
 
 generator client {
@@ -17,7 +26,7 @@ datasource db {
 }
 
 // -----------------------------------------------------------------------------
-// Enums
+// Enums (literais iguais aos do TypeScript)
 // -----------------------------------------------------------------------------
 
 /// Papel ao nível da plataforma.
@@ -26,7 +35,7 @@ enum PlatformRole {
   SUPER_ADMIN
 }
 
-/// Papel RBAC ao nível do workspace (hierarquia: OWNER > EDITOR > COMMENTER > VIEWER).
+/// Papel RBAC (hierarquia: OWNER > EDITOR > COMMENTER > VIEWER).
 enum WorkspaceRole {
   OWNER
   EDITOR
@@ -34,393 +43,341 @@ enum WorkspaceRole {
   VIEWER
 }
 
-/// Os 5 temas restritos (ver .claude/skills/frontend-design.md).
-enum Theme {
-  WARM_CREAM    @map("warm-cream")
-  SAGE_PAPER    @map("sage-paper")
-  NORDIC_SLATE  @map("nordic-slate")
-  SAND_DUNE     @map("sand-dune")
-  DARK_ESPRESSO @map("dark-espresso")
-}
-
-/// Modo de apresentação do documento (ver .claude/skills/document-print-craft.md).
-enum PageMode {
-  A4
-  FLUID
-}
-
-/// Etiquetas cromáticas ("tintas") de projetos e notas (Fase 2).
+/// Tintas de projetos, notas e legendas.
 enum InkColor {
-  TERRACOTA @map("terracota")
-  SALVIA    @map("salvia")
-  ARDOSIA   @map("ardosia")
-  OCRE      @map("ocre")
-  AMEIXA    @map("ameixa")
-  GRAFITE   @map("grafite")
+  terracota
+  salvia
+  ardosia
+  ocre
+  ameixa
+  grafite
 }
 
-/// Fonte de leitura do corpo dos documentos (Definições).
 enum ReadingFont {
-  SERIF
-  SANS
+  serif
+  sans
 }
 
-enum NotificationType {
-  MENTION
-  COMMENT
-  INVITE
-  EVENT_REMINDER
-  DOCUMENT_SHARED
-  SYSTEM
+enum CommentKind {
+  comment
+  suggestion
+  question
 }
 
-enum EffortSource {
-  EDITOR
-  MERMAID
-  CALENDAR
-  QUICK_NOTE
-  /// Sessão de foco registada manualmente (Pomodoro / Sessão Editorial) — Fase 4.
-  FOCUS_SESSION
+enum EffortKind {
+  tracked
+  focus
 }
 
 // -----------------------------------------------------------------------------
-// Módulo 1 — Auth & RBAC
+// Módulo 1 — Auth (Better-Auth)
 // -----------------------------------------------------------------------------
 
 model User {
-  id               String       @id @default(cuid())
-  email            String       @unique
-  /// Username único (login por username ou email, Fase 1B). Minúsculas, [a-z0-9._-].
-  username         String?      @unique
-  emailVerified    DateTime?
-  name             String?
-  image            String?
-  passwordHash     String?
-  platformRole     PlatformRole @default(USER)
-  theme            Theme        @default(WARM_CREAM)
-  pageMode         PageMode     @default(A4)
-  /// Meta diária de esforço focado, em minutos (Definições, Fase 2).
-  dailyGoalMinutes Int          @default(240)
-  readingFont      ReadingFont  @default(SERIF)
-  locale           String       @default("pt-PT")
-  timezone         String       @default("Europe/Lisbon")
-  lastSeenAt       DateTime?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
-  deletedAt        DateTime?
+  id              String        @id
+  name            String
+  email           String        @unique
+  emailVerified   Boolean       @default(false)
+  image           String?
+  /// Username único, minúsculas, [a-z0-9._-] (plugin `username`).
+  username        String?       @unique
+  displayUsername String?
+  platformRole    PlatformRole  @default(USER)
+  /// Papel por omissão no atelier criado no registo.
+  workspaceRole   WorkspaceRole @default(OWNER)
+  workspaceName   String        @default("Atelier")
+  /// Um dos 5 temas (`warm-cream`, `sage-paper`, `nordic-slate`, `sand-dune`, `dark-espresso`).
+  theme           String        @default("warm-cream")
+  isDemo          Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
-  passwordResetTokens PasswordResetToken[]
-  ownedWorkspaces     Workspace[]          @relation("WorkspaceOwner")
-  memberships         WorkspaceMember[]    @relation("MemberUser")
-  invitationsSent     WorkspaceMember[]    @relation("MemberInviter")
-  projectsCreated     Project[]
-  projectMemberships  ProjectMember[]
-  documentsCreated    Document[]           @relation("DocumentCreator")
-  documentsEdited     Document[]           @relation("DocumentLastEditor")
-  quickNotes          QuickNote[]
-  calendarEvents      CalendarEvent[]
-  notifications       Notification[]
-  effortLogs          EffortLog[]
-  dayNotes            DayNote[]
+  sessions Session[]
+  accounts Account[]
 
-  @@index([deletedAt])
+  @@map("user")
 }
 
-/// Tokens de recuperação de palavra-passe: só o hash é guardado; uso único.
-model PasswordResetToken {
-  id        String    @id @default(cuid())
-  userId    String
-  tokenHash String    @unique
+model Session {
+  id        String   @id
   expiresAt DateTime
-  usedAt    DateTime?
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   ipAddress String?
-  createdAt DateTime  @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([expiresAt])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Hash scrypt (`scrypt$salt$hash`, src/lib/auth-password.ts).
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+/// Códigos de uso único (recuperação de palavra-passe por código de 6 algarismos).
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
 }
 
 // -----------------------------------------------------------------------------
 // Módulo 2 — Workspace Engine
 // -----------------------------------------------------------------------------
 
-model Workspace {
-  id        String    @id @default(cuid())
-  name      String
-  slug      String    @unique
-  icon      String?
-  ownerId   String
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+/// Revisão do repositório: sobe a cada gravação; as instâncias recarregam quando muda.
+model StoreMeta {
+  id        Int      @id @default(1)
+  revision  Int      @default(0)
+  updatedAt DateTime @updatedAt
 
-  owner          User              @relation("WorkspaceOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  members        WorkspaceMember[]
-  projects       Project[]
-  documents      Document[]
-  quickNotes     QuickNote[]
-  calendarEvents CalendarEvent[]
-  legends        CalendarLegend[]
-  notifications  Notification[]
-  effortLogs     EffortLog[]
-  dayNotes       DayNote[]
-
-  @@index([ownerId])
+  @@map("store_meta")
 }
 
-/// Associação utilizador ↔ workspace com papel RBAC.
+model Workspace {
+  id        String   @id
+  name      String
+  slug      String   @unique
+  ownerId   String
+  createdAt DateTime
+
+  members   WorkspaceMember[]
+  projects  Project[]
+  documents Document[]
+
+  @@map("workspace")
+}
+
 model WorkspaceMember {
-  id          String        @id @default(cuid())
   workspaceId String
   userId      String
-  role        WorkspaceRole @default(VIEWER)
-  invitedById String?
-  joinedAt    DateTime      @default(now())
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  role        WorkspaceRole
+  joinedAt    DateTime
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation("MemberUser", fields: [userId], references: [id], onDelete: Cascade)
-  invitedBy User?     @relation("MemberInviter", fields: [invitedById], references: [id], onDelete: SetNull)
-
-  @@unique([workspaceId, userId])
+  @@id([workspaceId, userId])
   @@index([userId])
-  @@index([workspaceId, role])
+  @@map("workspace_member")
+}
+
+/// Diretório de pessoas do workspace (nome e email mostrados nas listas).
+model Person {
+  id           String       @id
+  name         String
+  email        String
+  platformRole PlatformRole
+
+  @@map("person")
+}
+
+model UserPreference {
+  userId           String      @id
+  theme            String
+  dailyGoalMinutes Int
+  readingFont      ReadingFont
+
+  @@map("user_preference")
 }
 
 model Project {
-  id          String    @id @default(cuid())
+  id          String    @id
   workspaceId String
   createdById String
   name        String
-  description String?
-  /// Ícone da lista fechada (lucide-react), ex.: "layers", "compass".
-  icon        String?
-  color       InkColor  @default(TERRACOTA)
-  position    Int       @default(0)
-  archivedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy      User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  members        ProjectMember[]
-  documents      Document[]
-  quickNotes     QuickNote[]
-  calendarEvents CalendarEvent[]
-  effortLogs     EffortLog[]
-
-  @@index([workspaceId, position])
-  @@index([workspaceId, deletedAt])
-}
-
-/// Papel num projeto concreto: só restringe o papel do workspace (nunca o eleva).
-model ProjectMember {
-  id        String        @id @default(cuid())
-  projectId String
-  userId    String
-  role      WorkspaceRole @default(VIEWER)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([projectId, userId])
-  @@index([userId])
-}
-
-/// Documento hierárquico (páginas e subpáginas ilimitadas).
-/// contentJson é a fonte de verdade (JSON ProseMirror/TipTap);
-/// plainText é derivado a cada gravação (pesquisa full-text e contagem de palavras).
-model Document {
-  id             String    @id @default(cuid())
-  workspaceId    String
-  projectId      String?
-  parentId       String?
-  createdById    String
-  lastEditedById String?
-  title          String    @default("Sem título")
-  /// Descrição curta ("dek") mostrada nas listagens.
-  summary        String?
-  icon           String?
-  coverUrl       String?
-  contentJson    Json      @default("{\"type\":\"doc\",\"content\":[]}")
-  plainText      String    @default("") @db.Text
-  wordCount      Int       @default(0)
-  pageMode       PageMode  @default(A4)
-  position       Int       @default(0)
-  isTemplate     Boolean   @default(false)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
-
-  workspace      Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  project        Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  parent         Document?       @relation("DocumentTree", fields: [parentId], references: [id], onDelete: Cascade)
-  children       Document[]      @relation("DocumentTree")
-  createdBy      User            @relation("DocumentCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  lastEditedBy   User?           @relation("DocumentLastEditor", fields: [lastEditedById], references: [id], onDelete: SetNull)
-  quickNotes     QuickNote[]
-  calendarEvents CalendarEvent[]
-  effortLogs     EffortLog[]
-
-  @@index([workspaceId, parentId, position])
-  @@index([projectId])
-  @@index([workspaceId, deletedAt])
-}
-
-/// Notas rápidas do mural: soltas, ligadas a um projeto e/ou ao documento em que foram convertidas.
-model QuickNote {
-  id          String    @id @default(cuid())
-  userId      String
-  workspaceId String?
-  projectId   String?
-  documentId  String?
-  title       String    @default("")
-  content     String    @db.Text
-  color       InkColor  @default(TERRACOTA)
-  isPinned    Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
-
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  document  Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
-
-  @@index([userId, isPinned])
-  @@index([workspaceId])
-  @@index([projectId])
-}
-
-// -----------------------------------------------------------------------------
-// Módulo 4 — Calendário + Notificações
-// -----------------------------------------------------------------------------
-
-/// Legendas (categorias) do calendário, personalizáveis por workspace.
-model CalendarLegend {
-  id          String    @id @default(cuid())
-  workspaceId String
-  name        String
-  /// Tinta harmónica da legenda (lista fechada, Fase 4); dado do utilizador, não token de UI.
-  color       InkColor  @default(TERRACOTA)
-  position    Int       @default(0)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  description String
+  icon        String
+  color       InkColor
+  position    Int
+  createdAt   DateTime
+  updatedAt   DateTime
   deletedAt   DateTime?
 
   workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  events    CalendarEvent[]
+  members   ProjectMember[]
+  documents Document[]
 
-  @@unique([workspaceId, name])
-  @@index([workspaceId, position])
+  @@index([workspaceId, deletedAt])
+  @@map("project")
+}
+
+model ProjectMember {
+  projectId String
+  userId    String
+  role      WorkspaceRole
+  addedAt   DateTime
+  project   Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, userId])
+  @@index([userId])
+  @@map("project_member")
+}
+
+model Document {
+  id             String    @id
+  workspaceId    String
+  projectId      String
+  parentId       String?
+  createdById    String
+  lastEditedById String
+  title          String
+  summary        String
+  /// Texto simples derivado (pesquisa e contagem de palavras).
+  plainText      String
+  /// JSON ProseMirror do editor rico.
+  contentJson    Json?
+  version        Int
+  wordCount      Int
+  position       Int
+  createdAt      DateTime
+  updatedAt      DateTime
+  deletedAt      DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project   Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, deletedAt])
+  @@index([projectId, parentId])
+  @@map("document")
+}
+
+model QuickNote {
+  id          String    @id
+  userId      String
+  workspaceId String
+  projectId   String?
+  documentId  String?
+  title       String
+  content     String
+  color       InkColor
+  isPinned    Boolean
+  createdAt   DateTime
+  updatedAt   DateTime
+  deletedAt   DateTime?
+
+  @@index([workspaceId, deletedAt])
+  @@map("quick_note")
+}
+
+model DocumentComment {
+  id           String      @id
+  workspaceId  String
+  documentId   String
+  authorId     String
+  kind         CommentKind
+  quote        String
+  body         String
+  resolvedAt   DateTime?
+  resolvedById String?
+  createdAt    DateTime
+  deletedAt    DateTime?
+
+  @@index([documentId])
+  @@map("document_comment")
+}
+
+model EffortLog {
+  id            String     @id
+  userId        String
+  workspaceId   String
+  projectId     String?
+  documentId    String?
+  startedAt     DateTime
+  activeSeconds Int
+  wordsWritten  Int
+  edits         Int
+  kind          EffortKind
+  updatedAt     DateTime
+
+  @@index([workspaceId, userId, startedAt])
+  @@map("effort_log")
+}
+
+model CalendarLegend {
+  id          String    @id
+  workspaceId String
+  name        String
+  color       InkColor
+  position    Int
+  createdAt   DateTime
+  deletedAt   DateTime?
+
+  @@index([workspaceId])
+  @@map("calendar_legend")
 }
 
 model CalendarEvent {
-  id              String    @id @default(cuid())
+  id              String    @id
   workspaceId     String
   createdById     String
-  legendId        String?
+  title           String
+  /// Dia (AAAA-MM-DD, Lisboa).
+  date            String
+  startTime       String?
+  endTime         String?
+  allDay          Boolean
   projectId       String?
   documentId      String?
-  title           String
-  description     String?   @db.Text
-  location        String?
-  startsAt        DateTime
-  endsAt          DateTime
-  allDay          Boolean   @default(false)
-  /// Regra de recorrência RFC 5545 (RRULE), ex.: "FREQ=WEEKLY;BYDAY=MO".
-  recurrenceRule  String?
-  /// Antecedência do lembrete em minutos (0, 5, 15, 30, 60, 120, 1440, 2880); null = sem notificação.
+  legendId        String?
+  isImportant     Boolean
   reminderMinutes Int?
-  /// «Dia Importante / Marco»: selo especial na grelha e destaque no dashboard (Fase 4).
-  isImportant     Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  notes           String
+  externalUid     String?
+  /// Regra de repetição ({ freq, interval, byWeekday, until, count }) ou null.
+  recurrence      Json?
+  /// Ocorrências apagadas de uma série (AAAA-MM-DD).
+  exdates         String[]  @default([])
+  createdAt       DateTime
+  updatedAt       DateTime
   deletedAt       DateTime?
 
-  workspace Workspace       @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  createdBy User            @relation(fields: [createdById], references: [id], onDelete: Restrict)
-  legend    CalendarLegend? @relation(fields: [legendId], references: [id], onDelete: SetNull)
-  project   Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  document  Document?       @relation(fields: [documentId], references: [id], onDelete: SetNull)
-
-  @@index([workspaceId, startsAt])
-  @@index([legendId])
-  @@index([workspaceId, isImportant, startsAt])
+  @@index([workspaceId, date])
+  @@map("calendar_event")
 }
 
-/// «Nota do Dia»: folha de registo diário, privada de cada pessoa (Fase 4).
 model DayNote {
-  id          String   @id @default(cuid())
+  id          String   @id
   workspaceId String
   userId      String
-  /// Dia no fuso Europe/Lisbon.
-  date        DateTime @db.Date
-  content     String   @db.Text
-  /// Documentos de projeto ligados a este dia.
+  date        String
+  content     String
   documentIds String[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  updatedAt   DateTime
 
   @@unique([workspaceId, userId, date])
+  @@map("day_note")
 }
 
-model Notification {
-  id          String           @id @default(cuid())
-  userId      String
-  workspaceId String?
-  type        NotificationType
-  title       String
-  body        String?
-  /// Rota interna para onde a notificação leva (ex.: /w/atelier/d/abc).
-  href        String?
-  readAt      DateTime?
-  createdAt   DateTime         @default(now())
+model ImportedSnapshot {
+  workspaceId String
+  snapshotId  String
+  importedAt  DateTime
 
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([userId, readAt, createdAt])
-}
-
-// -----------------------------------------------------------------------------
-// Módulo 5 — Telemetria de Esforço
-// -----------------------------------------------------------------------------
-
-/// Sessão de esforço focado registada pelo Motor de Telemetria (heartbeats agregados).
-model EffortLog {
-  id            String       @id @default(cuid())
-  userId        String
-  workspaceId   String?
-  projectId     String?
-  documentId    String?
-  source        EffortSource @default(EDITOR)
-  startedAt     DateTime
-  endedAt       DateTime?
-  activeSeconds Int          @default(0)
-  idleSeconds   Int          @default(0)
-  keystrokes    Int          @default(0)
-  /// Rajadas de edição em campos editáveis (Fase 4).
-  edits         Int          @default(0)
-  wordsDelta    Int          @default(0)
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  project   Project?   @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  document  Document?  @relation(fields: [documentId], references: [id], onDelete: SetNull)
-
-  @@index([userId, startedAt])
-  @@index([documentId])
-  @@index([projectId, startedAt])
+  @@id([workspaceId, snapshotId])
+  @@map("imported_snapshot")
 }

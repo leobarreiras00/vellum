@@ -43,7 +43,7 @@ export function NotificationCenter() {
     return (
       <li key={item.id}>
         <Link
-          href={`/calendar?dia=${event.date}`}
+          href={`/calendar?dia=${item.date}`}
           onClick={() => {
             markRead(item.id);
             close();
@@ -73,9 +73,9 @@ export function NotificationCenter() {
             </span>
             <span className="nums block text-xs text-muted">
               {item.kind === "important"
-                ? `${dayShortLabel(event.date)} · ${relativeDayLabel(event.date, today)}`
+                ? `${dayShortLabel(item.date)} · ${relativeDayLabel(item.date, today)}`
                 : [
-                    relativeDayLabel(event.date, today),
+                    relativeDayLabel(item.date, today),
                     timeRangeLabel(event),
                     Math.abs(item.startMs - now) < 86_400_000 ? relativeTimeLabel(item.startMs, now) : null,
                   ]

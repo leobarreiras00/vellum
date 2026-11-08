@@ -44,6 +44,7 @@ import {
   shiftMonth,
   weekDays,
 } from "@/lib/calendar";
+import { expandEvents } from "@/lib/recurrence";
 import { sumRange } from "@/lib/telemetry";
 import { EASE_EDITORIAL, cn, formatDuration, formatNumber } from "@/lib/utils";
 import { lisbonDay, type CalendarEventView } from "@/lib/workspace-types";
@@ -132,9 +133,15 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
     });
 
   const legends = useMemo(() => new Map(snapshot.legends.map((l) => [l.id, l])), [snapshot.legends]);
+  // Séries repetidas expandidas para a janela visível (mês do cursor ± margem da grelha e da semana).
+  const windowStart = addDays(`${cursor.year}-${String(cursor.month).padStart(2, "0")}-01`, -7);
+  const windowEnd = addDays(windowStart, 52);
   const visibleEvents = useMemo(
-    () => snapshot.events.filter((e) => !hidden.has(e.legendId && legends.has(e.legendId) ? e.legendId : NO_LEGEND)),
-    [snapshot.events, hidden, legends],
+    () =>
+      expandEvents(snapshot.events, windowStart, windowEnd).filter(
+        (e) => !hidden.has(e.legendId && legends.has(e.legendId) ? e.legendId : NO_LEGEND),
+      ),
+    [snapshot.events, hidden, legends, windowStart, windowEnd],
   );
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEventView[]>();
@@ -153,7 +160,11 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
   const label = monthLabel(cursor.year, cursor.month);
   const week = weekDays(selected);
   const weekLabel = `${dayShortLabel(week[0]!)} – ${dayShortLabel(week[6]!)}`;
-  const nextImportant = snapshot.events.filter((e) => e.isImportant && e.date >= today).sort(compareEvents)[0];
+  const nextImportant = expandEvents(
+    snapshot.events.filter((e) => e.isImportant),
+    today,
+    addDays(today, 730),
+  ).sort(compareEvents)[0];
 
   const move = (delta: number) => {
     if (view === "grelha" && scale === "semana") {
@@ -185,7 +196,7 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
     today,
     selected,
     canEdit,
-    onOpenEvent: (eventId: string) => setDialog({ open: true, eventId }),
+    onOpenEvent: (eventId: string, date?: string) => setDialog({ open: true, eventId, occurrenceDate: date }),
     onNewEvent: (date: string) => setDialog({ open: true, date }),
     onOpenDay: (day: string) => {
       selectDay(day);

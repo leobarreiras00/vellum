@@ -29,7 +29,7 @@ export interface DayGridProps {
   today: string;
   selected: string;
   canEdit: boolean;
-  onOpenEvent: (eventId: string) => void;
+  onOpenEvent: (eventId: string, date?: string) => void;
   onNewEvent: (date: string) => void;
   onOpenDay: (date: string) => void;
   onSaveNote: (date: string, content: string) => Promise<boolean>;
@@ -114,7 +114,7 @@ function MonthCell({
             isToday
               ? "bg-accent-primary text-canvas"
               : outside
-                ? "text-muted/70 hover:bg-surface"
+                ? "text-muted hover:bg-surface"
                 : "text-primary hover:bg-surface",
           )}
         >

@@ -25,18 +25,18 @@
     --bg-elevated: #fffdf9;
     --text-primary: #1c1b18;
     --text-muted: #6e6a63;
-    --accent-primary: #c85a32;
+    --accent-primary: #ac4c2a; /* AA: ≥4.5:1 em canvas, surface e elevated */
     --border-subtle: #e4ddd0;
     --bg-canvas-rgb: 250 247 242;
     --bg-surface-rgb: 242 236 225;
     --bg-elevated-rgb: 255 253 249;
     --text-primary-rgb: 28 27 24;
     --text-muted-rgb: 110 106 99;
-    --accent-primary-rgb: 200 90 50;
+    --accent-primary-rgb: 172 76 42;
     --border-subtle-rgb: 228 221 208;
     --shadow-paper: 0 2px 12px -2px rgba(28, 27, 24, 0.06);
     --shadow-sheet: 0 1px 2px rgba(28, 27, 24, 0.04), 0 12px 32px -8px rgba(28, 27, 24, 0.1);
-    --selection: rgba(200, 90, 50, 0.18);
+    --selection: rgba(172, 76, 42, 0.18);
     color-scheme: light;
   }
 
@@ -90,19 +90,19 @@
     --bg-surface: #ede5d5;
     --bg-elevated: #fcf9f4;
     --text-primary: #24201a;
-    --text-muted: #70675a;
-    --accent-primary: #b06d3b;
+    --text-muted: #6d6457;
+    --accent-primary: #8c5b29; /* AA: ≥4.5:1 em canvas, surface e elevated */
     --border-subtle: #dfd5c3;
     --bg-canvas-rgb: 247 243 235;
     --bg-surface-rgb: 237 229 213;
     --bg-elevated-rgb: 252 249 244;
     --text-primary-rgb: 36 32 26;
-    --text-muted-rgb: 112 103 90;
-    --accent-primary-rgb: 176 109 59;
+    --text-muted-rgb: 109 100 87;
+    --accent-primary-rgb: 140 91 41;
     --border-subtle-rgb: 223 213 195;
     --shadow-paper: 0 2px 12px -2px rgba(28, 27, 24, 0.06);
     --shadow-sheet: 0 1px 2px rgba(28, 27, 24, 0.04), 0 12px 32px -8px rgba(28, 27, 24, 0.1);
-    --selection: rgba(176, 109, 59, 0.18);
+    --selection: rgba(140, 91, 41, 0.18);
     color-scheme: light;
   }
 
@@ -183,7 +183,7 @@
      dos 4 temas claros e aclaradas no Espresso Escuro. */
   :root {
     --doc-ink-carvao: #2b2a26;
-    --doc-ink-terracota: #c85a32;
+    --doc-ink-terracota: #ac4c2a;
     --doc-ink-salvia: #3b6e52;
     --doc-ink-ardosia: #2b5b84;
     --doc-ink-ambar: #94650f;

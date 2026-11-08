@@ -7,6 +7,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Imagem Docker (Dockerfile): servidor autónomo em .next/standalone.
+  ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),
   poweredByHeader: false,
   // Chromium do Playwright para o PDF paginado no servidor (Fase 5): nunca empacotado.
   serverExternalPackages: ["playwright-core"],

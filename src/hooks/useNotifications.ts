@@ -14,7 +14,22 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 
 import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { buildNotifications, dayLongLabel, timeRangeLabel, type CalendarNotification } from "@/lib/calendar";
+import {
+  addDays,
+  buildNotifications,
+  dayLongLabel,
+  timeRangeLabel,
+  utcToKeyInLisbon,
+  type CalendarNotification,
+} from "@/lib/calendar";
+import { expandEvents } from "@/lib/recurrence";
+import type { CalendarEventView } from "@/lib/workspace-types";
+
+/** Ocorrências na janela das notificações (ontem … daqui a 3 semanas). */
+function upcomingOccurrences(events: readonly CalendarEventView[], nowMs: number) {
+  const today = utcToKeyInLisbon(nowMs);
+  return expandEvents(events, addDays(today, -1), addDays(today, 22));
+}
 
 const CHANGE_EVENT = "vellum:notifications";
 const PERMISSION_EVENT = "vellum:notifications-permission";
@@ -101,7 +116,10 @@ export function useNotifications(): NotificationsState {
 
   useEffect(() => setPermission(browserPermission()), []);
 
-  const items = useMemo(() => buildNotifications(snapshot.events, now), [snapshot.events, now]);
+  const items = useMemo(
+    () => buildNotifications(upcomingOccurrences(snapshot.events, now), now),
+    [snapshot.events, now],
+  );
   const unreadCount = items.filter((n) => n.isDue && !read.has(n.id)).length;
 
   const markRead = useCallback(
@@ -163,7 +181,7 @@ export function useEventReminders() {
     const byId = new Map(snapshot.events.map((e) => [e.id, e]));
     let changed = false;
     let fired = 0;
-    for (const item of buildNotifications(snapshot.events, now)) {
+    for (const item of buildNotifications(upcomingOccurrences(snapshot.events, now), now)) {
       // Lembretes vencidos de eventos ainda por terminar; no máximo 3 por ciclo (sem rajadas ao abrir).
       if (!item.isDue || sent.has(item.id) || fired >= 3) continue;
       const event = byId.get(item.eventId);
@@ -172,13 +190,13 @@ export function useEventReminders() {
         const alert = new window.Notification(
           item.kind === "important" ? `Dia importante: ${event.title}` : event.title,
           {
-            body: `${dayLongLabel(event.date)} · ${timeRangeLabel(event)}`,
+            body: `${dayLongLabel(item.date)} · ${timeRangeLabel(event)}`,
             tag: item.id,
           },
         );
         alert.onclick = () => {
           window.focus();
-          router.push(`/calendar?dia=${event.date}`);
+          router.push(`/calendar?dia=${item.date}`);
         };
       } catch {
         // Alguns navegadores (Android) só permitem notificações via Service Worker.

@@ -54,11 +54,13 @@ As ferramentas de conhecimento atuais obrigam a escolher entre flexibilidade e r
 | Framework      | Next.js 15 (App Router, React Server Components)               |
 | Linguagem      | TypeScript (strict)                                            |
 | Interface      | Tailwind CSS · shadcn/ui · Motion (`motion/react`)             |
-| Dados          | PostgreSQL · Prisma ORM                                        |
+| Dados          | PostgreSQL · Prisma ORM (ou ficheiro JSON local em desenvolvimento) |
 | Autenticação   | Better-Auth com RBAC                                           |
 | Editor         | TipTap v2 (ProseMirror) · Mermaid.js                           |
-| Planeamento    | FullCalendar                                                   |
-| Analítica      | Recharts                                                       |
+| Planeamento    | Calendário próprio com repetição (subconjunto RRULE)           |
+| Analítica      | Gráficos próprios (SVG + tokens)                               |
+| Qualidade      | Vitest · Playwright · axe-core (WCAG 2.2 AA nos 5 temas)       |
+| Deploy         | Docker (Next standalone) · `/api/health`                       |
 | Exportação     | Playwright (PDF) · `docx` (Word)                               |
 
 ```mermaid
@@ -128,19 +130,64 @@ Qualquer contribuição (humana ou agente de IA) segue obrigatoriamente as 5 ski
 
 ## Desenvolvimento local
 
+Não há ficheiros `.env` nem segredos no repositório: toda a configuração vem de variáveis de ambiente definidas na shell, na plataforma de alojamento ou no CI.
+
+Modo local (sem base de dados nem variáveis — dados em `.data/workspace.json`, contas em memória):
+
 ```bash
-cp .env.example .env        # definir DATABASE_URL (PostgreSQL)
-npm install
-npx prisma generate
+npm install                 # usa o .npmrc (legacy-peer-deps, por causa do Better-Auth)
 npm run dev                 # http://localhost:3000 → /login
 ```
 
-Testes E2E (Playwright, sobre o build de produção):
+Modo PostgreSQL (Neon ou Docker), com as variáveis exportadas na shell:
+
+```bash
+export VELLUM_STORE=postgres
+export DATABASE_URL="postgresql://…"      # Neon: branch de desenvolvimento · Docker: ver abaixo
+export AUTH_SECRET="$(openssl rand -base64 32)"
+npm run db:deploy && npm run dev
+```
+
+Com Docker local: `export POSTGRES_PASSWORD=…` e `npm run db:up`; a ligação fica `postgresql://vellum:$POSTGRES_PASSWORD@localhost:5432/vellum`. Na primeira execução com a base vazia, o Vellum importa `.data/workspace.json` se existir; senão cria os dados de demonstração.
+
+Testes (Vitest + Playwright sobre o build de produção; o segredo das sessões dos testes é gerado a cada execução):
 
 ```bash
 npx playwright install chromium   # só na primeira vez (também usado pelo PDF no servidor)
-npm run build && npm run test:e2e
+npm test
+npm run build && npm run test:e2e        # modo json
+E2E_DATABASE_URL="postgresql://…/vellum_e2e" npm run test:e2e:pg   # sobre PostgreSQL (o nome da base tem de conter «e2e»; é esvaziada)
 ```
+
+`tests/e2e/a11y.spec.ts` audita WCAG 2.2 AA com axe-core em todas as páginas e nos 5 temas.
+
+### Variáveis de ambiente
+
+| Variável | Onde | Obrigatória | Descrição |
+| -------- | ---- | ----------- | --------- |
+| `VELLUM_STORE` | app | não (`json`) | `postgres` para usar a base de dados |
+| `DATABASE_URL` | app, migrações | com `postgres` | Ligação PostgreSQL (Neon: a ligação direta, sem `-pooler`, com `sslmode=require`) |
+| `AUTH_SECRET` | app | em produção | 32+ caracteres (`openssl rand -base64 32`); sem ele, em desenvolvimento usa-se um segredo temporário |
+| `BETTER_AUTH_URL` | app | em produção | URL pública (`https://…`) |
+| `VELLUM_DEMO_AUTH` | app | não | `true` liga os perfis de demonstração em produção |
+| `RESEND_API_KEY`, `MAIL_FROM` | app | para email | Códigos de recuperação por email (Resend) |
+| `VELLUM_DATA_FILE` | app | não | Ficheiro do modo `json` |
+| `POSTGRES_PASSWORD` | docker compose | com Docker | Palavra-passe do PostgreSQL local |
+| `E2E_DATABASE_URL` | testes | com `test:e2e:pg` | Base dos testes (nome com «e2e») |
+
+### Produção (Docker)
+
+```bash
+docker build -t vellum .
+docker run -p 3000:3000 -e DATABASE_URL -e AUTH_SECRET -e BETTER_AUTH_URL -e VELLUM_STORE=postgres vellum
+```
+
+A imagem (Next standalone + Chromium para o PDF) aplica `prisma migrate deploy` no arranque, corre sem privilégios e expõe `GET /api/health`. Numa plataforma (Railway, Fly.io, Render…), as variáveis definem-se no painel da própria plataforma.
+
+### Repetição de eventos e trabalho sem rede
+
+- **Eventos que se repetem**: diário, semanal (escolhendo os dias), mensal ou anual, a cada N, até uma data ou N vezes. Cada ocorrência pode ser removida sem apagar a série; o `.ics` exporta e importa `RRULE` e `EXDATE`.
+- **Sem rede**: o documento continua a gravar neste dispositivo e a barra de estado mostra «Offline · N alterações por enviar». Quando a ligação volta, as alterações são enviadas; se outra pessoa gravou entretanto, o Vellum pergunta se mantém a sua versão, usa a do servidor ou guarda a sua como cópia.
 
 ### Exportação e sincronização (Fase 5)
 
@@ -174,7 +221,7 @@ O **Hub de Sincronização** (Calendário → «Sincronizar .ics» e Definiçõe
 
 Todas as rotas do workspace partilham o App Shell (Sidebar retrátil, Topbar contextual, Command Palette `⌘K` e `<AppFooter variant="statusbar" />`).
 
-### Dados locais (Fase 2)
+### Dados locais (modo json)
 
 Projetos, páginas, notas, membros, eventos do calendário, Notas do Dia, registos de esforço e preferências ficam em `.data/workspace.json` (ignorado pelo Git), criado com o seed editorial na primeira utilização. Para repor o seed: apagar a pasta `.data/` e reiniciar o servidor. O caminho pode ser mudado com `VELLUM_DATA_FILE`.
 
@@ -191,7 +238,7 @@ Ativos em desenvolvimento (em produção só com `VELLUM_DEMO_AUTH=true`). Entra
 
 Com uma conta de demonstração, o seletor no topo da barra lateral troca de perfil em tempo real para testar a matriz RBAC.
 
-> O motor de sessão guarda as contas em memória: contas criadas no registo desaparecem ao reiniciar o servidor (os seus dados do workspace ficam no ficheiro local). A persistência em PostgreSQL via Better-Auth está planeada para a Fase 2B.
+> Autenticação com Better-Auth. Em modo `json` as contas ficam em memória (as criadas no registo desaparecem ao reiniciar); em modo `postgres` ficam na base de dados.
 
 ## Roadmap
 
@@ -204,7 +251,7 @@ Com uma conta de demonstração, o seletor no topo da barra lateral troca de per
 | 4    | Calendário · Notificações · Telemetria & Dashboard  | ✅ Concluída  |
 | 5    | Exportação Fiel · Sincronização · Fecho             | ✅ Concluída  |
 
-Evoluções pós-lançamento (PostgreSQL + Better-Auth, recorrência no calendário, fila offline, entre outras) estão listadas no roteiro do PROGRESS.
+Pós-lançamento já feito: PostgreSQL + Prisma + Better-Auth, repetição de eventos, fila offline com resolução de conflitos, auditoria AA nos 5 temas e imagem Docker. O resto do roteiro está no PROGRESS.
 
 Detalhe completo em [`.claude/PROGRESS.md`](.claude/PROGRESS.md).
 

@@ -3,7 +3,7 @@
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
-**Estado atual:** ✅ Todas as fases do Vellum (0 a 5) 100% Concluídas. A Fase 5 fechou o projeto com o Motor de Exportação Sem Desformatação (PDF, Word, Markdown, HTML) e o Hub de Sincronização (.ics, Markdown, `.vellum.json`). As evoluções seguintes estão no «Roteiro pós-lançamento», no fim deste ficheiro.
+**Estado atual:** ✅ Todas as fases do Vellum (0 a 5) 100% Concluídas, mais o primeiro bloco do Roteiro pós-lançamento (2026-11-08): PostgreSQL + Prisma + Better-Auth, repetição de eventos, fila offline com resolução de conflitos, auditoria AA nos 5 temas e preparação de deploy (Docker, health check, build standalone). O que ainda depende do Leonardo (base de dados de produção, segredos, email, alojamento) está em «Para pôr em produção».
 **Última atualização:** 2026-11-08
 
 ---
@@ -86,9 +86,9 @@
 
 ### Roteiro pós-lançamento · Persistência real e autenticação definitiva (antiga Fase 2B)
 
-- [ ] Primeira migração Prisma (`prisma migrate dev --name init`) com PostgreSQL local; trocar a implementação de `workspace-store.ts` por Prisma (mesma API)
-- [ ] Better-Auth (email/palavra-passe, magic link, OAuth) a substituir o motor provisório de `src/lib/auth.ts` (mesma API pública)
-- [ ] Envio real do código de recuperação por email
+- [x] Primeira migração Prisma (`prisma/migrations/20261108001203_init`) e repositório PostgreSQL por trás de `workspace-store.ts` (mesma API) — ver «Roteiro pós-lançamento · Implementado»
+- [x] Better-Auth (email/username + palavra-passe, código de recuperação) a substituir o motor provisório de `src/lib/auth.ts` (mesma API pública); magic link e OAuth ficam por fazer
+- [x] Envio real do código de recuperação por email (Resend, `src/lib/mailer.ts`; precisa de `RESEND_API_KEY`)
 - [ ] Papel lido de `WorkspaceMember` no servidor (hoje vem do perfil da sessão)
 - [ ] Árvore com arrastar e largar (reordenar e mover páginas)
 - [ ] Favoritos, recentes e lixo (recuperar eliminações lógicas)
@@ -101,7 +101,7 @@
 - [x] Prettier (`.prettierrc.json`, largura 120) aplicado a todo o código — `npm run format` / `format:check`
 - [x] Vitest (`vitest.config.ts`, `tests/unit/`): 23 testes (RBAC, conteúdo ProseMirror ↔ texto/Markdown, kit Mermaid) — `npm test`; `npm run check` corre tudo
 - [x] Pipeline CI em `.github/workflows/ci.yml`: lint, typecheck, formatação, Vitest; depois build + Playwright (Chromium)
-- [ ] Converter o fluxo E2E da Fase 1B (login, registo, recuperação) em testes Playwright
+- [x] Converter o fluxo E2E da Fase 1B (login, registo, recuperação) em testes Playwright (`tests/e2e/auth.spec.ts`)
 
 ## Fase 3 — Módulo 3 (Editor Rico + Estúdio Mermaid) ✅ 100% CONCLUÍDA
 
@@ -130,7 +130,7 @@
 - [ ] Imagens e código com realce de sintaxe
 - [ ] Histórico de versões com restauro (hoje só o número da versão)
 - [ ] Comentários ancorados ao texto (marks) e menções
-- [ ] Atualização da página quando outra pessoa grava (hoje última gravação ganha)
+- [x] Deteção de conflitos quando outra pessoa grava (já não é «última gravação ganha»: o editor pergunta) · [ ] atualização ao vivo da página
 - [x] Exportação PDF no servidor via Playwright e DOCX (Fase 5)
 
 ## Fase 4 — Módulo 4 (Calendário + Notificações) + Módulo 5 (Telemetria & Dashboard) ✅ 100% CONCLUÍDA
@@ -157,7 +157,7 @@
 ### Roteiro pós-lançamento · Calendário (antiga Fase 4B)
 
 - [x] Importação/exportação ICS (Fase 5)
-- [ ] Recorrência (RRULE) — hoje os eventos recorrentes importados entram só com a primeira ocorrência
+- [x] Recorrência (RRULE): diária, semanal com dias, mensal, anual, intervalo, fim por data ou N vezes, exceções; .ics importa e exporta séries
 - [ ] Arrastar eventos na grelha e redimensionar na vista semanal
 - [ ] Notificações no servidor (modelo `Notification`, email, Web Push com Service Worker para Android)
 - [ ] Preferências de notificação e controlos de privacidade da telemetria (pausar medição, apagar histórico)
@@ -199,12 +199,70 @@
 
 ## Roteiro pós-lançamento (fora do âmbito das Fases 0–5)
 
-- [ ] PostgreSQL + Better-Auth (ver «antiga Fase 2B» acima)
-- [ ] Recorrência de eventos (RRULE) e sincronização contínua por URL de subscrição
-- [ ] Fila offline e resolução de conflitos entre pessoas a editar o mesmo documento
+- [x] PostgreSQL + Better-Auth (2026-11-08)
+- [x] Recorrência de eventos (RRULE) (2026-11-08) · [ ] sincronização contínua por URL de subscrição
+- [x] Fila offline e resolução de conflitos entre pessoas a editar o mesmo documento (2026-11-08)
 - [ ] Testes de regressão visual das exportações (comparação de imagens)
-- [ ] Auditoria de acessibilidade AA nos 5 temas
-- [ ] Otimização de performance, SEO e deploy de produção
+- [x] Auditoria de acessibilidade AA nos 5 temas (2026-11-08)
+- [x] Preparação de deploy: Dockerfile, docker-compose, `/api/health`, build standalone (2026-11-08) · [ ] otimização de performance e SEO · [ ] deploy de produção (depende do Leonardo)
+
+### Roteiro pós-lançamento · Implementado (2026-11-08)
+
+**PostgreSQL + Prisma**
+- [x] `prisma/schema.prisma` reescrito: tabelas do Better-Auth (`user`, `session`, `account`, `verification`) e uma tabela por coleção do workspace (projetos, documentos com `contentJson` JSONB, comentários, esforço, eventos com `recurrence`/`exdates`, notas do dia, snapshots…); migração `20261108001203_init`
+- [x] `src/lib/store/`: interface `StoreBackend` com dois repositórios — `json` (por omissão, `.data/workspace.json`) e `postgres` (`VELLUM_STORE=postgres`). O PostgreSQL grava por diferenças (só as linhas alteradas), em transação com `pg_advisory_xact_lock`, e usa `store_meta.revision` para várias instâncias se manterem coerentes
+- [x] Base vazia: importa `.data/workspace.json` se existir, senão cria os dados de demonstração. A API de `workspace-store.ts` e o RBAC não mudaram
+- [x] Prisma só é carregado em modo `postgres` (import dinâmico): o modo local não precisa de base de dados
+
+**Better-Auth 1.6**
+- [x] `src/lib/auth-server.ts`: Better-Auth com adaptador Prisma (postgres) ou em memória (json), plugins `username`, `emailOTP` (código de 6 dígitos, 15 min, guardado com hash, 5 tentativas) e `nextCookies`; palavras-passe com o scrypt de `src/lib/auth-password.ts`; papéis/tema/atelier como `additionalFields` que o cliente não pode definir
+- [x] `src/lib/auth.ts` mantém a API pública (`getSession`, `signIn`, `signInDemo`, `register`, `requestPasswordReset`, `confirmPasswordReset`, `signOut`) e o limitador de tentativas; sem rota HTTP pública de auth (tudo por Server Actions)
+- [x] Perfis de demonstração semeados no Better-Auth com ids fixos; desligados em produção salvo `VELLUM_DEMO_AUTH=true`
+- [x] Middleware só verifica a presença do cookie `vellum.session_token`; a sessão é validada no servidor. `src/lib/session-token.ts` deixou de existir (apagar no repositório)
+- [x] `tests/e2e/auth.spec.ts` (3): registo (username ocupado), sair, entrar por email e por username, palavra-passe errada, redireção de `/login`, recuperação com o código
+
+**Repetição de eventos**
+- [x] `src/lib/recurrence.ts` (puro): DAILY / WEEKLY (dias da semana) / MONTHLY (mesmo dia; meses sem esse dia são saltados) / YEARLY, intervalo, fim por data (inclusivo) ou N vezes, exceções (`exdates`); COUNT conta antes das exceções (RFC 5545); limite de 3000 ocorrências
+- [x] A série é guardada uma vez e expandida para a janela visível (mês, semana, agenda, dashboard, notificações — uma por ocorrência)
+- [x] Diálogo do evento: secção «Repetição» com resumo em PT-PT («Todas as semanas às segundas e quartas · até 31 dez 2026»); eliminar pergunta «Só esta ocorrência» ou «Eliminar a série»
+- [x] .ics: exporta `RRULE` + `EXDATE`; importa as séries que o Vellum representa (o resto entra só com a primeira ocorrência, como antes); snapshot e cópia de segurança levam a regra
+- [x] `tests/unit/recurrence.test.ts` (9) e E2E em `tests/e2e/pos-lancamento.spec.ts`
+
+**Fila offline e conflitos**
+- [x] `src/lib/offline-queue.ts`: sem rede (ou servidor inacessível) a última versão de cada documento fica em `localStorage`, com o `updatedAt` em que a edição assenta; ao voltar a ligação é enviada (o editor aberto trata do seu documento; `OfflineSync` envia os restantes)
+- [x] Servidor (`saveDocumentContent`): com `baseUpdatedAt`, recusa sobrescrever o que OUTRA pessoa gravou depois e devolve a versão do servidor
+- [x] Diálogo «Este documento mudou entretanto»: Manter a minha versão / Usar a versão do servidor / Guardar a minha como cópia (página irmã)
+- [x] Barra de estado: «Offline · N alterações por enviar»; cabeçalho do documento: «Sem ligação · guardado neste dispositivo»
+- [x] `run()` do `WorkspaceContext` deixa de ficar pendurado quando a Server Action falha por rede
+- [x] E2E com `context.setOffline` e duas pessoas (Leonardo e Ana) para «cópia» e «manter a minha»
+- [ ] Notas rápidas e eventos criados sem rede (hoje só a gravação de documentos entra na fila)
+
+**Acessibilidade AA (5 temas)**
+- [x] `tests/e2e/a11y.spec.ts` com `@axe-core/playwright`: WCAG 2.0/2.1/2.2 A+AA em login, dashboard, projetos, projeto, documento, calendário, notas, definições, diálogo de evento e modal de exportação, nos 5 temas → 0 violações (eram 63 na primeira passagem)
+- [x] Contraste: `--accent-primary` do `warm-cream` passa de `#c85a32` a `#ac4c2a` e do `sand-dune` de `#b06d3b` a `#8c5b29`; `--text-muted` do `sand-dune` de `#70675a` a `#6d6457`; tinta terracota do editor alinhada; dias fora do mês e horas dos eventos deixam de usar texto translúcido
+- [x] Alvos ≥ 24 px (WCAG 2.5.8): botões da árvore, eventos no calendário, seta do sublinhado
+- [x] Estrutura: `<dl>` do cabeçalho do documento válido; indicador de gravação como `role="status"` fora da lista
+
+**Deploy**
+- [x] `Dockerfile` multi-stage (Next standalone + Prisma + Chromium do Playwright para o PDF), utilizador sem privilégios, `HEALTHCHECK`, `prisma migrate deploy` no arranque
+- [x] `docker-compose.yml`: `db` (PostgreSQL 16, cria também `vellum_e2e`) e `app` (perfil `app`, exige `AUTH_SECRET`)
+- [x] `GET /api/health` → `{ status, version, store, ms }` (503 se a base falhar)
+- [x] Sem ficheiros `.env` nem segredos no repositório (variáveis só no ambiente: shell, plataforma, CI; tabela no README); `.npmrc` com `legacy-peer-deps=true` (peers opcionais do Better-Auth)
+- [x] `npm run db:up`, `db:deploy`, `test:e2e:pg` (E2E sobre PostgreSQL numa base cujo nome contém «e2e», esvaziada a cada execução)
+- [x] Verificado: build `NEXT_OUTPUT=standalone` + `node server.js` sobre PostgreSQL vazio → migração, seed, `/api/health` ok, login de demonstração e documento abertos
+
+**Validação (2026-11-08)**
+- [x] `tsc --noEmit`, ESLint (0 erros; os 5 avisos antigos), Prettier, Vitest 69/69, `next build`
+- [x] Playwright 41/41 em modo `json` e 41/41 em modo `postgres` (desktop + Pixel 7)
+
+### Para pôr em produção (o que falta do Leonardo)
+
+1. **Base de dados PostgreSQL de produção** (Neon, Supabase, RDS, ou o `docker compose` num servidor) → `DATABASE_URL`
+2. **`AUTH_SECRET`** com 32+ caracteres (`openssl rand -base64 32`) e **`BETTER_AUTH_URL`** com o domínio público (https)
+3. **Email**: conta Resend com o domínio verificado → `RESEND_API_KEY` e `MAIL_FROM`
+4. **Alojamento** para a imagem Docker (Fly.io, Railway, Render, VPS…) e o domínio
+5. Decidir se os perfis de demonstração ficam ativos em produção (`VELLUM_DEMO_AUTH`)
+6. Em migração de dados reais: a primeira execução importa `.data/workspace.json` se estiver presente
 
 ---
 
@@ -251,6 +309,12 @@
 | 2026-11-08 | Paginação feita no cliente (mesmo HTML para pré-visualização e PDF); o servidor só imprime as folhas, com JS desligado e rede bloqueada. Papel creme nas margens via `@page { background }`. |
 | 2026-11-08 | Exportar snapshot exige `document:export` e inclui só projetos exportáveis pela pessoa; restaurar é aditivo, só para o Proprietário (`project:manage` + `legend:manage`) e uma vez por snapshot. |
 | 2026-11-08 | Todas as fases 0–5 dadas como 100% Concluídas; o que estava em «2B/3B/4B» e os itens de lançamento passam ao Roteiro pós-lançamento. |
+
+| 2026-11-08 | Pós-lançamento: repositório em duas implementações (`json` por omissão, `postgres` com `VELLUM_STORE`) atrás da mesma interface; o PostgreSQL mantém o agregado em memória e grava por diferenças em transação com advisory lock. |
+| 2026-11-08 | Better-Auth 1.6 sem rota HTTP pública (só Server Actions); palavras-passe com o nosso scrypt; recuperação por código de 6 dígitos (emailOTP) em vez de link. `.npmrc` com `legacy-peer-deps` por causa dos peers opcionais do Better-Auth. |
+| 2026-11-08 | Séries de eventos guardadas uma vez (`recurrence` + `exdates`) e expandidas no cliente; subconjunto RRULE sem BYSETPOS nem «2.ª terça». |
+| 2026-11-08 | Conflitos de edição detetados por `baseUpdatedAt` só quando outra pessoa gravou depois; a mesma pessoa noutro separador continua a gravar por cima. |
+| 2026-11-08 | Auditoria AA inclui WCAG 2.2 (alvos de 24 px). Acentos do `warm-cream` e `sand-dune` escurecidos para 4,5:1 em todas as superfícies. |
 
 ---
 

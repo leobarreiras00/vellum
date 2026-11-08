@@ -27,7 +27,8 @@ import { NoteSlip } from "@/components/workspace/NoteSlip";
 import { useAuth } from "@/context/AuthContext";
 import { useTelemetry } from "@/context/TelemetryContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
-import { compareEvents, dayShortLabel, relativeDayLabel, timeRangeLabel, weekdayLabel } from "@/lib/calendar";
+import { addDays, compareEvents, dayShortLabel, relativeDayLabel, timeRangeLabel, weekdayLabel } from "@/lib/calendar";
+import { expandEvents } from "@/lib/recurrence";
 import { relativeTime } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/rbac";
 import { effortScore, periodTotals, sumRange } from "@/lib/telemetry";
@@ -74,11 +75,14 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
   const legends = new Map(snapshot.legends.map((l) => [l.id, l]));
   const recent = [...snapshot.documents].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6);
   const maxDocEffort = Math.max(1, ...recent.map((d) => d.effortSeconds));
-  const important = snapshot.events
-    .filter((e) => e.isImportant && e.date >= today)
+  const important = expandEvents(
+    snapshot.events.filter((e) => e.isImportant),
+    today,
+    addDays(today, 730),
+  )
     .sort(compareEvents)
     .slice(0, 5);
-  const todayEvents = snapshot.events.filter((e) => e.date === today).sort(compareEvents);
+  const todayEvents = expandEvents(snapshot.events, today, today).sort(compareEvents);
   const pinned = snapshot.notes.filter((n) => n.isPinned).slice(0, 2);
 
   return (
@@ -268,7 +272,7 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
                     {important.map((event) => {
                       const legend = event.legendId ? legends.get(event.legendId) : undefined;
                       return (
-                        <li key={event.id}>
+                        <li key={event.occurrenceKey}>
                           <Link
                             href={`${routes.calendar}?dia=${event.date}`}
                             className="-mx-2 grid grid-cols-[52px_minmax(0,1fr)] gap-3 rounded-lg px-2 py-3 hover:bg-surface/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
@@ -310,7 +314,7 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
                     </p>
                     <ul className="mt-2 space-y-1.5 text-sm">
                       {todayEvents.map((e) => (
-                        <li key={e.id} className="flex items-baseline gap-3">
+                        <li key={e.occurrenceKey} className="flex items-baseline gap-3">
                           <span className="nums w-[86px] shrink-0 font-mono text-[11px] text-muted">
                             {timeRangeLabel(e)}
                           </span>

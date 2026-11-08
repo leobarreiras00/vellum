@@ -11,13 +11,14 @@
  */
 "use client";
 
-import { ArrowUpRight, FileText, Timer, Type } from "lucide-react";
+import { ArrowUpRight, CloudOff, CloudUpload, FileText, Timer, Type } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { LicenseDialog } from "@/components/layout/LicenseDialog";
 import { ThemeSwatches } from "@/components/layout/ThemeSwatches";
 import { VellumMark } from "@/components/layout/VellumMark";
+import { useOnline, usePendingSaves } from "@/lib/offline-queue";
 import { PAGE_MODES, PAGE_MODE_LABELS, type PageMode } from "@/lib/page-mode";
 import { usePageMode } from "@/lib/use-page-mode";
 import {
@@ -184,6 +185,8 @@ function StatusbarFooter({
         )}
       </div>
 
+      <SyncIndicator />
+
       {/* Centro — direitos reservados */}
       <p className="hidden min-w-0 flex-1 truncate text-center md:block" title={COPYRIGHT_FULL}>
         {COPYRIGHT_SHORT}
@@ -198,6 +201,35 @@ function StatusbarFooter({
         <span className="nums hidden font-mono text-[10.5px] sm:inline">v{APP_VERSION}</span>
       </div>
     </footer>
+  );
+}
+
+/** «Offline · 2 alterações por enviar» — só aparece quando há algo a dizer. */
+function SyncIndicator() {
+  const online = useOnline();
+  const pending = usePendingSaves();
+  const label = pending === 1 ? "1 alteração por enviar" : `${pending} alterações por enviar`;
+  const visible = !online || pending > 0;
+  return (
+    <span role="status" aria-live="polite" data-testid="sync-status" className="inline-flex shrink-0 items-center">
+      {visible && (
+        <span
+          className="inline-flex items-center gap-1 rounded-md bg-accent-primary/10 px-1.5 py-0.5 text-primary"
+          title={
+            online
+              ? "Há alterações guardadas só neste dispositivo; serão enviadas automaticamente."
+              : "Sem ligação: as alterações ficam neste dispositivo e são enviadas quando a ligação voltar."
+          }
+        >
+          {online ? (
+            <CloudUpload aria-hidden="true" className="size-3" strokeWidth={1.5} />
+          ) : (
+            <CloudOff aria-hidden="true" className="size-3" strokeWidth={1.5} />
+          )}
+          {online ? label : pending > 0 ? `Offline · ${label}` : "Offline"}
+        </span>
+      )}
+    </span>
   );
 }
 

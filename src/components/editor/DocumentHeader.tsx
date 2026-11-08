@@ -9,7 +9,18 @@
  */
 "use client";
 
-import { BookOpenText, Check, ChevronRight, CircleAlert, Clock3, Hash, Loader2, PenLine, Timer } from "lucide-react";
+import {
+  BookOpenText,
+  Check,
+  ChevronRight,
+  CircleAlert,
+  Clock3,
+  CloudOff,
+  Hash,
+  Loader2,
+  PenLine,
+  Timer,
+} from "lucide-react";
 import Link from "next/link";
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 
@@ -18,7 +29,7 @@ import { clockTime, longDate, readingMinutes, relativeTime } from "@/lib/format"
 import { cn, formatDuration, formatNumber } from "@/lib/utils";
 import { routes } from "@/lib/workspace-routes";
 
-export type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
+export type SaveState = "idle" | "dirty" | "saving" | "saved" | "error" | "offline" | "conflict";
 
 export interface DocumentHeaderHandle {
   focusTitle: (selectAll?: boolean) => void;
@@ -137,36 +148,40 @@ export const DocumentHeader = forwardRef<DocumentHeaderHandle, DocumentHeaderPro
           </p>
         )}
 
-        <dl className="nums mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-subtle py-2.5 text-xs text-muted">
-          {props.author && (
-            <div className="flex items-center gap-1.5">
-              <dt className="sr-only">Autor</dt>
-              <Avatar initials={props.author.initials} name={props.author.name} size="xs" />
-              <dd className="text-primary">{props.author.name}</dd>
-            </div>
-          )}
-          <Meta icon={Hash} label="Palavras">
-            <span data-testid="doc-words">{formatNumber(props.words)}</span> palavras
-          </Meta>
-          <Meta icon={BookOpenText} label="Tempo de leitura">
-            {readingMinutes(props.words)} min de leitura
-          </Meta>
-          <Meta icon={Timer} label="Esforço investido">
-            {formatDuration(props.effortSeconds)} de esforço
-          </Meta>
-          <Meta icon={PenLine} label="Versão">
-            <span className="font-mono">v{props.version}</span>
-          </Meta>
-          <Meta icon={Clock3} label="Última edição">
-            <span title={longDate(props.updatedAt)}>
-              {relativeTime(props.updatedAt)}
-              {props.lastEditor &&
-                props.lastEditor.name !== props.author?.name &&
-                ` · ${props.lastEditor.name.split(" ")[0]}`}
-            </span>
-          </Meta>
+        <div className="nums mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 border-y border-subtle py-2.5 text-xs text-muted">
+          <dl className="contents">
+            {props.author && (
+              <div className="flex items-center gap-1.5">
+                <dt className="sr-only">Autor</dt>
+                <dd className="flex items-center gap-1.5 text-primary">
+                  <Avatar initials={props.author.initials} name={props.author.name} size="xs" />
+                  {props.author.name}
+                </dd>
+              </div>
+            )}
+            <Meta icon={Hash} label="Palavras">
+              <span data-testid="doc-words">{formatNumber(props.words)}</span> palavras
+            </Meta>
+            <Meta icon={BookOpenText} label="Tempo de leitura">
+              {readingMinutes(props.words)} min de leitura
+            </Meta>
+            <Meta icon={Timer} label="Esforço investido">
+              {formatDuration(props.effortSeconds)} de esforço
+            </Meta>
+            <Meta icon={PenLine} label="Versão">
+              <span className="font-mono">v{props.version}</span>
+            </Meta>
+            <Meta icon={Clock3} label="Última edição">
+              <span title={longDate(props.updatedAt)}>
+                {relativeTime(props.updatedAt)}
+                {props.lastEditor &&
+                  props.lastEditor.name !== props.author?.name &&
+                  ` · ${props.lastEditor.name.split(" ")[0]}`}
+              </span>
+            </Meta>
+          </dl>
           {editable && <SaveIndicator state={props.saveState} savedAt={props.savedAt} />}
-        </dl>
+        </div>
       </header>
     );
   },
@@ -176,8 +191,10 @@ function Meta({ icon: Icon, label, children }: { icon: typeof Hash; label: strin
   return (
     <div className="flex items-center gap-1">
       <dt className="sr-only">{label}</dt>
-      <Icon aria-hidden="true" className="size-3" strokeWidth={1.5} />
-      <dd>{children}</dd>
+      <dd className="flex items-center gap-1">
+        <Icon aria-hidden="true" className="size-3" strokeWidth={1.5} />
+        <span>{children}</span>
+      </dd>
     </div>
   );
 }
@@ -189,13 +206,20 @@ function SaveIndicator({ state, savedAt }: { state: SaveState; savedAt: string |
     dirty: { icon: PenLine, text: "Alterações por guardar", tone: "" },
     saving: { icon: Loader2, text: "A guardar…", tone: "" },
     error: { icon: CircleAlert, text: "Não foi possível guardar", tone: "text-accent-primary" },
+    offline: { icon: CloudOff, text: "Sem ligação · guardado neste dispositivo", tone: "text-accent-primary" },
+    conflict: { icon: CircleAlert, text: "Conflito por resolver", tone: "text-accent-primary" },
   }[state];
   const Icon = content.icon;
   return (
-    <div className="ml-auto flex items-center gap-1" role="status" aria-live="polite" data-save-state={state}>
-      <dt className="sr-only">Gravação automática</dt>
+    <div
+      className={cn("ml-auto flex items-center gap-1", content.tone)}
+      role="status"
+      aria-live="polite"
+      data-save-state={state}
+    >
+      <span className="sr-only">Gravação automática:</span>
       <Icon aria-hidden="true" className={cn("size-3", state === "saving" && "animate-spin")} strokeWidth={1.5} />
-      <dd className={content.tone}>{content.text}</dd>
+      <span>{content.text}</span>
     </div>
   );
 }

@@ -25,6 +25,7 @@ import {
   createEvent,
   createLegend,
   deleteEvent,
+  skipEventOccurrence,
   deleteLegend,
   logFocusSession,
   recordEffort,
@@ -72,9 +73,10 @@ import {
 
 export type WorkspaceActionResult<T = undefined> =
   | { ok: true; snapshot: WorkspaceSnapshot; data: T }
-  | { ok: false; error: string; fieldErrors?: Record<string, string> };
+  | { ok: false; error: string; fieldErrors?: Record<string, string>; network?: boolean };
 
 const idSchema = z.string().min(1).max(64);
+const dayKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
 function firstErrors(error: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};
@@ -235,6 +237,10 @@ export async function createEventAction(input: unknown) {
 
 export async function updateEventAction(eventId: unknown, input: unknown) {
   return run((user) => updateEvent(user, idSchema.parse(eventId), eventInputSchema.parse(input)));
+}
+
+export async function skipEventOccurrenceAction(eventId: unknown, date: unknown) {
+  return run((user) => skipEventOccurrence(user, idSchema.parse(eventId), dayKeySchema.parse(date)));
 }
 
 export async function deleteEventAction(eventId: unknown) {

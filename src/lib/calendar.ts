@@ -222,7 +222,8 @@ export interface NotificationOptions {
 }
 
 /**
- * Deriva o centro de notificações a partir dos eventos:
+ * Deriva o centro de notificações a partir dos eventos (séries já expandidas
+ * com `expandEvents`, ver src/lib/recurrence.ts):
  * - lembretes de eventos com notificação que ainda não terminaram e começam na janela;
  * - prazos de Dias Importantes nos próximos dias (vencidos 1 dia antes).
  */
@@ -237,6 +238,8 @@ export function buildNotifications(
   const out: CalendarNotification[] = [];
 
   for (const event of events) {
+    // Numa série, cada ocorrência tem o seu próprio estado lido/enviado.
+    const key = event.recurrence ? `${event.id}@${event.date}` : event.id;
     const startMs = eventStartMs(event);
     const endMs = event.allDay
       ? lisbonToMs(addDays(event.date, 1))
@@ -246,7 +249,7 @@ export function buildNotifications(
     if (event.reminderMinutes !== null && endMs > nowMs && startMs - nowMs <= reminderHorizon) {
       const dueMs = startMs - event.reminderMinutes * 60_000;
       out.push({
-        id: `${event.id}:reminder:${event.updatedAt}`,
+        id: `${key}:reminder:${event.updatedAt}`,
         kind: "reminder",
         eventId: event.id,
         title: event.title,
@@ -260,7 +263,7 @@ export function buildNotifications(
     if (event.isImportant && daysAway >= 0 && daysAway <= importantHorizon) {
       const dueMs = lisbonToMs(addDays(event.date, -1), ALL_DAY_ANCHOR);
       out.push({
-        id: `${event.id}:important:${event.updatedAt}`,
+        id: `${key}:important:${event.updatedAt}`,
         kind: "important",
         eventId: event.id,
         title: event.title,

@@ -77,6 +77,8 @@ test("Calendário: evento importante, legendas, vistas mês/semana e Agenda com 
   await expect(sheet.getByRole("list", { name: "Documentos ligados a este dia" })).toContainText(
     "Guião de entrevistas",
   );
+  // Só recarrega depois de o servidor confirmar (com a base remota, a gravação demora mais).
+  await expect(sheet.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
 
   await page.reload();
   await expect(page.getByRole("radio", { name: "Agenda com Notas" })).toHaveAttribute("aria-checked", "true");

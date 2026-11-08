@@ -186,10 +186,11 @@ function CalendarSync() {
       setResult({ tone: "error", text: response.error });
       return;
     }
-    const { created, duplicates, recurring, total } = response.data;
+    const { created, duplicates, series, recurring, total } = response.data;
     const parts = [`${created} de ${total} eventos importados de «${file.name}».`];
+    if (series) parts.push(`${series} ${series === 1 ? "série repetida" : "séries repetidas"} com a sua regra.`);
     if (duplicates) parts.push(`${duplicates} já existiam.`);
-    if (recurring) parts.push(`${recurring} recorrentes: ficou a primeira ocorrência.`);
+    if (recurring) parts.push(`${recurring} com repetição não suportada: ficou a primeira ocorrência.`);
     setResult({ tone: "info", text: parts.join(" ") });
   }
 

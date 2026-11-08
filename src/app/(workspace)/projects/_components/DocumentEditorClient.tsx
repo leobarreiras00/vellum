@@ -13,7 +13,18 @@
  */
 "use client";
 
-import { Download, Eye, FilePlus2, FileText, MessageSquareText, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Download,
+  Eye,
+  FilePlus2,
+  FileText,
+  MessageSquareText,
+  Server,
+  Trash2,
+  UserPen,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -32,7 +43,9 @@ import { docToPlainText, plainTextToDoc, type DocContent } from "@/lib/document-
 import { PAGE_MODES, PAGE_MODE_LABELS } from "@/lib/page-mode";
 import { canCommentDocument, canDeleteDocument, canEditDocument, canExportDocument, hasPermission } from "@/lib/rbac";
 import { usePageMode } from "@/lib/use-page-mode";
+import { claimDocument, dequeueSave, enqueueSave, queuedSave } from "@/lib/offline-queue";
 import { cn, countWords, formatNumber } from "@/lib/utils";
+import type { DocumentConflict } from "@/lib/workspace-store";
 import { routes } from "@/lib/workspace-routes";
 import { documentAncestors } from "@/lib/workspace-types";
 
@@ -46,7 +59,7 @@ interface DocumentEditorClientProps {
 
 export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentEditorClientProps) {
   const router = useRouter();
-  const { snapshot, run, subjectFor, isPending } = useWorkspace();
+  const { snapshot, run, subjectFor, isPending, notify } = useWorkspace();
   const { openExport, registerFlush, isExporting } = useShell();
   const project = snapshot.projects.find((p) => p.id === projectId);
   const doc = snapshot.documents.find((d) => d.id === documentId);
@@ -88,9 +101,48 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
   const saving = useRef(false);
   const timer = useRef<number | undefined>(undefined);
 
+  // Fila offline e conflitos: `baseUpdatedAt` é a versão do servidor em que a edição assenta.
+  const baseUpdatedAt = useRef<string | null>(doc?.updatedAt ?? null);
+  const forceNext = useRef(false);
+  const conflictRef = useRef<DocumentConflict | null>(null);
+  const [conflict, setConflict] = useState<DocumentConflict | null>(null);
+  const [resolving, setResolving] = useState(false);
+  const [headerOverride, setHeaderOverride] = useState<{ key: number; title: string; summary: string } | null>(null);
+
+  const currentPayload = useCallback(
+    () => ({
+      id: documentId,
+      title: titleRef.current.trim() || "Sem título",
+      summary: summaryRef.current.trim(),
+      // Os attrs do ProseMirror não têm protótipo: clonar para JSON simples
+      // (as Server Actions só serializam objetos simples).
+      contentJson: JSON.parse(JSON.stringify(contentRef.current)) as DocContent,
+    }),
+    [documentId],
+  );
+
+  const queueLocally = useCallback(
+    (isConflict = false) => {
+      enqueueSave({ ...currentPayload(), projectId, baseUpdatedAt: baseUpdatedAt.current, conflict: isConflict });
+    },
+    [currentPayload, projectId],
+  );
+
   const save = useCallback(async () => {
     window.clearTimeout(timer.current);
     if (!dirty.current || !canEdit) return;
+    // Com um conflito por resolver, as alterações ficam só neste dispositivo.
+    if (conflictRef.current) {
+      dirty.current = false;
+      queueLocally(true);
+      return;
+    }
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      dirty.current = false;
+      queueLocally();
+      setSaveState("offline");
+      return;
+    }
     if (saving.current) {
       timer.current = window.setTimeout(() => void save(), AUTOSAVE_MS);
       return;
@@ -98,26 +150,35 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
     dirty.current = false;
     saving.current = true;
     setSaveState("saving");
-    const result = await run(() =>
-      saveDocumentContentAction({
-        id: documentId,
-        title: titleRef.current.trim() || "Sem título",
-        summary: summaryRef.current.trim(),
-        // Os attrs do ProseMirror não têm protótipo: clonar para JSON simples
-        // (as Server Actions só serializam objetos simples).
-        contentJson: JSON.parse(JSON.stringify(contentRef.current)) as DocContent,
-      }),
+    const force = forceNext.current;
+    forceNext.current = false;
+    const payload = currentPayload();
+    const result = await run(
+      () => saveDocumentContentAction({ ...payload, baseUpdatedAt: baseUpdatedAt.current, force }),
+      { silent: true },
     );
     saving.current = false;
-    if (result.ok) {
+    if (result.ok && result.data.status === "saved") {
+      baseUpdatedAt.current = result.data.updatedAt;
+      if (!dirty.current) dequeueSave(documentId);
       setSavedAt(result.data.updatedAt);
       setSaveState(dirty.current ? "dirty" : "saved");
       if (dirty.current) timer.current = window.setTimeout(() => void save(), AUTOSAVE_MS);
-    } else {
+    } else if (result.ok && result.data.status === "conflict") {
+      // Outra pessoa gravou depois da versão em que esta edição assenta.
+      conflictRef.current = result.data.server;
+      setConflict(result.data.server);
+      queueLocally(true);
+      setSaveState("conflict");
+    } else if (!result.ok && result.network) {
+      queueLocally();
+      setSaveState("offline");
+    } else if (!result.ok) {
       dirty.current = true;
       setSaveState("error");
+      notify(result.error, "error");
     }
-  }, [run, documentId, canEdit]);
+  }, [run, documentId, canEdit, currentPayload, queueLocally, notify]);
 
   const markDirty = useCallback(() => {
     dirty.current = true;
@@ -168,6 +229,88 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [canEdit, save]);
+
+  // Fila offline: este editor trata da entrada do documento. Se ficou trabalho
+  // por enviar (separador fechado sem rede), recupera-o e tenta gravar.
+  useEffect(() => {
+    if (!canEdit) return;
+    const release = claimDocument(documentId);
+    const pending = queuedSave(documentId);
+    if (pending && editor) {
+      editor.commands.setContent(pending.contentJson, false);
+      contentRef.current = pending.contentJson;
+      titleRef.current = pending.title;
+      summaryRef.current = pending.summary;
+      baseUpdatedAt.current = pending.baseUpdatedAt;
+      setWords(countWords(docToPlainText(pending.contentJson)));
+      setHeaderOverride((h) => ({ key: (h?.key ?? 0) + 1, title: pending.title, summary: pending.summary }));
+      dirty.current = true;
+      void saveRef.current();
+    }
+    const onOnline = () => {
+      if (conflictRef.current || !queuedSave(documentId)) return;
+      dirty.current = true;
+      void saveRef.current();
+    };
+    window.addEventListener("online", onOnline);
+    return () => {
+      release();
+      window.removeEventListener("online", onOnline);
+    };
+    // O editor só existe depois do primeiro render (immediatelyRender: false).
+  }, [canEdit, documentId, editor]);
+
+  /** Mostra no editor a versão do servidor (descarta a local). */
+  const applyServerVersion = useCallback(
+    (server: DocumentConflict) => {
+      const content = server.contentJson ?? plainTextToDoc(server.plainText);
+      editor?.commands.setContent(content, false);
+      contentRef.current = content;
+      titleRef.current = server.title;
+      summaryRef.current = server.summary;
+      baseUpdatedAt.current = server.updatedAt;
+      setWords(countWords(docToPlainText(content)));
+      setHeaderOverride((h) => ({ key: (h?.key ?? 0) + 1, title: server.title, summary: server.summary }));
+      dequeueSave(documentId);
+      dirty.current = false;
+      conflictRef.current = null;
+      setConflict(null);
+      setSavedAt(server.updatedAt);
+      setSaveState("saved");
+      router.refresh();
+    },
+    [editor, documentId, router],
+  );
+
+  async function keepMine() {
+    conflictRef.current = null;
+    setConflict(null);
+    forceNext.current = true;
+    dirty.current = true;
+    await save();
+    notify("A sua versão foi gravada.");
+  }
+
+  async function saveMineAsCopy() {
+    const server = conflictRef.current;
+    if (!server) return;
+    setResolving(true);
+    const mine = currentPayload();
+    const title = `${mine.title} (cópia)`.slice(0, 120);
+    const created = await run(() =>
+      createDocumentAction({ projectId, parentId: doc?.parentId ?? null, title, summary: mine.summary }),
+    );
+    if (created.ok) {
+      const saved = await run(() =>
+        saveDocumentContentAction({ ...mine, id: created.data.id, title, baseUpdatedAt: null, force: true }),
+      );
+      if (saved.ok) {
+        applyServerVersion(server);
+        notify(`A sua versão ficou em «${title}».`);
+      }
+    }
+    setResolving(false);
+  }
 
   // Documento novo: foco no título, com o texto selecionado.
   useEffect(() => {
@@ -319,8 +462,9 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
                 projectId={projectId}
                 projectName={project.name}
                 ancestors={ancestors.map((a) => ({ id: a.id, title: a.title }))}
-                initialTitle={doc.title}
-                initialSummary={doc.summary}
+                key={headerOverride?.key ?? 0}
+                initialTitle={headerOverride?.title ?? doc.title}
+                initialSummary={headerOverride?.summary ?? doc.summary}
                 editable={canEdit}
                 words={words}
                 effortSeconds={doc.effortSeconds}
@@ -390,6 +534,43 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
       )}
 
       <Dialog
+        open={conflict !== null}
+        onClose={() => undefined}
+        size="sm"
+        eyebrow="Conflito de edição"
+        title="Este documento mudou entretanto"
+        description={
+          conflict
+            ? `${conflict.editorName ?? "Outra pessoa"} gravou uma versão às ${clock(conflict.updatedAt)}, depois da versão em que as suas alterações assentam. Escolha o que fazer.`
+            : undefined
+        }
+      >
+        <div className="grid gap-2" data-testid="conflict-dialog">
+          <ConflictChoice
+            icon={UserPen}
+            label="Manter a minha versão"
+            detail="Grava as suas alterações por cima da versão do servidor."
+            onClick={keepMine}
+            disabled={resolving}
+          />
+          <ConflictChoice
+            icon={Server}
+            label="Usar a versão do servidor"
+            detail="Descarta as alterações feitas neste dispositivo."
+            onClick={() => conflict && applyServerVersion(conflict)}
+            disabled={resolving}
+          />
+          <ConflictChoice
+            icon={Copy}
+            label="Guardar a minha como cópia"
+            detail="Cria uma página irmã com as suas alterações e mostra aqui a do servidor."
+            onClick={saveMineAsCopy}
+            disabled={resolving}
+          />
+        </div>
+      </Dialog>
+
+      <Dialog
         open={confirmDelete}
         onClose={() => setConfirmDelete(false)}
         size="sm"
@@ -417,5 +598,40 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
         </p>
       </Dialog>
     </div>
+  );
+}
+
+function clock(iso: string): string {
+  return new Intl.DateTimeFormat("pt-PT", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Lisbon" }).format(
+    new Date(iso),
+  );
+}
+
+function ConflictChoice({
+  icon: Icon,
+  label,
+  detail,
+  onClick,
+  disabled,
+}: {
+  icon: LucideIcon;
+  label: string;
+  detail: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex items-start gap-3 rounded-lg border border-subtle bg-elevated px-3 py-2.5 text-left transition-colors duration-150 hover:border-accent-primary/60 hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary disabled:opacity-60"
+    >
+      <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.5} />
+      <span>
+        <span className="block text-sm font-medium text-primary">{label}</span>
+        <span className="block text-xs text-muted">{detail}</span>
+      </span>
+    </button>
   );
 }

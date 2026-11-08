@@ -7,7 +7,13 @@
  * atelier de demonstração, em datas relativas ao momento do seed.
  */
 import { addDays, utcToKeyInLisbon } from "@/lib/calendar";
-import type { CalendarEventRecord, CalendarLegendRecord, DayNoteRecord, InkColor } from "@/lib/workspace-types";
+import type {
+  CalendarEventRecord,
+  CalendarLegendRecord,
+  DayNoteRecord,
+  InkColor,
+  RecurrenceRule,
+} from "@/lib/workspace-types";
 
 const WS = "ws-atelier-vellum";
 const LEO = "demo-leo";
@@ -33,6 +39,7 @@ interface SeedEvent {
   reminder?: number;
   notes?: string;
   by?: string;
+  recurrence?: RecurrenceRule;
 }
 
 const EVENTS: SeedEvent[] = [
@@ -97,8 +104,21 @@ const EVENTS: SeedEvent[] = [
     reminder: 1440,
     notes: "Versão final do roteiro partilhada com toda a equipa até às 18:00.",
   },
-  { key: "ginasio", title: "Treino de manhã", offset: 2, time: ["07:30", "08:30"], legend: "lg-pessoal" },
-  { key: "aniversario-ana", title: "Aniversário da Ana", offset: 3, legend: "lg-pessoal" },
+  {
+    key: "ginasio",
+    title: "Treino de manhã",
+    offset: 2,
+    time: ["07:30", "08:30"],
+    legend: "lg-pessoal",
+    recurrence: { freq: "WEEKLY", interval: 1, byWeekday: [], until: null, count: 12 },
+  },
+  {
+    key: "aniversario-ana",
+    title: "Aniversário da Ana",
+    offset: 3,
+    legend: "lg-pessoal",
+    recurrence: { freq: "YEARLY", interval: 1, byWeekday: [], until: null, count: null },
+  },
   {
     key: "marco-editor",
     title: "Marco: Editor Rico em beta interna",
@@ -202,6 +222,8 @@ export function buildCalendarSeed(now = Date.now()): {
     isImportant: e.important ?? false,
     reminderMinutes: e.reminder ?? null,
     notes: e.notes ?? "",
+    recurrence: e.recurrence ?? null,
+    exdates: [],
     createdAt: iso,
     updatedAt: iso,
     deletedAt: null,

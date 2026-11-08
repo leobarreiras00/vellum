@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { exportMarkdownAction, updatePreferencesAction } from "@/app/(workspace)/actions";
 import { ExportModal } from "@/components/editor/ExportModal";
 import { AppFooter } from "@/components/layout/AppFooter";
+import { OfflineSync } from "@/components/layout/OfflineSync";
 import { CommandPalette } from "@/components/layout/CommandPalette";
 import { ShellContext, type ShellContextValue } from "@/components/layout/ShellContext";
 import { Sidebar, type SwitchableProfile } from "@/components/layout/Sidebar";
@@ -201,6 +202,7 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
         />
       </div>
 
+      <OfflineSync />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
       <ProjectFormDialog
         open={projectForm.open}

@@ -84,7 +84,20 @@ export function WorkspaceProvider({ initial, children }: WorkspaceProviderProps)
     (action, options) =>
       new Promise((resolve) => {
         startTransition(async () => {
-          const result = await action();
+          let result: Awaited<ReturnType<typeof action>>;
+          try {
+            result = await action();
+          } catch {
+            // Sem rede (ou servidor inacessível): a Server Action rejeita em vez de responder.
+            const offline = typeof navigator !== "undefined" && !navigator.onLine;
+            result = {
+              ok: false,
+              network: true,
+              error: offline
+                ? "Sem ligação à internet. As alterações ficam guardadas neste dispositivo."
+                : "Não foi possível contactar o servidor. Tente de novo dentro de momentos.",
+            };
+          }
           if (result.ok) {
             setSnapshot(result.snapshot);
             if (options?.success) notify(options.success);

@@ -149,7 +149,7 @@ export function WeekGrid({ anchor, label, ...props }: DayGridProps & { anchor: s
                       type="button"
                       data-ink={legend?.color ?? "grafite"}
                       data-event-id={event.id}
-                      onClick={() => props.onOpenEvent(event.id)}
+                      onClick={() => props.onOpenEvent(event.id, event.date)}
                       className="absolute inset-x-1 overflow-hidden rounded-md border-l-2 border-ink bg-elevated px-1.5 py-1 text-left shadow-paper transition-colors hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
                       style={{ top: top + 1, height }}
                       aria-label={`${event.title} · ${timeRangeLabel(event)}`}

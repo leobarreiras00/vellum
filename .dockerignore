@@ -1,0 +1,12 @@
+# Vellum — ficheiros fora da imagem Docker
+node_modules
+.next
+.data
+.git
+.env*
+!.env.example
+test-results
+playwright-report
+tests
+_para-mover-claude
+*.tgz

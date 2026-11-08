@@ -15,8 +15,6 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import path from "node:path";
 
 import type { SessionUser } from "@/lib/auth";
 import { ForbiddenError, assertCan, canDeleteDocument, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
@@ -31,8 +29,7 @@ import {
   type SnapshotImportSummary,
   type WorkspaceBackup,
 } from "@/lib/sync/snapshot";
-import { buildCalendarSeed } from "@/lib/calendar-seed";
-import { DEMO_WORKSPACE_ID, EFFORT_HISTORY_DAYS, buildSeed, seedEffortLogs } from "@/lib/workspace-seed";
+import { getStoreBackend } from "@/lib/store";
 import {
   initialsOf,
   lisbonDay,
@@ -62,106 +59,20 @@ import {
    Persistência
    ========================================================================== */
 
-const DATA_FILE = process.env.VELLUM_DATA_FILE || path.join(process.cwd(), ".data", "workspace.json");
-
-interface StoreState {
-  data: StoreData | null;
-  loading: Promise<StoreData> | null;
-  queue: Promise<void>;
-}
-
-const globalForStore = globalThis as unknown as { vellumWorkspaceStore?: StoreState };
-const state: StoreState = (globalForStore.vellumWorkspaceStore ??= {
-  data: null,
-  loading: null,
-  queue: Promise.resolve(),
-});
-
-function isStoreData(value: unknown): value is StoreData {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Partial<StoreData>;
-  return v.version === 1 && Array.isArray(v.projects) && Array.isArray(v.documents) && Array.isArray(v.notes);
-}
-
 async function load(): Promise<StoreData> {
-  if (state.data) return state.data;
-  state.loading ??= (async () => {
-    try {
-      const parsed: unknown = JSON.parse(await readFile(DATA_FILE, "utf8"));
-      if (isStoreData(parsed)) {
-        state.data = upgrade(parsed);
-        return state.data;
-      }
-      // Formato desconhecido: guarda uma cópia e recomeça a partir do seed.
-      await writeFile(`${DATA_FILE}.invalido-${Date.now()}`, JSON.stringify(parsed)).catch(() => undefined);
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.error("[vellum] Não foi possível ler o ficheiro do workspace; a repor o seed.", error);
-      }
-    }
-    const seeded = buildSeed();
-    state.data = seeded;
-    await persist();
-    return seeded;
-  })();
-  try {
-    return await state.loading;
-  } finally {
-    state.loading = null;
-  }
-}
-
-/** Completa ficheiros gravados por versões anteriores (Fases 2A e 3) com os campos novos. */
-function upgrade(data: StoreData): StoreData {
-  data.comments ??= [];
-  for (const doc of data.documents) {
-    doc.contentJson ??= null;
-    doc.version ??= 1;
-  }
-  // Fase 4: telemetria de esforço com palavras, edições e tipo de sessão.
-  for (const log of data.effortLogs) {
-    log.wordsWritten ??= Math.round((log.activeSeconds / 60) * 11);
-    log.edits ??= Math.round(log.activeSeconds / 360);
-    log.kind ??= "tracked";
-    log.updatedAt ??= log.startedAt;
-  }
-  // Fase 4: calendário. Ficheiros anteriores recebem o seed do calendário e o
-  // histórico de esforço do atelier de demonstração (mapa de consistência).
-  if (!data.calendarEvents) {
-    const hasDemo = data.workspaces.some((w) => w.id === DEMO_WORKSPACE_ID);
-    const calendar = buildCalendarSeed();
-    data.calendarLegends = hasDemo ? calendar.legends : [];
-    data.calendarEvents = hasDemo ? calendar.events : [];
-    data.dayNotes = hasDemo ? calendar.dayNotes : [];
-    if (hasDemo) {
-      const demoProjects = data.projects.filter((p) => p.workspaceId === DEMO_WORKSPACE_ID);
-      const demoDocs = data.documents.filter((d) => d.workspaceId === DEMO_WORKSPACE_ID && !d.deletedAt);
-      data.effortLogs.push(...seedEffortLogs(Date.now(), demoProjects, demoDocs, 22, EFFORT_HISTORY_DAYS));
-    }
-  }
-  data.calendarLegends ??= [];
-  data.dayNotes ??= [];
-  return data;
-}
-
-function persist(): Promise<void> {
-  const snapshot = JSON.stringify(state.data, null, 2);
-  state.queue = state.queue
-    .then(async () => {
-      await mkdir(path.dirname(DATA_FILE), { recursive: true });
-      const tmp = `${DATA_FILE}.${process.pid}.tmp`;
-      await writeFile(tmp, snapshot, "utf8");
-      await rename(tmp, DATA_FILE);
-    })
-    .catch((error) => console.error("[vellum] Falha ao gravar o workspace.", error));
-  return state.queue;
+  return (await getStoreBackend()).read();
 }
 
 async function mutate<T>(fn: (data: StoreData) => T): Promise<T> {
+  return (await getStoreBackend()).write(fn);
+}
+
+/** Lê o estado garantindo que a pessoa já tem atelier (cria-o, gravando, se for nova). */
+async function loadFor(user: SessionUser): Promise<StoreData> {
   const data = await load();
-  const result = fn(data);
-  await persist();
-  return result;
+  if (data.memberships.some((m) => m.userId === user.userId)) return data;
+  await mutate((d) => workspaceIdFor(d, user));
+  return load();
 }
 
 /* ==========================================================================
@@ -252,10 +163,8 @@ function nextPosition(items: readonly { position: number }[]): number {
    ========================================================================== */
 
 export async function getWorkspaceSnapshot(user: SessionUser): Promise<WorkspaceSnapshot> {
-  const data = await load();
-  const hadWorkspace = data.memberships.some((m) => m.userId === user.userId);
+  const data = await loadFor(user);
   const workspaceId = workspaceIdFor(data, user);
-  if (!hadWorkspace) await persist();
 
   const workspace = data.workspaces.find((w) => w.id === workspaceId);
   const projects = data.projects.filter((p) => p.workspaceId === workspaceId && !p.deletedAt);
@@ -352,7 +261,7 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
 
 /** Verificação no servidor para as páginas dinâmicas (notFound se não existir). */
 export async function findProject(user: SessionUser, projectId: string): Promise<ProjectRecord | null> {
-  const data = await load();
+  const data = await loadFor(user);
   const workspaceId = workspaceIdFor(data, user);
   return data.projects.find((p) => p.id === projectId && p.workspaceId === workspaceId && !p.deletedAt) ?? null;
 }
@@ -362,7 +271,7 @@ export async function findDocument(
   projectId: string,
   documentId: string,
 ): Promise<DocumentRecord | null> {
-  const data = await load();
+  const data = await loadFor(user);
   const workspaceId = workspaceIdFor(data, user);
   try {
     const doc = liveDocument(data, workspaceId, documentId);
@@ -535,15 +444,64 @@ function bumpVersion(doc: DocumentRecord, user: SessionUser) {
 }
 
 /** Gravação automática do Editor Rico: título, descrição e JSON ProseMirror. */
+/** Versão do servidor devolvida quando a gravação entra em conflito. */
+export interface DocumentConflict {
+  title: string;
+  summary: string;
+  contentJson: DocContent | null;
+  plainText: string;
+  updatedAt: string;
+  version: number;
+  editorName: string | null;
+}
+
+export type SaveDocumentResult =
+  | { status: "saved"; version: number; wordCount: number; updatedAt: string }
+  | { status: "conflict"; server: DocumentConflict };
+
+/**
+ * Grava o conteúdo de um documento. Com `baseUpdatedAt` (edição feita a partir
+ * de uma versão conhecida, p. ex. em fila offline), recusa sobrescrever as
+ * alterações que OUTRA pessoa gravou depois dessa versão e devolve a versão do
+ * servidor, para o cliente resolver o conflito. `force` grava na mesma.
+ */
 export async function saveDocumentContent(
   user: SessionUser,
-  input: { id: string; title: string; summary: string; contentJson: DocContent },
-): Promise<{ version: number; wordCount: number; updatedAt: string }> {
-  return mutate((data) => {
+  input: {
+    id: string;
+    title: string;
+    summary: string;
+    contentJson: DocContent;
+    baseUpdatedAt?: string | null;
+    force?: boolean;
+  },
+): Promise<SaveDocumentResult> {
+  return mutate((data): SaveDocumentResult => {
     const workspaceId = workspaceIdFor(data, user);
     const doc = liveDocument(data, workspaceId, input.id);
     const project = liveProject(data, workspaceId, doc.projectId);
     assertCan(subjectIn(user, project), "document:edit");
+    if (
+      !input.force &&
+      input.baseUpdatedAt &&
+      doc.updatedAt > input.baseUpdatedAt &&
+      doc.lastEditedById &&
+      doc.lastEditedById !== user.userId
+    ) {
+      const editor = data.people.find((p) => p.id === doc.lastEditedById);
+      return {
+        status: "conflict",
+        server: {
+          title: doc.title,
+          summary: doc.summary,
+          contentJson: doc.contentJson ?? null,
+          plainText: doc.plainText,
+          updatedAt: doc.updatedAt,
+          version: doc.version,
+          editorName: editor?.name ?? null,
+        },
+      };
+    }
     const plainText = docToPlainText(input.contentJson);
     bumpVersion(doc, user);
     doc.title = input.title || "Sem título";
@@ -554,7 +512,7 @@ export async function saveDocumentContent(
     doc.lastEditedById = user.userId;
     doc.updatedAt = now();
     touchProject(project);
-    return { version: doc.version, wordCount: doc.wordCount, updatedAt: doc.updatedAt };
+    return { status: "saved", version: doc.version, wordCount: doc.wordCount, updatedAt: doc.updatedAt };
   });
 }
 
@@ -748,7 +706,7 @@ export async function exportMarkdown(
   user: SessionUser,
   target: { kind: "document" | "project"; id: string },
 ): Promise<{ filename: string; markdown: string }> {
-  const data = await load();
+  const data = await loadFor(user);
   const workspaceId = workspaceIdFor(data, user);
   const project =
     target.kind === "project"
@@ -995,6 +953,7 @@ export async function createEvent(user: SessionUser, input: EventInput): Promise
       createdById: user.userId,
       ...input,
       projectId: input.documentId ? liveDocument(data, workspaceId, input.documentId).projectId : input.projectId,
+      exdates: [],
       createdAt: timestamp,
       updatedAt: timestamp,
       deletedAt: null,
@@ -1013,8 +972,27 @@ export async function updateEvent(user: SessionUser, eventId: string, input: Eve
     assertCan(eventSubject(data, user, workspaceId, input), "calendar:edit");
     Object.assign(event, input, {
       projectId: input.documentId ? liveDocument(data, workspaceId, input.documentId).projectId : input.projectId,
+      // Exceções só fazem sentido numa série, a partir do (novo) primeiro dia.
+      exdates: input.recurrence ? (event.exdates ?? []).filter((d) => d > input.date) : [],
       updatedAt: now(),
     });
+  });
+}
+
+/** Remove uma só ocorrência de uma série (EXDATE). Mesmas regras de eliminar. */
+export async function skipEventOccurrence(user: SessionUser, eventId: string, date: string): Promise<void> {
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const event = liveEvent(data, workspaceId, eventId);
+    const subject = event.projectId ? subjectIn(user, liveProject(data, workspaceId, event.projectId)) : user;
+    assertCan(subject, "calendar:edit");
+    if (event.createdById !== user.userId && !canDeleteDocument(subject, { createdById: event.createdById })) {
+      throw new ForbiddenError("calendar:edit");
+    }
+    if (!event.recurrence) throw new ValidationError("Este evento não se repete.");
+    if (date <= event.date) throw new ValidationError("Para remover o primeiro dia, altere o início da série.");
+    event.exdates = [...new Set([...(event.exdates ?? []), date])].sort();
+    event.updatedAt = now();
   });
 }
 
@@ -1069,7 +1047,7 @@ function personName(data: StoreData, userId: string): string {
  * gravado, que o cliente transforma em PDF, Word, Markdown ou HTML.
  */
 export async function getExportBundle(user: SessionUser, documentId: string): Promise<ExportBundle> {
-  const data = await load();
+  const data = await loadFor(user);
   const workspaceId = workspaceIdFor(data, user);
   const doc = liveDocument(data, workspaceId, documentId);
   const project = liveProject(data, workspaceId, doc.projectId);
@@ -1132,7 +1110,14 @@ export async function exportCalendarIcs(
 export async function importCalendarIcs(
   user: SessionUser,
   text: string,
-): Promise<{ created: number; duplicates: number; recurring: number; multiDay: number; total: number }> {
+): Promise<{
+  created: number;
+  duplicates: number;
+  series: number;
+  recurring: number;
+  multiDay: number;
+  total: number;
+}> {
   assertCan(user, "calendar:edit");
   const parsed = parseIcs(text);
   if (parsed.events.length === 0) throw new ValidationError("O ficheiro não tem eventos válidos (VEVENT).");
@@ -1143,7 +1128,7 @@ export async function importCalendarIcs(
     const existing = data.calendarEvents.filter((e) => e.workspaceId === workspaceId && !e.deletedAt);
     const uids = new Set(existing.map((e) => e.externalUid ?? `${e.id}@vellum.leobarreiras`));
     const signatures = new Set(existing.map((e) => `${e.date}|${e.startTime ?? ""}|${e.title.toLowerCase()}`));
-    const result = { created: 0, duplicates: 0, recurring: 0, multiDay: 0, total: parsed.events.length };
+    const result = { created: 0, duplicates: 0, series: 0, recurring: 0, multiDay: 0, total: parsed.events.length };
     const timestamp = now();
     for (const event of parsed.events) {
       const signature = `${event.date}|${event.startTime ?? ""}|${event.title.toLowerCase()}`;
@@ -1157,9 +1142,10 @@ export async function importCalendarIcs(
         result.multiDay++;
         notes.push(`Termina a ${event.endDate}${event.allDay ? "" : " (evento de vários dias)"}.`);
       }
-      if (event.recurring) {
+      if (event.recurrence) result.series++;
+      else if (event.recurring) {
         result.recurring++;
-        notes.push("Evento recorrente: importada a primeira ocorrência.");
+        notes.push("Evento recorrente com uma regra que o Vellum não representa: importada a primeira ocorrência.");
       }
       const legendName = event.legendName ?? event.categories.find((c) => byName.has(c.toLocaleLowerCase("pt-PT")));
       data.calendarEvents.push({
@@ -1178,6 +1164,8 @@ export async function importCalendarIcs(
         reminderMinutes: event.reminderMinutes,
         notes: notes.join("\n\n").slice(0, 4000),
         externalUid: event.uid,
+        recurrence: event.recurrence,
+        exdates: event.recurrence ? event.exdates.filter((d) => d > event.date) : [],
         createdAt: timestamp,
         updatedAt: timestamp,
         deletedAt: null,
@@ -1232,7 +1220,7 @@ export async function importMarkdownDocuments(
  */
 export async function exportWorkspaceBackup(user: SessionUser): Promise<{ filename: string; json: string }> {
   assertCan(user, "document:export");
-  const data = await load();
+  const data = await loadFor(user);
   const workspaceId = workspaceIdFor(data, user);
   const workspace = data.workspaces.find((w) => w.id === workspaceId);
   const projects = data.projects.filter(
@@ -1309,6 +1297,8 @@ export async function exportWorkspaceBackup(user: SessionUser): Promise<{ filena
         reminderMinutes: e.reminderMinutes,
         notes: e.notes,
         externalUid: e.externalUid ?? null,
+        recurrence: e.recurrence ?? null,
+        exdates: e.exdates ?? [],
       })),
     dayNotes: data.dayNotes
       .filter((n) => n.workspaceId === workspaceId && n.userId === user.userId)
@@ -1495,6 +1485,8 @@ export async function importWorkspaceBackup(
         reminderMinutes: e.reminderMinutes,
         notes: e.notes,
         externalUid: uid,
+        recurrence: e.recurrence ?? null,
+        exdates: e.exdates ?? [],
         createdAt: timestamp,
         updatedAt: timestamp,
         deletedAt: null,

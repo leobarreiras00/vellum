@@ -4,13 +4,15 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Caneta SVG → Modal de autenticação → <AppFooter variant="full" />.
- * Com sessão válida, o middleware redireciona para /dashboard.
+ * Com sessão válida, redireciona para /dashboard.
  */
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { AuthModal, type PublicDemoProfile } from "@/components/auth/AuthModal";
 import { PenWritingIntro } from "@/components/auth/PenWritingIntro";
 import { AppFooter } from "@/components/layout/AppFooter";
+import { getSession } from "@/lib/auth";
 import { DEMO_PROFILES, demoRoleTag, isDemoAuthEnabled } from "@/lib/demo-profiles";
 
 export const metadata: Metadata = {
@@ -27,6 +29,7 @@ function initialsOf(name: string) {
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
+  if (await getSession()) redirect("/dashboard");
   const params = await searchParams;
   const next = typeof params.seguinte === "string" ? params.seguinte : undefined;
   const view = params.vista === "registo" ? "register" : params.vista === "recuperar" ? "reset" : "login";

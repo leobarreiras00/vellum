@@ -209,6 +209,22 @@ export const REMINDER_LABELS: Record<number, string> = {
   2880: "2 dias antes",
 };
 
+export const RECURRENCE_FREQS = ["DAILY", "WEEKLY", "MONTHLY", "YEARLY"] as const;
+export type RecurrenceFreq = (typeof RECURRENCE_FREQS)[number];
+
+/**
+ * Regra de repetição (subconjunto do RFC 5545 RRULE): frequência, intervalo,
+ * dias da semana (0 = segunda … 6 = domingo, só em WEEKLY) e fim por data
+ * (inclusiva) ou por número de ocorrências.
+ */
+export interface RecurrenceRule {
+  freq: RecurrenceFreq;
+  interval: number;
+  byWeekday: number[];
+  until: string | null;
+  count: number | null;
+}
+
 export interface CalendarLegendRecord {
   id: string;
   workspaceId: string;
@@ -240,6 +256,10 @@ export interface CalendarEventRecord {
   notes: string;
   /** UID iCalendar de origem (importação .ics; evita duplicados e mantém o UID ao reexportar). */
   externalUid?: string | null;
+  /** Repetição (RRULE simplificada); `null` = evento único. */
+  recurrence?: RecurrenceRule | null;
+  /** Ocorrências removidas de uma série (AAAA-MM-DD, EXDATE). */
+  exdates?: string[];
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -388,6 +408,10 @@ export const documentContentSaveSchema = z.object({
   title: z.string().trim().max(120),
   summary: z.string().trim().max(240),
   contentJson: docContentSchema,
+  /** `updatedAt` em que a edição se baseou (fila offline): deteta conflitos. */
+  baseUpdatedAt: z.string().max(40).nullable().default(null),
+  /** Grava mesmo que outra pessoa tenha editado entretanto («Manter a minha»). */
+  force: z.boolean().default(false),
 });
 
 export const commentInputSchema = z.object({
@@ -415,6 +439,14 @@ export const legendInputSchema = z.object({
 });
 export type LegendInput = z.infer<typeof legendInputSchema>;
 
+export const recurrenceRuleSchema = z.object({
+  freq: z.enum(RECURRENCE_FREQS),
+  interval: z.number().int().min(1, "Intervalo mínimo: 1.").max(999, "Intervalo máximo: 999."),
+  byWeekday: z.array(z.number().int().min(0).max(6)).max(7).default([]),
+  until: dayKey.nullable().default(null),
+  count: z.number().int().min(1, "Pelo menos 1 vez.").max(3000, "No máximo 3000 vezes.").nullable().default(null),
+});
+
 export const eventInputSchema = z
   .object({
     title: z.string().trim().min(1, "Dê um título ao evento.").max(120, "Máximo de 120 caracteres."),
@@ -433,6 +465,7 @@ export const eventInputSchema = z
       .nullable()
       .default(null),
     notes: z.string().trim().max(4000, "Máximo de 4000 caracteres.").default(""),
+    recurrence: recurrenceRuleSchema.nullable().default(null),
   })
   .transform((v) => (v.allDay ? { ...v, startTime: null, endTime: null } : v))
   .superRefine((v, ctx) => {
@@ -441,6 +474,13 @@ export const eventInputSchema = z
     }
     if (v.startTime && v.endTime && v.endTime <= v.startTime) {
       ctx.addIssue({ code: "custom", path: ["endTime"], message: "O fim tem de ser depois do início." });
+    }
+    if (v.recurrence?.until && v.recurrence.until < v.date) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["recurrence"],
+        message: "A repetição tem de terminar depois do primeiro dia.",
+      });
     }
   });
 export type EventInput = z.infer<typeof eventInputSchema>;

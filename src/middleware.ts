@@ -4,39 +4,31 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Primeira barreira (ver .claude/skills/security-rbac-guard.md §3):
- *  - rotas privadas sem sessão válida → /login?seguinte=<rota>
- *  - /login com sessão válida → /dashboard
+ *  - rotas privadas sem cookie de sessão → /login?seguinte=<rota>
  * A autorização fina (papéis) é sempre verificada de novo no servidor.
  */
 import { NextResponse, type NextRequest } from "next/server";
 
-import { SESSION_COOKIE, verifySession } from "@/lib/session-token";
+/** Cookie de sessão do Better-Auth (`advanced.cookiePrefix: "vellum"`); em HTTPS leva o prefixo __Secure-. */
+const SESSION_COOKIES = ["vellum.session_token", "__Secure-vellum.session_token"];
 
-const PRIVATE_PREFIXES = ["/dashboard", "/projects", "/notes", "/calendar", "/settings", "/admin", "/workspace"];
+const PRIVATE_PREFIXES = ["/dashboard", "/projects", "/notes", "/calendar", "/settings", "/workspace"];
 
-export async function middleware(request: NextRequest) {
+/**
+ * Edge: só verifica a presença do cookie de sessão do Better-Auth. A sessão é
+ * validada na base de dados no servidor (layout do workspace e Server Actions);
+ * /login com sessão válida é redirecionado pela própria página.
+ */
+export function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  const session = await verifySession(request.cookies.get(SESSION_COOKIE)?.value);
-
   const isPrivate = PRIVATE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
-  if (isPrivate && !session) {
+  if (isPrivate && !SESSION_COOKIES.some((name) => request.cookies.has(name))) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
     url.searchParams.set("seguinte", `${pathname}${search}`);
-    const response = NextResponse.redirect(url);
-    // Cookie inválido ou expirado: limpa-o.
-    if (request.cookies.has(SESSION_COOKIE)) response.cookies.delete(SESSION_COOKIE);
-    return response;
-  }
-
-  if (pathname.startsWith("/admin") && session?.pr !== "SUPER_ADMIN") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  if (pathname === "/login" && session) {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+    return NextResponse.redirect(url);
   }
 
   return NextResponse.next();
@@ -49,8 +41,6 @@ export const config = {
     "/notes/:path*",
     "/calendar/:path*",
     "/settings/:path*",
-    "/admin/:path*",
     "/workspace/:path*",
-    "/login",
   ],
 };

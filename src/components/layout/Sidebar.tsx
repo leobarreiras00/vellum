@@ -603,7 +603,7 @@ function TreeRow({
           type="button"
           onClick={onToggle}
           aria-label={expanded ? `Recolher «${label}»` : `Expandir «${label}»`}
-          className="grid size-5 shrink-0 place-items-center rounded text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+          className="grid size-6 shrink-0 place-items-center rounded text-muted hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
         >
           {expanded ? (
             <ChevronDown aria-hidden="true" className="size-3" strokeWidth={1.75} />
@@ -612,7 +612,7 @@ function TreeRow({
           )}
         </button>
       ) : (
-        <span aria-hidden="true" className="w-5 shrink-0" />
+        <span aria-hidden="true" className="w-6 shrink-0" />
       )}
       <Link
         href={href}
@@ -634,7 +634,7 @@ function TreeRow({
           aria-label={createLabel}
           title={createLabel}
           className={cn(
-            "grid size-5 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity duration-150",
+            "grid size-6 shrink-0 place-items-center rounded text-muted opacity-0 transition-opacity duration-150",
             "hover:bg-surface hover:text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
             "group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100",
           )}

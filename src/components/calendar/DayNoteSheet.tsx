@@ -31,7 +31,7 @@ interface DayNoteSheetProps {
   legends: Map<string, LegendView>;
   effortSeconds: number;
   canEdit: boolean;
-  onOpenEvent: (eventId: string) => void;
+  onOpenEvent: (eventId: string, date?: string) => void;
   onNewEvent: (date: string) => void;
   onSave: (date: string, content: string, documentIds: string[]) => Promise<boolean>;
 }
@@ -84,6 +84,15 @@ export function DayNoteSheet({
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
+  // Avisa antes de sair da página com o registo por gravar (rede lenta).
+  const pending = state === "saving" || state === "dirty";
+  useEffect(() => {
+    if (!pending) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [pending]);
+
   const projectById = new Map(snapshot.projects.map((p) => [p.id, p]));
   const docById = new Map(snapshot.documents.map((d) => [d.id, d]));
   const linked = docIds.map((id) => docById.get(id)).filter((d) => d !== undefined);
@@ -122,7 +131,7 @@ export function DayNoteSheet({
               <li key={event.id}>
                 <button
                   type="button"
-                  onClick={() => onOpenEvent(event.id)}
+                  onClick={() => onOpenEvent(event.id, event.date)}
                   className="-mx-2 flex w-[calc(100%+1rem)] items-baseline gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-surface/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
                 >
                   <span className="nums w-[86px] shrink-0 font-mono text-[11px] text-muted">
@@ -154,7 +163,7 @@ export function DayNoteSheet({
           <label htmlFor={`registo-${day}`} className="eyebrow">
             Registo diário
           </label>
-          <span className="nums text-[11px] text-muted" aria-live="polite">
+          <span className="nums text-[11px] text-muted" aria-live="polite" data-save-state={state}>
             {state === "saving"
               ? "A guardar…"
               : state === "saved"
