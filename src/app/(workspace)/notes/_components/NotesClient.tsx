@@ -3,13 +3,14 @@
  * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
- * Captura rápida à maneira do OneNote, com estética editorial: título,
- * conteúdo, tinta, projeto opcional, fixação, pesquisa instantânea e
- * «Converter em Documento de Projeto». Criar/editar exige canEditDocument.
+ * Captura rápida à maneira do OneNote, com estética editorial: barra de
+ * filtros horizontal no topo (pesquisa, projeto, cor) e mural em grelha de 3
+ * colunas, com o compositor como primeiro cartão. Fixação e «Converter em
+ * Documento de Projeto». Criar/editar exige canEditDocument.
  */
 "use client";
 
-import { FileOutput, Lock, PenLine, Pin, PinOff, Search, Trash2 } from "lucide-react";
+import { FileOutput, Lock, PenLine, Pin, PinOff, Search, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
@@ -31,7 +32,7 @@ import { useWorkspace } from "@/context/WorkspaceContext";
 import { canDeleteDocument } from "@/lib/rbac";
 import { cn, formatNumber } from "@/lib/utils";
 import { routes } from "@/lib/workspace-routes";
-import { normalizeSearch, type InkColor, type NoteView } from "@/lib/workspace-types";
+import { INK_COLORS, INK_LABELS, normalizeSearch, type InkColor, type NoteView } from "@/lib/workspace-types";
 
 interface NotesClientProps {
   startComposing: boolean;
@@ -46,6 +47,7 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
   const { snapshot, run, can, isPending } = useWorkspace();
   const [query, setQuery] = useState("");
   const [projectFilter, setProjectFilter] = useState<string>(initialProject && !startComposing ? initialProject : "");
+  const [colorFilter, setColorFilter] = useState<InkColor | "">("");
   const [editing, setEditing] = useState<NoteView | null>(null);
   const [converting, setConverting] = useState<NoteView | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -77,12 +79,13 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
     return snapshot.notes.filter((note) => {
       if (projectFilter === NO_PROJECT && note.projectId) return false;
       if (projectFilter && projectFilter !== NO_PROJECT && note.projectId !== projectFilter) return false;
+      if (colorFilter && note.color !== colorFilter) return false;
       if (!tokens.length) return true;
       const project = snapshot.projects.find((p) => p.id === note.projectId)?.name ?? "";
       const hay = normalizeSearch(`${note.title} ${note.content} ${project}`);
       return tokens.every((t) => hay.includes(t));
     });
-  }, [snapshot.notes, snapshot.projects, query, projectFilter]);
+  }, [snapshot.notes, snapshot.projects, query, projectFilter, colorFilter]);
 
   const pinned = filtered.filter((n) => n.isPinned);
   const rest = filtered.filter((n) => !n.isPinned);
@@ -141,111 +144,166 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
     );
   }
 
-  const masonry = "columns-1 gap-4 sm:columns-2 2xl:columns-3 [&>*]:mb-4 [&>*]:break-inside-avoid";
+  const grid = "grid items-start gap-4 sm:grid-cols-2 xl:grid-cols-3";
+  const usedColors = INK_COLORS.filter((c) => snapshot.notes.some((n) => n.color === c));
+  const filtering = Boolean(query || projectFilter || colorFilter);
+  const clearFilters = () => {
+    setQuery("");
+    setProjectFilter("");
+    setColorFilter("");
+  };
+
+  const composer = (
+    <RoleGuard
+      permission="document:edit"
+      fallback={
+        <p className="flex items-start gap-2 rounded-xl border border-dashed border-subtle p-4 text-sm text-muted">
+          <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} />O seu papel permite ler o
+          mural, mas não criar ou editar notas.
+        </p>
+      }
+    >
+      <Composer startOpen={startComposing} defaultProject={initialProject} />
+    </RoleGuard>
+  );
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-10 md:px-10">
-      <header>
-        <p className="eyebrow">{snapshot.workspace.name}</p>
-        <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight">Notas Rápidas</h1>
-        <p className="nums mt-2 font-serif text-lg italic text-muted">
-          Capture agora, organize depois · {formatNumber(snapshot.notes.length)} notas no mural
-        </p>
+    <div className="mx-auto w-full max-w-7xl px-5 pb-16 pt-10 md:px-10">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="eyebrow">{snapshot.workspace.name}</p>
+          <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight">Notas Rápidas</h1>
+          <p className="nums mt-2 font-serif text-lg italic text-muted">
+            Capture agora, organize depois · {formatNumber(snapshot.notes.length)} notas no mural
+          </p>
+        </div>
       </header>
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        {/* Coluna de captura */}
-        <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
-          <RoleGuard
-            permission="document:edit"
-            fallback={
-              <p className="flex items-start gap-2 rounded-xl border border-dashed border-subtle p-4 text-sm text-muted">
-                <Lock aria-hidden="true" className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} />O seu papel permite ler
-                o mural, mas não criar ou editar notas.
-              </p>
-            }
-          >
-            <Composer startOpen={startComposing} defaultProject={initialProject} />
-          </RoleGuard>
-
-          <div className="space-y-3 rounded-xl border border-subtle bg-surface/50 p-4">
-            <div className="relative">
-              <Search
-                aria-hidden="true"
-                className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
-                strokeWidth={1.5}
-              />
-              <Input
-                ref={searchRef}
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Pesquisar notas…"
-                aria-label="Pesquisar notas"
-                className="pl-8 pr-10"
-              />
-              <kbd className="absolute right-2 top-1/2 -translate-y-1/2">/</kbd>
-            </div>
-            <div>
-              <Label htmlFor="notes-project-filter">Projeto</Label>
-              <Select
-                id="notes-project-filter"
-                value={projectFilter}
-                onChange={(e) => setProjectFilter(e.target.value)}
+      {/* Barra de filtros */}
+      <div
+        role="search"
+        data-testid="notes-filters"
+        className="sticky top-0 z-20 -mx-2 mt-7 flex flex-wrap items-center gap-2.5 border-y border-subtle bg-canvas/95 px-2 py-2.5 backdrop-blur"
+      >
+        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+          <Search
+            aria-hidden="true"
+            className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
+            strokeWidth={1.5}
+          />
+          <Input
+            ref={searchRef}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Pesquisar notas…"
+            aria-label="Pesquisar notas"
+            className="h-8 pl-8 pr-10 text-[13px]"
+          />
+          <kbd className="absolute right-2 top-1/2 -translate-y-1/2">/</kbd>
+        </div>
+        <label htmlFor="notes-project-filter" className="sr-only">
+          Filtrar por projeto
+        </label>
+        <Select
+          id="notes-project-filter"
+          value={projectFilter}
+          onChange={(e) => setProjectFilter(e.target.value)}
+          className="h-8 w-auto min-w-[180px] text-[13px]"
+        >
+          <option value="">Todos os projetos</option>
+          <option value={NO_PROJECT}>Sem projeto</option>
+          {snapshot.projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
+        {usedColors.length > 0 && (
+          <div role="radiogroup" aria-label="Filtrar por cor" className="flex items-center gap-1">
+            {usedColors.map((c) => (
+              <button
+                key={c}
+                type="button"
+                role="radio"
+                aria-checked={colorFilter === c}
+                aria-label={INK_LABELS[c]}
+                title={INK_LABELS[c]}
+                data-ink={c}
+                onClick={() => setColorFilter((v) => (v === c ? "" : c))}
+                className={cn(
+                  "grid size-7 place-items-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
+                  colorFilter === c ? "bg-ink/15 ring-1 ring-ink/50" : "hover:bg-surface",
+                )}
               >
-                <option value="">Todos os projetos</option>
-                <option value={NO_PROJECT}>Sem projeto</option>
-                {snapshot.projects.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <p className="nums text-xs text-muted" aria-live="polite">
-              {filtered.length === snapshot.notes.length
-                ? `${filtered.length} notas`
-                : `${filtered.length} de ${snapshot.notes.length} notas`}
-            </p>
+                <span className="size-3 rounded-full bg-ink" />
+              </button>
+            ))}
           </div>
-        </div>
+        )}
+        <span className="nums ml-auto text-xs text-muted" aria-live="polite">
+          {filtered.length === snapshot.notes.length
+            ? `${filtered.length} notas`
+            : `${filtered.length} de ${snapshot.notes.length} notas`}
+        </span>
+        {filtering && (
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
+            <X aria-hidden="true" strokeWidth={1.5} />
+            Limpar filtros
+          </Button>
+        )}
+      </div>
 
-        {/* Mural */}
-        <div>
-          {filtered.length === 0 && (
-            <p className="border-t border-subtle pt-8 font-serif text-xl italic text-muted">
-              {query ? `Nenhuma nota com «${query}».` : "O mural está vazio."}
+      {/* Mural em grelha */}
+      <div className="mt-6 space-y-6">
+        <section aria-labelledby="notes-pinned">
+          {pinned.length > 0 && (
+            <p id="notes-pinned" className="eyebrow mb-3 flex items-center gap-1.5">
+              <Pin aria-hidden="true" className="size-3" strokeWidth={1.5} />
+              Fixadas
             </p>
           )}
-          {pinned.length > 0 && (
-            <section aria-labelledby="notes-pinned">
-              <p id="notes-pinned" className="eyebrow mb-3 flex items-center gap-1.5">
-                <Pin aria-hidden="true" className="size-3" strokeWidth={1.5} />
-                Fixadas
-              </p>
-              <div className={masonry}>
-                {pinned.map((note) => (
-                  <NoteSlip key={note.id} note={note} actions={actionsFor(note)} highlight={note.id === focusNoteId} />
-                ))}
-              </div>
-            </section>
-          )}
-          {rest.length > 0 && (
-            <section
-              aria-labelledby="notes-rest"
-              className={cn(pinned.length > 0 && "mt-6 border-t border-subtle pt-5")}
-            >
-              <p id="notes-rest" className="eyebrow mb-3">
-                {pinned.length > 0 ? "Restantes" : "Todas as notas"}
-              </p>
-              <div className={masonry}>
-                {rest.map((note) => (
-                  <NoteSlip key={note.id} note={note} actions={actionsFor(note)} highlight={note.id === focusNoteId} />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
+          <div className={grid} data-testid="notes-grid">
+            {composer}
+            {pinned.map((note) => (
+              <NoteSlip key={note.id} note={note} actions={actionsFor(note)} highlight={note.id === focusNoteId} />
+            ))}
+            {pinned.length === 0 &&
+              rest.map((note) => (
+                <NoteSlip key={note.id} note={note} actions={actionsFor(note)} highlight={note.id === focusNoteId} />
+              ))}
+          </div>
+        </section>
+
+        {pinned.length > 0 && rest.length > 0 && (
+          <section aria-labelledby="notes-rest" className="border-t border-subtle pt-5">
+            <p id="notes-rest" className="eyebrow mb-3">
+              Restantes
+            </p>
+            <div className={grid}>
+              {rest.map((note) => (
+                <NoteSlip key={note.id} note={note} actions={actionsFor(note)} highlight={note.id === focusNoteId} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {filtered.length === 0 && (
+          <div className="rounded-xl border border-dashed border-subtle px-6 py-10 text-center">
+            <p className="font-serif text-xl italic text-muted">
+              {filtering
+                ? query
+                  ? `Nenhuma nota com «${query}».`
+                  : "Nenhuma nota com estes filtros."
+                : "O mural está vazio. Escreva a primeira nota no cartão acima."}
+            </p>
+            {filtering && (
+              <Button variant="ghost" size="sm" className="mt-3" onClick={clearFilters}>
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       <NoteEditorDialog note={editing} onClose={() => setEditing(null)} />
@@ -336,7 +394,7 @@ function Composer({ startOpen, defaultProject }: { startOpen: boolean; defaultPr
               placeholder="Ideias, listas, frases soltas…"
               rows={4}
               maxLength={4000}
-              className="w-full resize-y bg-transparent text-sm leading-relaxed text-primary placeholder:text-muted/70 focus:outline-none focus-visible:outline-none"
+              className="w-full resize-none bg-transparent text-sm leading-relaxed text-primary placeholder:text-muted/70 focus:outline-none focus-visible:outline-none"
             />
             <div className="space-y-3 border-t border-subtle pt-3">
               <InkPicker value={color} onChange={setColor} label="Cor da nota" />

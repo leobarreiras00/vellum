@@ -3,26 +3,27 @@
  * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
- * Separador «Visão executiva»: 4 KPIs, horas e esforço por projeto, mapa de
- * consistência anual, «Continuar a Escrever» e próximos Dias Importantes.
- * Separador «Permissões (RBAC)»: o painel de verificação da Fase 1B.
+ * Visão executiva: 4 KPIs, horas e esforço por projeto, mapa de consistência
+ * anual, «Continuar a Escrever» e próximos Dias Importantes. Num atelier vazio
+ * mostra um estado inicial com «Carregar dados de exemplo» e «Criar projeto».
+ * (A tabela de papéis vive agora em Definições → Equipa & Permissões.)
  */
 "use client";
 
-import { ArrowRight, CalendarDays, Star, StickyNote, Timer } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { ArrowRight, CalendarDays, FolderPlus, Sparkles, Star, StickyNote, Timer } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
+import { restoreExampleDataAction } from "@/app/(workspace)/actions";
 import { ConsistencyHeatmap } from "@/app/(workspace)/dashboard/_components/ConsistencyHeatmap";
 import { FocusSessionDialog } from "@/app/(workspace)/dashboard/_components/FocusSessionDialog";
 import { KpiRuler, hours } from "@/app/(workspace)/dashboard/_components/KpiRuler";
 import { ProjectEffortChart } from "@/app/(workspace)/dashboard/_components/ProjectEffortChart";
-import { RbacPanel } from "@/app/(workspace)/dashboard/_components/RbacPanel";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { Button, buttonVariants } from "@/components/ui/Button";
 import { InkTag } from "@/components/ui/Ink";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { useShell } from "@/components/layout/ShellContext";
 import { NoteSlip } from "@/components/workspace/NoteSlip";
 import { useAuth } from "@/context/AuthContext";
 import { useTelemetry } from "@/context/TelemetryContext";
@@ -32,28 +33,16 @@ import { expandEvents } from "@/lib/recurrence";
 import { relativeTime } from "@/lib/format";
 import { ROLE_LABELS } from "@/lib/rbac";
 import { effortScore, periodTotals, sumRange } from "@/lib/telemetry";
-import { EASE_EDITORIAL, cn, formatClock, formatNumber } from "@/lib/utils";
+import { cn, formatClock, formatNumber } from "@/lib/utils";
 import { routes } from "@/lib/workspace-routes";
 import { lisbonDay } from "@/lib/workspace-types";
 
-type Tab = "visao" | "rbac";
-
 export function DashboardClient({ greeting, today: todayLabel }: { greeting: string; today: string }) {
   const { user, role } = useAuth();
-  const { snapshot } = useWorkspace();
+  const { snapshot, can, run, isPending } = useWorkspace();
+  const { openProjectForm } = useShell();
   const telemetry = useTelemetry();
-  const reduce = useReducedMotion();
-  const [tab, setTab] = useState<Tab>("visao");
   const [focusOpen, setFocusOpen] = useState(false);
-
-  // Ligação direta ao painel RBAC: /dashboard#rbac
-  useEffect(() => {
-    if (window.location.hash === "#rbac") setTab("rbac");
-  }, []);
-  const chooseTab = (next: Tab) => {
-    setTab(next);
-    window.history.replaceState(null, "", next === "rbac" ? "#rbac" : window.location.pathname);
-  };
 
   if (!user) return null;
 
@@ -99,145 +88,182 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
             <span className="not-italic text-primary">{role ? ROLE_LABELS[role] : "visitante"}</span>.
           </p>
         </div>
-        <div role="tablist" aria-label="Secções do dashboard" className="flex border-b border-subtle">
-          {(
-            [
-              ["visao", "Visão executiva"],
-              ["rbac", "Permissões (RBAC)"],
-            ] as const
-          ).map(([value, label]) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              id={`tab-${value}`}
-              aria-selected={tab === value}
-              aria-controls={`painel-${value}`}
-              onClick={() => chooseTab(value)}
-              className={cn(
-                "relative -mb-px px-3 pb-2 pt-1 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary",
-                tab === value ? "text-primary" : "text-muted hover:text-primary",
-              )}
-            >
-              {label}
-              {tab === value && (
-                <motion.span
-                  layoutId="dashboard-tab"
-                  className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-accent-primary"
-                  transition={reduce ? { duration: 0 } : { duration: 0.22, ease: EASE_EDITORIAL }}
-                />
-              )}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {tab === "rbac" ? (
-        <div role="tabpanel" id="painel-rbac" aria-labelledby="tab-rbac" className="mt-10">
-          <RbacPanel />
+      {snapshot.projects.length === 0 && (
+        <EmptyAtelier
+          canManage={can("project:manage")}
+          busy={isPending}
+          onLoadExamples={() =>
+            void run(() => restoreExampleDataAction(), {
+              success: "Dados de exemplo carregados: três projetos prontos a explorar.",
+            })
+          }
+          onNewProject={() => openProjectForm()}
+        />
+      )}
+
+      <div className="mt-8">
+        {/* Sessão ao vivo */}
+        <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-subtle bg-surface/60 px-4 py-3 text-sm">
+          <span className="inline-flex items-center gap-2">
+            <span
+              aria-hidden="true"
+              className={cn("size-2 rounded-full", telemetry.isActive ? "bg-accent-primary" : "border border-muted")}
+            />
+            <span className={telemetry.isActive ? "text-primary" : "text-muted"}>
+              {telemetry.isActive ? "Esforço Ativo" : "Em Pausa"}
+            </span>
+          </span>
+          <span className="nums inline-flex items-center gap-1.5 text-muted">
+            <Timer aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            Sessão atual <span className="font-mono text-primary">{formatClock(telemetry.sessionSeconds)}</span>
+          </span>
+          <span className="nums text-muted">
+            {formatNumber(telemetry.editsToday)} edições hoje · pausa ao fim de {Math.round(telemetry.idleMs / 60_000)}{" "}
+            min sem atividade
+          </span>
+          <Button variant="secondary" size="sm" className="ml-auto" onClick={() => setFocusOpen(true)}>
+            <Timer aria-hidden="true" strokeWidth={1.5} />
+            Registar sessão de foco
+          </Button>
         </div>
-      ) : (
-        <div role="tabpanel" id="painel-visao" aria-labelledby="tab-visao" className="mt-8">
-          {/* Sessão ao vivo */}
-          <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-3 rounded-xl border border-subtle bg-surface/60 px-4 py-3 text-sm">
-            <span className="inline-flex items-center gap-2">
-              <span
-                aria-hidden="true"
-                className={cn("size-2 rounded-full", telemetry.isActive ? "bg-accent-primary" : "border border-muted")}
-              />
-              <span className={telemetry.isActive ? "text-primary" : "text-muted"}>
-                {telemetry.isActive ? "Esforço Ativo" : "Em Pausa"}
-              </span>
-            </span>
-            <span className="nums inline-flex items-center gap-1.5 text-muted">
-              <Timer aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
-              Sessão atual <span className="font-mono text-primary">{formatClock(telemetry.sessionSeconds)}</span>
-            </span>
-            <span className="nums text-muted">
-              {formatNumber(telemetry.editsToday)} edições hoje · pausa ao fim de{" "}
-              {Math.round(telemetry.idleMs / 60_000)} min sem atividade
-            </span>
-            <Button variant="secondary" size="sm" className="ml-auto" onClick={() => setFocusOpen(true)}>
-              <Timer aria-hidden="true" strokeWidth={1.5} />
-              Registar sessão de foco
-            </Button>
-          </div>
 
-          <KpiRuler
-            data={{
-              ...periods,
-              goalSeconds,
-              score,
-              notes: snapshot.notes.length,
-              documents: snapshot.documents.length,
-              diagrams: snapshot.diagramCount,
-              weekWords,
-              wordsPerHour,
-              wordsToday: telemetry.wordsToday,
-            }}
+        <KpiRuler
+          data={{
+            ...periods,
+            goalSeconds,
+            score,
+            notes: snapshot.notes.length,
+            documents: snapshot.documents.length,
+            diagrams: snapshot.diagramCount,
+            weekWords,
+            wordsPerHour,
+            wordsToday: telemetry.wordsToday,
+          }}
+        />
+
+        <section aria-labelledby="dash-projetos" className="mt-12">
+          <SectionHeading
+            index="01"
+            id="dash-projetos"
+            title="Horas e esforço por projeto"
+            description="O seu tempo ativo em cada projeto e o ritmo diário no intervalo escolhido."
           />
+          <div className="mt-4">
+            <ProjectEffortChart projects={snapshot.projects} byProjectDay={effort.byProjectDay} today={today} />
+          </div>
+        </section>
 
-          <section aria-labelledby="dash-projetos" className="mt-12">
-            <SectionHeading
-              index="01"
-              id="dash-projetos"
-              title="Horas e esforço por projeto"
-              description="O seu tempo ativo em cada projeto e o ritmo diário no intervalo escolhido."
-            />
-            <div className="mt-4">
-              <ProjectEffortChart projects={snapshot.projects} byProjectDay={effort.byProjectDay} today={today} />
-            </div>
-          </section>
+        <section aria-labelledby="dash-mapa" className="mt-12">
+          <SectionHeading
+            index="02"
+            id="dash-mapa"
+            title="Mapa de consistência anual"
+            description={`Cada quadrado é um dia; a terracota plena marca a meta de ${hours(goalSeconds)} cumprida.`}
+          />
+          <div className="mt-5">
+            <ConsistencyHeatmap byDay={byDay} wordsByDay={wordsByDay} goalSeconds={goalSeconds} today={today} />
+          </div>
+        </section>
 
-          <section aria-labelledby="dash-mapa" className="mt-12">
-            <SectionHeading
-              index="02"
-              id="dash-mapa"
-              title="Mapa de consistência anual"
-              description={`Cada quadrado é um dia; a terracota plena marca a meta de ${hours(goalSeconds)} cumprida.`}
-            />
-            <div className="mt-5">
-              <ConsistencyHeatmap byDay={byDay} wordsByDay={wordsByDay} goalSeconds={goalSeconds} today={today} />
-            </div>
-          </section>
-
-          <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-14">
-            <section aria-labelledby="dash-escrever">
-              <SectionHeading index="03" id="dash-escrever" title="Continuar a escrever" />
-              {recent.length === 0 ? (
-                <p className="mt-6 font-serif italic text-muted">Ainda não há páginas. Crie um projeto para começar.</p>
-              ) : (
-                <ol className="mt-2 divide-y divide-subtle">
-                  {recent.map((doc) => {
-                    const project = projectById.get(doc.projectId);
-                    return (
-                      <li key={doc.id}>
-                        <Link
-                          href={routes.page(doc.projectId, doc.id)}
-                          className="group -mx-2 block rounded-lg px-2 py-3.5 transition-colors hover:bg-surface/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                        >
-                          <span className="flex items-baseline justify-between gap-4">
-                            <span className="truncate font-serif text-lg leading-snug text-primary group-hover:text-accent-primary">
-                              {doc.title}
-                            </span>
-                            <span className="nums shrink-0 text-xs text-muted">{relativeTime(doc.updatedAt)}</span>
+        <div className="mt-12 grid gap-12 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:gap-14">
+          <section aria-labelledby="dash-escrever">
+            <SectionHeading index="03" id="dash-escrever" title="Continuar a escrever" />
+            {recent.length === 0 ? (
+              <p className="mt-6 font-serif italic text-muted">Ainda não há páginas. Crie um projeto para começar.</p>
+            ) : (
+              <ol className="mt-2 divide-y divide-subtle">
+                {recent.map((doc) => {
+                  const project = projectById.get(doc.projectId);
+                  return (
+                    <li key={doc.id}>
+                      <Link
+                        href={routes.page(doc.projectId, doc.id)}
+                        className="group -mx-2 block rounded-lg px-2 py-3.5 transition-colors hover:bg-surface/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                      >
+                        <span className="flex items-baseline justify-between gap-4">
+                          <span className="truncate font-serif text-lg leading-snug text-primary group-hover:text-accent-primary">
+                            {doc.title}
                           </span>
-                          <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
-                            {project && <InkTag color={project.color}>{project.name}</InkTag>}
-                            <span className="nums">{formatNumber(doc.wordCount)} palavras</span>
-                            <span
-                              className="ml-auto flex w-full items-center gap-2 sm:w-44"
-                              data-ink={project?.color ?? "grafite"}
-                            >
-                              <span className="h-1 flex-1 overflow-hidden rounded-full bg-surface" aria-hidden="true">
-                                <span
-                                  className="block h-full rounded-full bg-ink"
-                                  style={{ width: `${(doc.effortSeconds / maxDocEffort) * 100}%` }}
-                                />
-                              </span>
-                              <span className="nums w-14 text-right font-mono text-[11px]" title="Esforço investido">
-                                {hours(doc.effortSeconds)}
-                              </span>
+                          <span className="nums shrink-0 text-xs text-muted">{relativeTime(doc.updatedAt)}</span>
+                        </span>
+                        <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted">
+                          {project && <InkTag color={project.color}>{project.name}</InkTag>}
+                          <span className="nums">{formatNumber(doc.wordCount)} palavras</span>
+                          <span
+                            className="ml-auto flex w-full items-center gap-2 sm:w-44"
+                            data-ink={project?.color ?? "grafite"}
+                          >
+                            <span className="h-1 flex-1 overflow-hidden rounded-full bg-surface" aria-hidden="true">
+                              <span
+                                className="block h-full rounded-full bg-ink"
+                                style={{ width: `${(doc.effortSeconds / maxDocEffort) * 100}%` }}
+                              />
+                            </span>
+                            <span className="nums w-14 text-right font-mono text-[11px]" title="Esforço investido">
+                              {hours(doc.effortSeconds)}
+                            </span>
+                          </span>
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
+
+          <div className="grid content-start gap-12">
+            <section aria-labelledby="dash-importantes">
+              <SectionHeading
+                index="04"
+                id="dash-importantes"
+                title="Próximos dias importantes"
+                action={
+                  <Link
+                    href={routes.calendar}
+                    className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent-primary"
+                  >
+                    Calendário <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                  </Link>
+                }
+              />
+              {important.length === 0 ? (
+                <p className="mt-5 font-serif italic text-muted">
+                  Nenhum marco agendado. Marque um evento como Dia Importante.
+                </p>
+              ) : (
+                <ol className="mt-2 divide-y divide-subtle" aria-label="Próximos dias importantes">
+                  {important.map((event) => {
+                    const legend = event.legendId ? legends.get(event.legendId) : undefined;
+                    return (
+                      <li key={event.occurrenceKey}>
+                        <Link
+                          href={`${routes.calendar}?dia=${event.date}`}
+                          className="-mx-2 grid grid-cols-[52px_minmax(0,1fr)] gap-3 rounded-lg px-2 py-3 hover:bg-surface/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+                        >
+                          <span className="text-center">
+                            <span className="nums block font-serif text-2xl leading-none text-accent-primary">
+                              {Number(event.date.slice(8))}
+                            </span>
+                            <span className="mt-1 block text-[10px] uppercase tracking-[0.12em] text-muted">
+                              {dayShortLabel(event.date).split(" ")[1]}
+                            </span>
+                          </span>
+                          <span className="min-w-0">
+                            <span className="flex items-center gap-1.5 truncate text-sm text-primary">
+                              <Star
+                                aria-hidden="true"
+                                className="size-3 shrink-0 fill-current text-accent-primary"
+                                strokeWidth={1.5}
+                              />
+                              <span className="truncate">{event.title}</span>
+                            </span>
+                            <span className="nums mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
+                              <span className="first-letter:uppercase">{relativeDayLabel(event.date, today)}</span>·
+                              <span>{weekdayLabel(event.date)}</span>
+                              {legend && <InkTag color={legend.color}>{legend.name}</InkTag>}
                             </span>
                           </span>
                         </Link>
@@ -246,129 +272,140 @@ export function DashboardClient({ greeting, today: todayLabel }: { greeting: str
                   })}
                 </ol>
               )}
+              {todayEvents.length > 0 && (
+                <div className="mt-5 rounded-xl border border-subtle bg-surface/50 px-4 py-3">
+                  <p className="eyebrow flex items-center gap-1.5">
+                    <CalendarDays aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                    Hoje na agenda
+                  </p>
+                  <ul className="mt-2 space-y-1.5 text-sm">
+                    {todayEvents.map((e) => (
+                      <li key={e.occurrenceKey} className="flex items-baseline gap-3">
+                        <span className="nums w-[86px] shrink-0 font-mono text-[11px] text-muted">
+                          {timeRangeLabel(e)}
+                        </span>
+                        <span className="truncate text-primary">{e.title}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </section>
 
-            <div className="grid content-start gap-12">
-              <section aria-labelledby="dash-importantes">
-                <SectionHeading
-                  index="04"
-                  id="dash-importantes"
-                  title="Próximos dias importantes"
-                  action={
-                    <Link
-                      href={routes.calendar}
-                      className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent-primary"
-                    >
-                      Calendário <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.5} />
-                    </Link>
-                  }
-                />
-                {important.length === 0 ? (
-                  <p className="mt-5 font-serif italic text-muted">
-                    Nenhum marco agendado. Marque um evento como Dia Importante.
+            <section aria-labelledby="dash-notas">
+              <SectionHeading
+                index="05"
+                id="dash-notas"
+                title="Notas fixadas"
+                action={
+                  <Link
+                    href={routes.notes}
+                    className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent-primary"
+                  >
+                    Ver mural <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.5} />
+                  </Link>
+                }
+              />
+              <div className="mt-4 space-y-3">
+                {pinned.length === 0 && (
+                  <p className="font-serif italic text-muted">
+                    Nenhuma nota fixada. Fixe as que quer ter sempre à mão.
                   </p>
-                ) : (
-                  <ol className="mt-2 divide-y divide-subtle" aria-label="Próximos dias importantes">
-                    {important.map((event) => {
-                      const legend = event.legendId ? legends.get(event.legendId) : undefined;
-                      return (
-                        <li key={event.occurrenceKey}>
-                          <Link
-                            href={`${routes.calendar}?dia=${event.date}`}
-                            className="-mx-2 grid grid-cols-[52px_minmax(0,1fr)] gap-3 rounded-lg px-2 py-3 hover:bg-surface/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
-                          >
-                            <span className="text-center">
-                              <span className="nums block font-serif text-2xl leading-none text-accent-primary">
-                                {Number(event.date.slice(8))}
-                              </span>
-                              <span className="mt-1 block text-[10px] uppercase tracking-[0.12em] text-muted">
-                                {dayShortLabel(event.date).split(" ")[1]}
-                              </span>
-                            </span>
-                            <span className="min-w-0">
-                              <span className="flex items-center gap-1.5 truncate text-sm text-primary">
-                                <Star
-                                  aria-hidden="true"
-                                  className="size-3 shrink-0 fill-current text-accent-primary"
-                                  strokeWidth={1.5}
-                                />
-                                <span className="truncate">{event.title}</span>
-                              </span>
-                              <span className="nums mt-1 flex flex-wrap items-center gap-2 text-xs text-muted">
-                                <span className="first-letter:uppercase">{relativeDayLabel(event.date, today)}</span>·
-                                <span>{weekdayLabel(event.date)}</span>
-                                {legend && <InkTag color={legend.color}>{legend.name}</InkTag>}
-                              </span>
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ol>
                 )}
-                {todayEvents.length > 0 && (
-                  <div className="mt-5 rounded-xl border border-subtle bg-surface/50 px-4 py-3">
-                    <p className="eyebrow flex items-center gap-1.5">
-                      <CalendarDays aria-hidden="true" className="size-3" strokeWidth={1.5} />
-                      Hoje na agenda
-                    </p>
-                    <ul className="mt-2 space-y-1.5 text-sm">
-                      {todayEvents.map((e) => (
-                        <li key={e.occurrenceKey} className="flex items-baseline gap-3">
-                          <span className="nums w-[86px] shrink-0 font-mono text-[11px] text-muted">
-                            {timeRangeLabel(e)}
-                          </span>
-                          <span className="truncate text-primary">{e.title}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </section>
-
-              <section aria-labelledby="dash-notas">
-                <SectionHeading
-                  index="05"
-                  id="dash-notas"
-                  title="Notas fixadas"
-                  action={
-                    <Link
-                      href={routes.notes}
-                      className="inline-flex items-center gap-1 text-xs text-muted hover:text-accent-primary"
-                    >
-                      Ver mural <ArrowRight aria-hidden="true" className="size-3" strokeWidth={1.5} />
-                    </Link>
-                  }
-                />
-                <div className="mt-4 space-y-3">
-                  {pinned.length === 0 && (
-                    <p className="font-serif italic text-muted">
-                      Nenhuma nota fixada. Fixe as que quer ter sempre à mão.
-                    </p>
-                  )}
-                  {pinned.map((note) => (
-                    <NoteSlip key={note.id} note={note} compact />
-                  ))}
-                  <RoleGuard permission="document:edit">
-                    <Link href={`${routes.notes}?nova=1`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-                      <StickyNote aria-hidden="true" strokeWidth={1.5} />
-                      Nova nota rápida
-                    </Link>
-                  </RoleGuard>
-                </div>
-              </section>
-            </div>
+                {pinned.map((note) => (
+                  <NoteSlip key={note.id} note={note} compact />
+                ))}
+                <RoleGuard permission="document:edit">
+                  <Link href={`${routes.notes}?nova=1`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
+                    <StickyNote aria-hidden="true" strokeWidth={1.5} />
+                    Nova nota rápida
+                  </Link>
+                </RoleGuard>
+              </div>
+            </section>
           </div>
-
-          <p className="nums mt-12 border-t border-subtle pt-4 text-xs text-muted">
-            Últimos 30 dias: {hours(sumRange(byDay, lisbonDay(new Date(Date.now() - 29 * 86_400_000)), today))} de
-            esforço focado. O Motor de Telemetria mede teclado, rato e edição; pausa sozinho ao fim de 2 minutos sem
-            atividade.
-          </p>
         </div>
-      )}
+
+        <p className="nums mt-12 border-t border-subtle pt-4 text-xs text-muted">
+          Últimos 30 dias: {hours(sumRange(byDay, lisbonDay(new Date(Date.now() - 29 * 86_400_000)), today))} de esforço
+          focado. O Motor de Telemetria mede teclado, rato e edição; pausa sozinho ao fim de 2 minutos sem atividade.
+        </p>
+      </div>
 
       <FocusSessionDialog open={focusOpen} onClose={() => setFocusOpen(false)} />
     </div>
+  );
+}
+
+function EmptyAtelier({
+  canManage,
+  busy,
+  onLoadExamples,
+  onNewProject,
+}: {
+  canManage: boolean;
+  busy: boolean;
+  onLoadExamples: () => void;
+  onNewProject: () => void;
+}) {
+  return (
+    <section
+      aria-labelledby="atelier-vazio"
+      data-testid="dashboard-empty"
+      className="paper-grain relative mt-8 overflow-hidden rounded-2xl border border-subtle bg-elevated px-6 py-9 shadow-sheet md:px-10"
+    >
+      <div className="grid gap-8 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] md:items-center">
+        <div>
+          <p className="eyebrow">Atelier em branco</p>
+          <h2 id="atelier-vazio" className="mt-2 font-serif text-3xl font-normal leading-tight">
+            Uma mesa limpa, à espera da primeira página<span className="text-accent-primary">.</span>
+          </h2>
+          <p className="mt-3 max-w-prose font-serif text-lg italic leading-relaxed text-muted">
+            Comece por um projeto seu ou carregue três exemplos editoriais (um romance, uma revista e uma investigação)
+            com documentos, diagramas, notas e uma agenda de novembro já preenchida.
+          </p>
+          <div className="mt-6 flex flex-wrap gap-2">
+            {canManage && (
+              <Button variant="primary" onClick={onNewProject}>
+                <FolderPlus aria-hidden="true" strokeWidth={1.5} />
+                Criar projeto
+              </Button>
+            )}
+            {canManage && (
+              <Button variant="secondary" onClick={onLoadExamples} disabled={busy} data-testid="load-example-data">
+                <Sparkles aria-hidden="true" strokeWidth={1.5} />
+                Carregar dados de exemplo
+              </Button>
+            )}
+            {!canManage && (
+              <p className="text-sm text-muted">Peça a quem gere o atelier para criar o primeiro projeto.</p>
+            )}
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            Pode limpar os exemplos a qualquer momento em Definições → Equipa &amp; Permissões.
+          </p>
+        </div>
+        <ol aria-hidden="true" className="hidden space-y-2.5 md:block">
+          {[
+            ["Romance", "A Casa das Marés", "terracota"],
+            ["Revista", "Atelier · Edição de Inverno", "salvia"],
+            ["Investigação", "Hábitos de escrita", "ardosia"],
+          ].map(([kind, title, ink], i) => (
+            <li
+              key={title}
+              data-ink={ink}
+              className={cn(
+                "rounded-lg border border-subtle bg-canvas px-4 py-3 shadow-paper",
+                i === 1 && "ml-6",
+                i === 2 && "ml-3",
+              )}
+            >
+              <span className="block text-[10.5px] uppercase tracking-[0.14em] text-ink">{kind}</span>
+              <span className="mt-0.5 block font-serif text-[17px] text-primary">{title}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
   );
 }

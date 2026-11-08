@@ -24,6 +24,7 @@ import {
   Trash2,
   UserPen,
   type LucideIcon,
+  Share2,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -60,7 +61,7 @@ interface DocumentEditorClientProps {
 export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentEditorClientProps) {
   const router = useRouter();
   const { snapshot, run, subjectFor, isPending, notify } = useWorkspace();
-  const { openExport, registerFlush, isExporting } = useShell();
+  const { openExport, openShare, registerFlush, isExporting } = useShell();
   const project = snapshot.projects.find((p) => p.id === projectId);
   const doc = snapshot.documents.find((d) => d.id === documentId);
 
@@ -427,6 +428,17 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
                 <span className="nums font-mono text-[10.5px] text-muted">{openComments}</span>
               </Button>
             )}
+
+            <Button
+              size="sm"
+              variant="ghost"
+              data-testid="document-share"
+              onClick={() => openShare({ projectId, documentId: doc.id })}
+              title="Partilhar por link ou convidar por email"
+            >
+              <Share2 aria-hidden="true" strokeWidth={1.5} />
+              Partilhar
+            </Button>
 
             {canExport && (
               <Button

@@ -3,15 +3,17 @@
  * © 2026 Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
- * Folha de papelaria (bg-elevated, borda capilar, shadow-sheet) com três vistas:
+ * Folha de papelaria (bg-elevated, borda capilar, shadow-sheet) com quatro vistas:
  *  1. Entrar — username/email + palavra-passe, e perfis de demonstração RBAC.
  *  2. Criar conta — nome, username único, email, palavra-passe e tema inicial.
  *  3. Recuperar — pedido de código (passo 1) e nova palavra-passe (passo 2).
+ *  4. Confirmar — código de 6 algarismos enviado por email (registo e início de
+ *     sessão), «Reenviar código» e «Confiar neste dispositivo por 7 dias».
  * Todo o input é validado no cliente (Zod) e de novo nas Server Actions.
  */
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, KeyRound, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Inbox, KeyRound, Loader2, MailCheck, RotateCw } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition, type FormEvent, type ReactNode } from "react";
@@ -22,6 +24,8 @@ import {
   loginAction,
   registerAction,
   requestResetAction,
+  resendCodeAction,
+  verifyCodeAction,
 } from "@/app/(auth)/actions";
 import { FormNotice, PasswordField, SubmitButton, TextField, linkButton } from "@/components/auth/AuthFields";
 import { useTheme } from "@/components/providers/ThemeProvider";
@@ -32,8 +36,10 @@ import {
   registerSchema,
   resetConfirmSchema,
   resetRequestSchema,
+  verifyCodeSchema,
   type FieldErrors,
 } from "@/lib/auth-schemas";
+import type { SignInOutcome } from "@/lib/auth";
 import type { PlatformRole, WorkspaceRole } from "@/lib/rbac";
 import type { ThemeId } from "@/lib/themes";
 import { EASE_EDITORIAL, cn } from "@/lib/utils";
@@ -49,20 +55,38 @@ export interface PublicDemoProfile {
   workspaceRole: WorkspaceRole;
 }
 
-type View = "login" | "register" | "reset";
+type View = "login" | "register" | "reset" | "verify";
+type CodeSent = Extract<SignInOutcome, { status: "code-sent" }>;
 
 interface AuthModalProps {
   demoProfiles: readonly PublicDemoProfile[];
   /** Destino após entrar (validado de novo no servidor). */
   next?: string;
-  initialView?: View;
+  initialView?: Exclude<View, "verify">;
+  /** Username ou email já preenchido (ex.: ligação do email de recuperação). */
+  initialIdentifier?: string;
+  /** Mostra a ligação para a Caixa de Inspeção (desenvolvimento sem fornecedor de email). */
+  devInbox?: boolean;
 }
 
-export function AuthModal({ demoProfiles, next, initialView = "login" }: AuthModalProps) {
+export function AuthModal({
+  demoProfiles,
+  next,
+  initialView = "login",
+  initialIdentifier = "",
+  devInbox = false,
+}: AuthModalProps) {
   const [view, setView] = useState<View>(initialView);
-  const [prefill, setPrefill] = useState("");
+  const [prefill, setPrefill] = useState(initialIdentifier);
+  const [pendingCode, setPendingCode] = useState<CodeSent | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const reduced = useReducedMotion();
+
+  const awaitCode = (outcome: CodeSent) => {
+    setPendingCode(outcome);
+    setNotice(null);
+    setView("verify");
+  };
 
   const go = (target: View, options?: { identifier?: string; notice?: string }) => {
     if (options?.identifier !== undefined) setPrefill(options.identifier);
@@ -82,6 +106,14 @@ export function AuthModal({ demoProfiles, next, initialView = "login" }: AuthMod
       title: "Redefinir palavra-passe",
       dek: "Enviamos um código de uso único, válido durante 15 minutos.",
     },
+    verify: {
+      eyebrow: pendingCode?.purpose === "register" ? "II · Confirmar email" : "I · Confirmar acesso",
+      title: pendingCode?.purpose === "register" ? "Confirme o seu e-mail" : "Confirme que é você",
+      dek:
+        pendingCode?.purpose === "register"
+          ? "Falta um passo para abrir o seu atelier."
+          : "Enviámos um código de 6 algarismos para o seu email.",
+    },
   };
 
   return (
@@ -89,7 +121,7 @@ export function AuthModal({ demoProfiles, next, initialView = "login" }: AuthMod
       aria-labelledby="auth-title"
       className="w-[min(440px,calc(100vw-2rem))] overflow-hidden rounded-xl border border-subtle bg-elevated shadow-sheet"
     >
-      {view !== "reset" && (
+      {view !== "reset" && view !== "verify" && (
         <div role="tablist" aria-label="Acesso" className="grid grid-cols-2 border-b border-subtle">
           {(["login", "register"] as const).map((tab) => (
             <button
@@ -139,9 +171,19 @@ export function AuthModal({ demoProfiles, next, initialView = "login" }: AuthMod
                 notice={notice}
                 demoProfiles={demoProfiles}
                 onForgot={(identifier) => go("reset", { identifier })}
+                onCodeSent={awaitCode}
               />
             )}
-            {view === "register" && <RegisterView />}
+            {view === "register" && <RegisterView onCodeSent={awaitCode} />}
+            {view === "verify" && pendingCode && (
+              <VerifyView
+                pending={pendingCode}
+                next={next}
+                devInbox={devInbox}
+                onResent={setPendingCode}
+                onBack={() => go(pendingCode.purpose === "register" ? "register" : "login")}
+              />
+            )}
             {view === "reset" && (
               <ResetView
                 prefill={prefill}
@@ -185,9 +227,10 @@ interface LoginViewProps {
   notice: string | null;
   demoProfiles: readonly PublicDemoProfile[];
   onForgot: (identifier: string) => void;
+  onCodeSent: (outcome: CodeSent) => void;
 }
 
-function LoginView({ next, prefill, notice, demoProfiles, onForgot }: LoginViewProps) {
+function LoginView({ next, prefill, notice, demoProfiles, onForgot, onCodeSent }: LoginViewProps) {
   const complete = useCompleteSignIn();
   const [identifier, setIdentifier] = useState(prefill);
   const [password, setPassword] = useState("");
@@ -222,7 +265,8 @@ function LoginView({ next, prefill, notice, demoProfiles, onForgot }: LoginViewP
         passwordRef.current?.focus();
         return;
       }
-      complete(result.data, result.redirectTo);
+      if (result.data.status === "code-sent") onCodeSent(result.data);
+      else complete(result.data.user, result.redirectTo);
     });
   }
 
@@ -335,7 +379,7 @@ function LoginView({ next, prefill, notice, demoProfiles, onForgot }: LoginViewP
 
 type RegisterFields = { name: string; username: string; email: string; password: string; theme: string };
 
-function RegisterView() {
+function RegisterView({ onCodeSent }: { onCodeSent: (outcome: CodeSent) => void }) {
   const complete = useCompleteSignIn();
   const { theme, themes, setTheme } = useTheme();
   const [values, setValues] = useState({ name: "", username: "", email: "", password: "" });
@@ -368,8 +412,12 @@ function RegisterView() {
         setFormError(result.error ?? null);
         return;
       }
-      setTheme(result.data.theme);
-      complete(result.data, result.redirectTo);
+      if (result.data.status === "code-sent") {
+        onCodeSent(result.data);
+        return;
+      }
+      setTheme(result.data.user.theme);
+      complete(result.data.user, result.redirectTo);
     });
   }
 
@@ -471,7 +519,7 @@ function RegisterView() {
         <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.5} />
       </SubmitButton>
       <p className="text-center text-[11px] leading-relaxed text-muted">
-        Fica como Proprietário do seu próprio workspace.
+        Fica como Proprietário do seu próprio workspace. Enviamos um código para confirmar o email.
       </p>
     </form>
   );
@@ -638,6 +686,180 @@ function ResetView({ prefill, onBack, onDone }: ResetViewProps) {
   );
 }
 
+/* ==========================================================================
+   Vista 4 · Confirme o seu e-mail (código de 6 algarismos)
+   ========================================================================== */
+
+const RESEND_COOLDOWN_S = 30;
+
+interface VerifyViewProps {
+  pending: CodeSent;
+  next?: string;
+  devInbox: boolean;
+  onResent: (outcome: CodeSent) => void;
+  onBack: () => void;
+}
+
+function VerifyView({ pending, next, devInbox, onResent, onBack }: VerifyViewProps) {
+  const complete = useCompleteSignIn();
+  const { setTheme } = useTheme();
+  const [code, setCode] = useState("");
+  const [trust, setTrust] = useState(pending.purpose === "login");
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_S);
+  const [pendingSubmit, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = window.setTimeout(() => setCooldown((s) => s - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [cooldown]);
+
+  function submit(value = code) {
+    const parsed = verifyCodeSchema.safeParse({ email: pending.email, code: value, trustDevice: trust });
+    if (!parsed.success) {
+      setError(fieldErrors(parsed.error).code ?? "Indique o código de 6 algarismos.");
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const result = await verifyCodeAction(parsed.data, next);
+      if (!result.ok) {
+        setError(result.fieldErrors?.code ?? result.error ?? "Código inválido.");
+        setCode("");
+        inputRef.current?.focus();
+        return;
+      }
+      setTheme(result.data.theme);
+      complete(result.data, result.redirectTo);
+    });
+  }
+
+  function resend() {
+    setError(null);
+    startTransition(async () => {
+      const result = await resendCodeAction();
+      if (!result.ok) {
+        setError(result.error ?? "Não foi possível reenviar o código.");
+        return;
+      }
+      if (result.data.status === "code-sent") onResent(result.data);
+      setCode("");
+      setCooldown(RESEND_COOLDOWN_S);
+      setInfo("Enviámos um novo código. O anterior deixou de funcionar.");
+    });
+  }
+
+  return (
+    <form
+      noValidate
+      className="space-y-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        submit();
+      }}
+      data-testid="verify-view"
+    >
+      <div className="flex items-start gap-3 rounded-lg border border-subtle bg-surface/60 px-3 py-3">
+        <MailCheck aria-hidden="true" className="mt-0.5 size-4 shrink-0 text-accent-primary" strokeWidth={1.5} />
+        <p className="text-sm leading-relaxed text-primary">
+          Enviámos um código de 6 algarismos para{" "}
+          <span className="font-medium" data-testid="verify-email">
+            {pending.maskedEmail}
+          </span>
+          . Também pode abrir a ligação «Confirmar» do email. Expira em 15 minutos.
+        </p>
+      </div>
+      {pending.deliveryFailed && (
+        <FormNotice>
+          O serviço de email recusou o envio. Confirme a chave e o remetente nas variáveis de ambiente e tente «Reenviar
+          código».
+        </FormNotice>
+      )}
+      {pending.devCode && (
+        <DemoCodeSlip
+          code={pending.devCode}
+          label={devInbox ? "Caixa de inspeção · sem fornecedor de email configurado" : undefined}
+          onUse={() => {
+            setCode(pending.devCode!);
+            submit(pending.devCode!);
+          }}
+        />
+      )}
+      {info && !error && <FormNotice tone="info">{info}</FormNotice>}
+      {error && !pending.devCode && <FormNotice>{error}</FormNotice>}
+
+      <TextField
+        ref={inputRef}
+        label="Código de confirmação"
+        name="one-time-code"
+        autoComplete="one-time-code"
+        inputMode="numeric"
+        maxLength={6}
+        placeholder="000000"
+        className="nums h-12 text-center font-mono text-xl tracking-[0.5em]"
+        value={code}
+        onChange={(e) => {
+          const value = e.target.value.replace(/\D/g, "").slice(0, 6);
+          setCode(value);
+          if (value.length === 6) submit(value);
+        }}
+        error={pending.devCode ? (error ?? undefined) : undefined}
+      />
+
+      <label className="flex cursor-pointer items-center gap-2 text-sm text-primary">
+        <input
+          type="checkbox"
+          checked={trust}
+          onChange={(e) => setTrust(e.target.checked)}
+          className="size-4 accent-[rgb(var(--accent-primary-rgb))]"
+        />
+        Confiar neste dispositivo por 7 dias
+      </label>
+
+      <SubmitButton pending={pendingSubmit} pendingLabel="A confirmar…">
+        {pending.purpose === "register" ? "Confirmar e abrir o atelier" : "Confirmar e entrar"}
+        <ArrowRight aria-hidden="true" className="size-4" strokeWidth={1.5} />
+      </SubmitButton>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-subtle pt-4">
+        <button type="button" onClick={onBack} className={cn(linkButton, "inline-flex items-center gap-1.5")}>
+          <ArrowLeft aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+          Voltar
+        </button>
+        <div className="flex items-center gap-3">
+          {devInbox && (
+            <a
+              href="/dev/caixa"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(linkButton, "inline-flex items-center gap-1")}
+            >
+              <Inbox aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+              Caixa de inspeção
+            </a>
+          )}
+          <button
+            type="button"
+            className={cn(linkButton, "nums inline-flex items-center gap-1")}
+            onClick={resend}
+            disabled={pendingSubmit || cooldown > 0}
+          >
+            <RotateCw aria-hidden="true" className="size-3.5" strokeWidth={1.5} />
+            {cooldown > 0 ? `Reenviar código (${cooldown} s)` : "Reenviar código"}
+          </button>
+        </div>
+      </div>
+    </form>
+  );
+}
+
 function StepRule({ step }: { step: 1 | 2 }) {
   return (
     <ol className="flex items-center gap-3" aria-label={`Passo ${step} de 2`}>
@@ -663,11 +885,14 @@ function StepRule({ step }: { step: 1 | 2 }) {
 }
 
 /** Talão do modo de demonstração: o código que seria enviado por email. */
-function DemoCodeSlip({ code, onUse }: { code: string; onUse: () => void }): ReactNode {
+function DemoCodeSlip({ code, onUse, label }: { code: string; onUse: () => void; label?: string }): ReactNode {
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-accent-primary/50 bg-accent-primary/[0.04] px-3 py-2.5">
+    <div
+      className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-accent-primary/50 bg-accent-primary/[0.04] px-3 py-2.5"
+      data-testid="dev-code"
+    >
       <div>
-        <p className="text-[11px] text-muted">Modo de demonstração · código que seguiria por email</p>
+        <p className="text-[11px] text-muted">{label ?? "Modo de demonstração · código que seguiria por email"}</p>
         <p className="nums mt-0.5 font-mono text-base tracking-[0.3em] text-primary">{code}</p>
       </div>
       <button

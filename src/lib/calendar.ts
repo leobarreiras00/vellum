@@ -47,8 +47,22 @@ export function weekdayIndex(key: string): number {
   return (new Date(keyToUtc(key)).getUTCDay() + 6) % 7;
 }
 
-export function startOfWeek(key: string): string {
-  return addDays(key, -weekdayIndex(key));
+/** Início da semana: 1 = segunda-feira (padrão europeu), 0 = domingo. */
+export type WeekStart = 0 | 1;
+
+export function startOfWeek(key: string, weekStart: WeekStart = 1): string {
+  const offset = weekStart === 1 ? weekdayIndex(key) : (weekdayIndex(key) + 1) % 7;
+  return addDays(key, -offset);
+}
+
+/** Abreviaturas dos dias pela ordem da semana escolhida. */
+export function weekdayHeaders(weekStart: WeekStart = 1): string[] {
+  return weekStart === 1 ? [...WEEKDAY_SHORT] : [WEEKDAY_SHORT[6], ...WEEKDAY_SHORT.slice(0, 6)];
+}
+
+/** Sábado ou domingo. */
+export function isWeekend(key: string): boolean {
+  return weekdayIndex(key) >= 5;
 }
 
 export function weekDays(key: string): string[] {
@@ -60,12 +74,12 @@ export function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-/** Semanas (segunda a domingo) que cobrem o mês, incluindo dias dos meses vizinhos. */
-export function monthMatrix(year: number, month: number): string[][] {
+/** Semanas que cobrem o mês (segunda ou domingo primeiro), incluindo dias dos meses vizinhos. */
+export function monthMatrix(year: number, month: number, weekStart: WeekStart = 1): string[][] {
   const first = toDayKey(year, month, 1);
   const last = toDayKey(year, month, daysInMonth(year, month));
   const weeks: string[][] = [];
-  for (let cursor = startOfWeek(first); cursor <= last; cursor = addDays(cursor, 7)) {
+  for (let cursor = startOfWeek(first, weekStart); cursor <= last; cursor = addDays(cursor, 7)) {
     weeks.push(Array.from({ length: 7 }, (_, i) => addDays(cursor, i)));
   }
   return weeks;

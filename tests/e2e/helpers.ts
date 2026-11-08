@@ -31,3 +31,39 @@ export async function switchProfile(page: Page, name: string) {
   await expect(page.getByRole("status").filter({ hasText: `Agora como ${name}` })).toBeVisible();
   await page.locator("[data-shell-ready]").waitFor();
 }
+
+const MAIL = `http://127.0.0.1:${process.env.E2E_MAIL_PORT ?? 3199}`;
+
+/** Última mensagem enviada para `email` (servidor falso do Brevo, scripts/e2e-mail-mock.mjs). */
+export async function lastMail(email: string, after = 0): Promise<{ subject: string; text: string; html: string }> {
+  let found: { subject: string; text: string; html: string; at: number } | null = null;
+  await expect
+    .poll(
+      async () => {
+        const res = await fetch(`${MAIL}/ultima?para=${encodeURIComponent(email)}`);
+        if (!res.ok) return false;
+        const body = (await res.json()) as { subject: string; text: string; html: string; at: number };
+        if (body.at <= after) return false;
+        found = body;
+        return true;
+      },
+      { message: `email para ${email}`, timeout: 10_000 },
+    )
+    .toBe(true);
+  return found!;
+}
+
+/** Código de 6 algarismos do último email para `email`. */
+export async function lastCode(email: string, after = 0): Promise<string> {
+  const mail = await lastMail(email, after);
+  const code = /\b(\d{6})\b/.exec(mail.subject)?.[1] ?? /\b(\d{6})\b/.exec(mail.text)?.[1];
+  expect(code, "código no email").toMatch(/^\d{6}$/);
+  return code!;
+}
+
+/** Ecrã «Confirme o seu email»: lê o código da caixa falsa e escreve-o (submete sozinho). */
+export async function confirmWithCode(page: Page, email: string, after = 0) {
+  await expect(page.getByTestId("verify-view")).toBeVisible();
+  const code = await lastCode(email, after);
+  await page.getByLabel("Código de confirmação").fill(code);
+}

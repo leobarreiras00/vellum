@@ -45,7 +45,7 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
   const pathname = usePathname();
   const { user, logout, isLoggingOut } = useAuth();
   const { snapshot, subjectFor } = useWorkspace();
-  const { openMembers, exportMarkdown, openExport, isExporting } = useShell();
+  const { openShare, exportMarkdown, openExport, isExporting } = useShell();
   const { projectId, documentId } = parseWorkspacePath(pathname);
 
   const project = projectId ? snapshot.projects.find((p) => p.id === projectId) : undefined;
@@ -147,9 +147,12 @@ export function Topbar({ onOpenMobileNav }: { onOpenMobileNav: () => void }) {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => openMembers(project?.id ?? null)}
-          aria-label={project ? "Partilha e permissões do projeto" : "Membros do workspace"}
-          title={project ? "Partilha e permissões" : "Membros do workspace"}
+          onClick={() => openShare({ projectId: project?.id ?? null, documentId: document?.id ?? null })}
+          aria-label={
+            document ? "Partilhar documento" : project ? "Partilhar projeto" : "Partilha e membros do workspace"
+          }
+          title={document ? "Partilhar documento" : project ? "Partilhar projeto" : "Partilha e membros"}
+          data-testid="topbar-share"
         >
           <Users aria-hidden="true" strokeWidth={1.5} />
           <span className="hidden xl:inline">Partilhar</span>

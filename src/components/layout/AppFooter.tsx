@@ -13,6 +13,7 @@
 
 import { ArrowUpRight, CloudOff, CloudUpload, FileText, Timer, Type } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
+import { usePathname } from "next/navigation";
 
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { LicenseDialog } from "@/components/layout/LicenseDialog";
@@ -141,6 +142,9 @@ function StatusbarFooter({
 }: StatusbarFooterProps) {
   const [uncontrolledMode, setUncontrolledMode] = usePageMode();
   const pageMode = controlledMode ?? uncontrolledMode;
+  const pathname = usePathname() ?? "";
+  // O modo de página só faz sentido onde há uma folha aberta.
+  const showPageMode = isDocumentRoute(pathname);
 
   // Modo não controlado: preferência partilhada com o documento aberto.
   function changeMode(mode: PageMode) {
@@ -195,13 +199,22 @@ function StatusbarFooter({
       {/* Direita — tema, modo de documento, versão */}
       <div className="ml-auto flex shrink-0 items-center justify-end gap-3 md:ml-0">
         <ThemeSwatches size="sm" className="hidden sm:flex" />
-        <Divider className="hidden sm:block" />
-        <PageModeToggle value={pageMode} onChange={changeMode} />
+        {showPageMode && (
+          <>
+            <Divider className="hidden sm:block" />
+            <PageModeToggle value={pageMode} onChange={changeMode} />
+          </>
+        )}
         <Divider className="hidden sm:block" />
         <span className="nums hidden font-mono text-[10.5px] sm:inline">v{APP_VERSION}</span>
       </div>
     </footer>
   );
+}
+
+/** Documento do atelier (/projects/[id]/documents/[docId]) ou documento partilhado (/shared/[token]). */
+export function isDocumentRoute(pathname: string): boolean {
+  return /^\/projects\/[^/]+\/documents\/[^/]+/.test(pathname) || /^\/shared\/[^/]+/.test(pathname);
 }
 
 /** «Offline · 2 alterações por enviar» — só aparece quando há algo a dizer. */

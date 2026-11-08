@@ -120,15 +120,17 @@ test("Notas Rápidas: criar, fixar, pesquisar e converter em documento", async (
   await page.goto("/notes");
   await expect(page.getByRole("article")).toHaveCount(6);
 
-  await page.getByLabel("Título da nota").fill("Glossário de termos editoriais");
-  await page.getByLabel("Conteúdo da nota").fill("Mancha gráfica, entrelinha, medida, viúvas e órfãs.");
-  await page.getByRole("radio", { name: "Sálvia" }).first().click();
-  await page
+  // Barra de filtros no topo; o compositor é o primeiro cartão da grelha.
+  await expect(page.getByTestId("notes-filters")).toBeVisible();
+  const composer = page.getByRole("form", { name: "Nova nota rápida" });
+  await composer.getByLabel("Título da nota").fill("Glossário de termos editoriais");
+  await composer.getByLabel("Conteúdo da nota").fill("Mancha gráfica, entrelinha, medida, viúvas e órfãs.");
+  await composer.getByRole("radio", { name: "Sálvia" }).click();
+  await composer
     .getByLabel("Projeto", { exact: true })
-    .first()
     .selectOption({ label: "Investigação UX & Sistemas Editoriais" });
-  await page.getByRole("button", { name: "Fixar no topo" }).first().click();
-  await page.getByRole("button", { name: "Guardar nota" }).click();
+  await composer.getByRole("button", { name: "Fixar no topo" }).click();
+  await composer.getByRole("button", { name: "Guardar nota" }).click();
   await expect(page.getByRole("article")).toHaveCount(7);
 
   const note = page.getByRole("article", { name: "Glossário de termos editoriais" });
@@ -180,20 +182,22 @@ test("RBAC: Comentador, Leitor e restrição por projeto", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Novo documento" })).toHaveCount(0);
 
   // Gestão de membros: só leitura para quem não é Proprietário.
-  await page.getByRole("button", { name: "Partilha e permissões do projeto" }).click();
-  await expect(page.getByRole("dialog").getByText("Só o Proprietário do projeto pode gerir membros")).toBeVisible();
+  await page.getByTestId("topbar-share").click();
+  const share = page.getByTestId("share-modal");
+  await expect(share.getByText("Só o Proprietário do projeto altera papéis e remove acessos.")).toBeVisible();
+  await expect(share.getByText("Só o Proprietário do projeto pode criar links de partilha.")).toBeVisible();
 });
 
 test("Gestão de membros pelo Proprietário", async ({ page }) => {
   await loginAs(page, PROFILES.leo);
   await page.goto("/projects/prj-ux");
   await page.getByRole("button", { name: "Membros" }).click();
-  const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Adicionar membro do workspace").selectOption({ label: "Pedro Costa — Leitor" });
-  await dialog.getByLabel("Papel", { exact: true }).selectOption("VIEWER");
-  await dialog.getByRole("button", { name: "Adicionar" }).click();
-  await expect(dialog.getByRole("button", { name: "Remover Pedro Costa do projeto" })).toBeVisible();
-  await dialog.getByLabel("Papel de Ana Silva no projeto").selectOption("COMMENTER");
+  const dialog = page.getByTestId("share-modal");
+  await dialog.getByLabel("Adicionar membro do workspace").selectOption({ label: "Pedro Costa" });
+  await dialog.getByLabel("Papel do novo membro").selectOption("VIEWER");
+  await dialog.getByRole("button", { name: "Adicionar", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Remover o acesso de Pedro Costa" })).toBeVisible();
+  await dialog.getByLabel("Papel de Ana Silva").selectOption("COMMENTER");
   await expect(page.getByRole("status").filter({ hasText: "Papel de Ana Silva atualizado." })).toBeVisible();
 });
 
@@ -207,6 +211,7 @@ test("Definições: tema, fonte de leitura e meta diária persistem", async ({ p
   await expect(page.locator("html")).toHaveAttribute("data-theme", "sage-paper");
   await page.getByRole("radio", { name: /Plus Jakarta Sans/ }).click();
   await expect(page.getByRole("radio", { name: /Plus Jakarta Sans/ })).toHaveAttribute("aria-checked", "true");
+  await page.getByTestId("settings-tab-conta").click();
   await page.getByLabel("Horas").fill("3");
   await page.getByLabel("Minutos").fill("30");
   await page.getByRole("button", { name: "Guardar meta" }).click();
@@ -214,9 +219,12 @@ test("Definições: tema, fonte de leitura e meta diária persistem", async ({ p
 
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "sage-paper");
+  await expect(page.getByTestId("settings-tab-conta")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByLabel("Horas")).toHaveValue("3");
   await expect(page.getByLabel("Minutos")).toHaveValue("30");
+  await page.getByTestId("settings-tab-aparencia").click();
   await expect(page.getByRole("radio", { name: /Plus Jakarta Sans/ })).toHaveAttribute("aria-checked", "true");
+  await page.getByTestId("settings-tab-equipa").click();
   await expect(page.getByRole("table", { name: /Matriz de permissões/ })).toBeVisible();
 });
 

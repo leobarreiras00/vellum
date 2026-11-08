@@ -14,7 +14,7 @@
  */
 import "server-only";
 
-import { randomBytes } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 
 import type { SessionUser } from "@/lib/auth";
 import { ForbiddenError, assertCan, canDeleteDocument, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
@@ -30,6 +30,10 @@ import {
   type WorkspaceBackup,
 } from "@/lib/sync/snapshot";
 import { getStoreBackend } from "@/lib/store";
+import { absoluteUrl } from "@/lib/app-url";
+import { hashPassword, verifyPassword } from "@/lib/auth-password";
+import { derivedKey } from "@/lib/auth-server";
+import { addExampleData, isExampleId, removeExampleData, workspaceHasExampleData } from "@/lib/example-seed";
 import {
   initialsOf,
   lisbonDay,
@@ -50,6 +54,10 @@ import {
   type ProjectInput,
   type ProjectRecord,
   type QuickNoteRecord,
+  type ShareLinkInput,
+  type ShareLinkRecord,
+  type ShareLinkView,
+  type ShareRole,
   type StoreData,
   type UserPreferences,
   type WorkspaceSnapshot,
@@ -120,6 +128,8 @@ function workspaceIdFor(data: StoreData, user: SessionUser): string {
     data.people.push({ id: user.userId, name: user.name, email: user.email, platformRole: user.platformRole });
   }
   data.preferences[user.userId] ??= defaultPreferences(user);
+  // Ateliers novos abrem com três projetos de exemplo (removíveis nas Definições).
+  if (process.env.VELLUM_EXAMPLE_DATA !== "false") addExampleData(data, workspaceId, user.userId);
   return workspaceId;
 }
 
@@ -252,6 +262,8 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
     legends: legends.map(strip),
     events: events.map(strip),
     dayNotes,
+    shareLinks: shareLinkViews(data, user, workspaceId, projects),
+    hasExampleData: workspaceHasExampleData(data, workspaceId),
     diagramCount,
     preferences: data.preferences[user.userId] ?? defaultPreferences(user),
     effort,
@@ -1023,11 +1035,12 @@ export async function saveDayNote(user: SessionUser, input: DayNoteInput): Promi
     const index = data.dayNotes.findIndex(
       (n) => n.workspaceId === workspaceId && n.userId === user.userId && n.date === input.date,
     );
-    if (!input.content.trim() && documentIds.length === 0) {
+    const isImportant = input.isImportant ?? (index >= 0 ? Boolean(data.dayNotes[index]!.isImportant) : false);
+    if (!input.content.trim() && documentIds.length === 0 && !isImportant) {
       if (index >= 0) data.dayNotes.splice(index, 1);
       return;
     }
-    const record = { content: input.content, documentIds, updatedAt: now() };
+    const record = { content: input.content, documentIds, isImportant, updatedAt: now() };
     if (index >= 0) Object.assign(data.dayNotes[index]!, record);
     else data.dayNotes.push({ id: newId("dia"), workspaceId, userId: user.userId, date: input.date, ...record });
   });
@@ -1181,11 +1194,35 @@ export async function importCalendarIcs(
 /** Cria documentos a partir de ficheiros Markdown (exige `document:create` no projeto). */
 export async function importMarkdownDocuments(
   user: SessionUser,
-  projectId: string,
+  targetProjectId: string | null,
   files: ReadonlyArray<{ name: string; text: string }>,
-): Promise<{ ids: string[] }> {
+  newProjectName?: string,
+): Promise<{ ids: string[]; projectId: string }> {
   return mutate((data) => {
     const workspaceId = workspaceIdFor(data, user);
+    let projectId = targetProjectId;
+    if (!projectId) {
+      // Projeto criado automaticamente (só o Proprietário gere projetos).
+      assertCan(user, "project:manage");
+      const timestamp = now();
+      const name = (newProjectName?.trim() || "Documentos importados").slice(0, 80);
+      const created: ProjectRecord = {
+        id: newId("prj"),
+        workspaceId,
+        createdById: user.userId,
+        name,
+        description: `Importado de Markdown em ${lisbonDay(new Date())}.`,
+        icon: "library",
+        color: "grafite",
+        position: nextPosition(data.projects.filter((p) => p.workspaceId === workspaceId && !p.deletedAt)),
+        members: [{ userId: user.userId, role: "OWNER", addedAt: timestamp }],
+        createdAt: timestamp,
+        updatedAt: timestamp,
+        deletedAt: null,
+      };
+      data.projects.push(created);
+      projectId = created.id;
+    }
     const project = liveProject(data, workspaceId, projectId);
     assertCan(subjectIn(user, project), "document:create");
     const ids: string[] = [];
@@ -1209,7 +1246,7 @@ export async function importMarkdownDocuments(
       doc.wordCount = countWords(doc.plainText);
       ids.push(doc.id);
     }
-    return { ids };
+    return { ids, projectId: project.id };
   });
 }
 
@@ -1533,3 +1570,479 @@ export async function importWorkspaceBackup(
     return summary;
   });
 }
+
+/* ==========================================================================
+   Membros do workspace (papel lido no servidor a partir de WorkspaceMember)
+   ========================================================================== */
+
+/** Papel da pessoa no seu workspace (`null` se ainda não tiver atelier). */
+export async function membershipRoleOf(userId: string): Promise<WorkspaceRole | null> {
+  const data = await load();
+  return data.memberships.find((m) => m.userId === userId)?.role ?? null;
+}
+
+/** Altera o papel de um membro do workspace ou remove-o (role = null). Só o Proprietário. */
+export async function setWorkspaceMember(user: SessionUser, userId: string, role: WorkspaceRole | null): Promise<void> {
+  assertCan(user, "member:change-role");
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const membership = data.memberships.find((m) => m.workspaceId === workspaceId && m.userId === userId);
+    if (!membership) throw new NotFoundError();
+    if (userId === user.userId) throw new ValidationError("Não pode alterar o seu próprio papel.");
+    const owners = data.memberships.filter((m) => m.workspaceId === workspaceId && m.role === "OWNER");
+    if (membership.role === "OWNER" && role !== "OWNER" && owners.length === 1) {
+      throw new ValidationError("O workspace precisa de pelo menos um Proprietário.");
+    }
+    if (role === null) {
+      data.memberships = data.memberships.filter((m) => !(m.workspaceId === workspaceId && m.userId === userId));
+      for (const project of data.projects) {
+        if (project.workspaceId === workspaceId) project.members = project.members.filter((m) => m.userId !== userId);
+      }
+      return;
+    }
+    membership.role = role;
+  });
+}
+
+/* ==========================================================================
+   Partilha: links diretos e convites por email
+   ========================================================================== */
+
+const SHARE_TOKEN_BYTES = 24;
+const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
+
+function sealToken(token: string): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", derivedKey("share-token"), iv);
+  const sealed = Buffer.concat([cipher.update(token, "utf8"), cipher.final()]);
+  return [iv, cipher.getAuthTag(), sealed].map((b) => b.toString("base64url")).join(".");
+}
+
+function unsealToken(value: string): string | null {
+  try {
+    const [iv, tag, sealed] = value.split(".").map((part) => Buffer.from(part, "base64url"));
+    if (!iv || !tag || !sealed) return null;
+    const decipher = createDecipheriv("aes-256-gcm", derivedKey("share-token"), iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(sealed), decipher.final()]).toString("utf8");
+  } catch {
+    return null;
+  }
+}
+
+export const sharedPath = (token: string) => `/shared/${token}`;
+
+function isLinkActive(link: ShareLinkRecord, at = Date.now()): boolean {
+  return !link.revokedAt && (!link.expiresAt || Date.parse(link.expiresAt) > at);
+}
+
+function shareLinkViews(
+  data: StoreData,
+  user: SessionUser,
+  workspaceId: string,
+  projects: readonly ProjectRecord[],
+): ShareLinkView[] {
+  const managed = new Set(
+    projects.filter((p) => hasPermissionSafe(subjectIn(user, p), "member:invite")).map((p) => p.id),
+  );
+  return (data.shareLinks ?? [])
+    .filter((l) => l.workspaceId === workspaceId && managed.has(l.projectId) && isLinkActive(l))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((l) => {
+      const token = unsealToken(l.tokenSealed);
+      return {
+        id: l.id,
+        projectId: l.projectId,
+        documentId: l.documentId,
+        kind: l.kind,
+        email: l.email,
+        role: l.role,
+        hasPassword: Boolean(l.passwordHash),
+        expiresAt: l.expiresAt,
+        createdById: l.createdById,
+        createdAt: l.createdAt,
+        lastOpenedAt: l.lastOpenedAt,
+        openCount: l.openCount,
+        url: token ? absoluteUrl(sharedPath(token)) : null,
+      };
+    });
+}
+
+function hasPermissionSafe(subject: RbacSubject, permission: "member:invite"): boolean {
+  try {
+    assertCan(subject, permission);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function shareTarget(data: StoreData, workspaceId: string, projectId: string, documentId: string | null) {
+  const project = liveProject(data, workspaceId, projectId);
+  const doc = documentId ? liveDocument(data, workspaceId, documentId) : null;
+  if (doc && doc.projectId !== project.id) throw new NotFoundError();
+  return { project, doc };
+}
+
+async function newShareLink(
+  data: StoreData,
+  user: SessionUser,
+  input: { projectId: string; documentId: string | null; role: ShareRole; expiresInDays: number },
+  extra: { kind: "link" | "invite"; email: string | null; passwordHash: string | null },
+): Promise<{ record: ShareLinkRecord; token: string }> {
+  const token = randomBytes(SHARE_TOKEN_BYTES).toString("base64url");
+  const timestamp = now();
+  const record: ShareLinkRecord = {
+    id: newId("shr"),
+    workspaceId: workspaceIdFor(data, user),
+    projectId: input.projectId,
+    documentId: input.documentId,
+    kind: extra.kind,
+    email: extra.email,
+    role: input.role,
+    tokenHash: hashToken(token),
+    tokenSealed: sealToken(token),
+    passwordHash: extra.passwordHash,
+    expiresAt: input.expiresInDays ? new Date(Date.now() + input.expiresInDays * 86_400_000).toISOString() : null,
+    createdById: user.userId,
+    createdAt: timestamp,
+    revokedAt: null,
+    lastOpenedAt: null,
+    openCount: 0,
+  };
+  return { record, token };
+}
+
+/** Cria um link direto (exige `member:invite` no projeto). */
+export async function createShareLink(user: SessionUser, input: ShareLinkInput): Promise<{ id: string; url: string }> {
+  const passwordHash = input.password ? await hashPassword(input.password) : null;
+  const data0 = await loadFor(user);
+  const created = await (async () => {
+    const workspaceId = workspaceIdFor(data0, user);
+    const { project } = shareTarget(data0, workspaceId, input.projectId, input.documentId);
+    assertCan(subjectIn(user, project), "member:invite");
+    return newShareLink(data0, user, input, { kind: "link", email: null, passwordHash });
+  })();
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const { project } = shareTarget(data, workspaceId, input.projectId, input.documentId);
+    assertCan(subjectIn(user, project), "member:invite");
+    (data.shareLinks ??= []).push(created.record);
+  });
+  return { id: created.record.id, url: absoluteUrl(sharedPath(created.token)) };
+}
+
+export async function revokeShareLink(user: SessionUser, linkId: string): Promise<void> {
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const link = (data.shareLinks ?? []).find((l) => l.id === linkId && l.workspaceId === workspaceId);
+    if (!link) throw new NotFoundError();
+    assertCan(subjectIn(user, liveProject(data, workspaceId, link.projectId)), "member:invite");
+    link.revokedAt = now();
+  });
+}
+
+export interface InviteResult {
+  url: string;
+  targetTitle: string;
+  targetKind: "documento" | "projeto";
+  /** A pessoa já pertence ao workspace: passou também a membro do projeto. */
+  addedAsMember: boolean;
+  expiresAt: string | null;
+}
+
+/** Convite por email: link pessoal e, se a pessoa já for do workspace, papel no projeto. */
+export async function inviteToShare(
+  user: SessionUser,
+  input: { projectId: string; documentId: string | null; email: string; role: ShareRole; expiresInDays: number },
+): Promise<InviteResult> {
+  const data0 = await loadFor(user);
+  const { record, token } = await newShareLink(data0, user, input, {
+    kind: "invite",
+    email: input.email,
+    passwordHash: null,
+  });
+  return mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    const { project, doc } = shareTarget(data, workspaceId, input.projectId, input.documentId);
+    assertCan(subjectIn(user, project), "member:invite");
+    // Convite repetido para o mesmo email e alvo substitui o anterior.
+    for (const old of data.shareLinks ?? []) {
+      if (
+        old.kind === "invite" &&
+        old.email === input.email &&
+        old.projectId === input.projectId &&
+        old.documentId === input.documentId &&
+        !old.revokedAt
+      ) {
+        old.revokedAt = now();
+      }
+    }
+    (data.shareLinks ??= []).push(record);
+    const person = data.people.find((p) => p.email.toLowerCase() === input.email);
+    const isMember = person && data.memberships.some((m) => m.workspaceId === workspaceId && m.userId === person.id);
+    if (person && isMember) {
+      const existing = project.members.find((m) => m.userId === person.id);
+      if (existing) existing.role = input.role;
+      else project.members.push({ userId: person.id, role: input.role, addedAt: now() });
+      touchProject(project);
+    }
+    return {
+      url: absoluteUrl(sharedPath(token)),
+      targetTitle: doc?.title ?? project.name,
+      targetKind: doc ? "documento" : "projeto",
+      addedAsMember: Boolean(person && isMember),
+      expiresAt: record.expiresAt,
+    } satisfies InviteResult;
+  });
+}
+
+/* Acesso por link (sem sessão obrigatória) -------------------------------- */
+
+export interface SharedDocumentView {
+  id: string;
+  parentId: string | null;
+  title: string;
+  summary: string;
+  contentJson: DocContent;
+  wordCount: number;
+  version: number;
+  updatedAt: string;
+}
+
+export interface SharedCommentView {
+  id: string;
+  documentId: string;
+  authorName: string;
+  kind: CommentKind;
+  quote: string;
+  body: string;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
+export interface SharedAccess {
+  linkId: string;
+  role: ShareRole;
+  needsPassword: boolean;
+  expiresAt: string | null;
+  workspaceName: string;
+  ownerName: string;
+  project: { id: string; name: string; color: ProjectRecord["color"]; icon: ProjectRecord["icon"] };
+  /** Documento único (link de documento) ou o primeiro do projeto. */
+  scope: "document" | "project";
+  documents: Array<{ id: string; parentId: string | null; title: string }>;
+}
+
+export type ShareResolution =
+  | { ok: true; access: SharedAccess; link: ShareLinkRecord }
+  | { ok: false; reason: "not-found" | "revoked" | "expired" };
+
+function resolveLink(data: StoreData, token: string): ShareResolution {
+  const hash = hashToken(token);
+  const link = (data.shareLinks ?? []).find((l) => l.tokenHash === hash);
+  if (!link) return { ok: false, reason: "not-found" };
+  if (link.revokedAt) return { ok: false, reason: "revoked" };
+  if (link.expiresAt && Date.parse(link.expiresAt) <= Date.now()) return { ok: false, reason: "expired" };
+  const project = data.projects.find(
+    (p) => p.id === link.projectId && p.workspaceId === link.workspaceId && !p.deletedAt,
+  );
+  if (!project) return { ok: false, reason: "not-found" };
+  const docs = data.documents
+    .filter((d) => d.projectId === project.id && !d.deletedAt)
+    .sort((a, b) => a.position - b.position);
+  let scoped = docs;
+  if (link.documentId) {
+    const root = docs.find((d) => d.id === link.documentId);
+    if (!root) return { ok: false, reason: "not-found" };
+    // Um documento partilhado leva consigo as subpáginas.
+    const ids = new Set([root.id]);
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const d of docs) {
+        if (d.parentId && ids.has(d.parentId) && !ids.has(d.id)) {
+          ids.add(d.id);
+          grew = true;
+        }
+      }
+    }
+    scoped = docs.filter((d) => ids.has(d.id));
+  }
+  const workspace = data.workspaces.find((w) => w.id === link.workspaceId);
+  const owner = data.people.find((p) => p.id === link.createdById);
+  return {
+    ok: true,
+    link,
+    access: {
+      linkId: link.id,
+      role: link.role,
+      needsPassword: Boolean(link.passwordHash),
+      expiresAt: link.expiresAt,
+      workspaceName: workspace?.name ?? "Atelier",
+      ownerName: owner?.name ?? "Vellum",
+      project: { id: project.id, name: project.name, color: project.color, icon: project.icon },
+      scope: link.documentId ? "document" : "project",
+      documents: scoped.map((d) => ({
+        id: d.id,
+        parentId: link.documentId && d.id === link.documentId ? null : d.parentId,
+        title: d.title || "Sem título",
+      })),
+    },
+  };
+}
+
+export async function resolveShareToken(token: string): Promise<ShareResolution> {
+  if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return { ok: false, reason: "not-found" };
+  return resolveLink(await load(), token);
+}
+
+export async function checkSharePassword(token: string, password: string): Promise<boolean> {
+  const resolved = await resolveShareToken(token);
+  if (!resolved.ok || !resolved.link.passwordHash) return false;
+  return verifyPassword(password, resolved.link.passwordHash);
+}
+
+function personLabel(data: StoreData, authorId: string): string {
+  if (authorId.startsWith("guest:")) return `${authorId.slice(6) || "Convidado"} (convidado)`;
+  return data.people.find((p) => p.id === authorId)?.name ?? "Pessoa do atelier";
+}
+
+/** Documento e comentários dentro do âmbito do link. */
+export async function readSharedDocument(
+  token: string,
+  documentId: string | null,
+): Promise<{ document: SharedDocumentView; comments: SharedCommentView[] } | null> {
+  const data = await load();
+  const resolved = resolveLink(data, token);
+  if (!resolved.ok) return null;
+  const wanted = documentId ?? resolved.link.documentId ?? resolved.access.documents[0]?.id ?? null;
+  if (!wanted || !resolved.access.documents.some((d) => d.id === wanted)) return null;
+  const doc = data.documents.find((d) => d.id === wanted && !d.deletedAt);
+  if (!doc) return null;
+  const comments =
+    resolved.link.role === "VIEWER"
+      ? []
+      : data.comments
+          .filter((c) => c.documentId === doc.id && !c.deletedAt)
+          .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+          .map((c) => ({
+            id: c.id,
+            documentId: c.documentId,
+            authorName: personLabel(data, c.authorId),
+            kind: c.kind,
+            quote: c.quote,
+            body: c.body,
+            resolvedAt: c.resolvedAt,
+            createdAt: c.createdAt,
+          }));
+  return {
+    document: {
+      id: doc.id,
+      parentId: doc.parentId,
+      title: doc.title,
+      summary: doc.summary,
+      contentJson: doc.contentJson ?? plainTextDoc(doc.plainText),
+      wordCount: doc.wordCount,
+      version: doc.version,
+      updatedAt: doc.updatedAt,
+    },
+    comments,
+  };
+}
+
+/** Regista uma abertura do link (contador visível nas Definições). */
+export async function markShareOpened(token: string): Promise<void> {
+  await mutate((data) => {
+    const resolved = resolveLink(data, token);
+    if (!resolved.ok) return;
+    resolved.link.openCount += 1;
+    resolved.link.lastOpenedAt = now();
+  }).catch(() => undefined);
+}
+
+/** Quem age através do link: a pessoa com sessão ou um convidado identificado pelo nome. */
+export interface ShareActor {
+  userId: string | null;
+  guestName: string;
+}
+
+const actorId = (link: ShareLinkRecord, actor: ShareActor) =>
+  actor.userId ?? `guest:${actor.guestName.trim().slice(0, 60) || (link.email ?? "Convidado")}`;
+
+export async function saveSharedDocument(
+  token: string,
+  actor: ShareActor,
+  input: { documentId: string; title: string; summary: string; contentJson: DocContent; baseUpdatedAt: string | null },
+): Promise<{ updatedAt: string; wordCount: number; conflict: boolean }> {
+  return mutate((data) => {
+    const resolved = resolveLink(data, token);
+    if (!resolved.ok) throw new NotFoundError();
+    if (resolved.link.role !== "EDITOR") throw new ForbiddenError("document:edit");
+    if (!resolved.access.documents.some((d) => d.id === input.documentId)) throw new NotFoundError();
+    const doc = data.documents.find((d) => d.id === input.documentId && !d.deletedAt);
+    if (!doc) throw new NotFoundError();
+    const author = actorId(resolved.link, actor);
+    if (input.baseUpdatedAt && doc.updatedAt > input.baseUpdatedAt && doc.lastEditedById !== author) {
+      return { updatedAt: doc.updatedAt, wordCount: doc.wordCount, conflict: true };
+    }
+    const content = docContentSchema.parse(input.contentJson);
+    const changedHands = doc.lastEditedById !== author;
+    const stale = Date.now() - Date.parse(doc.updatedAt) > 10 * 60_000;
+    if (changedHands || stale) doc.version += 1;
+    doc.title = input.title.trim() || doc.title;
+    doc.summary = input.summary;
+    doc.contentJson = content;
+    doc.plainText = docToPlainText(content);
+    doc.wordCount = countWords(doc.plainText);
+    doc.lastEditedById = author;
+    doc.updatedAt = now();
+    return { updatedAt: doc.updatedAt, wordCount: doc.wordCount, conflict: false };
+  });
+}
+
+export async function addSharedComment(
+  token: string,
+  actor: ShareActor,
+  input: { documentId: string; kind: CommentKind; quote: string; body: string },
+): Promise<void> {
+  await mutate((data) => {
+    const resolved = resolveLink(data, token);
+    if (!resolved.ok) throw new NotFoundError();
+    if (resolved.link.role === "VIEWER") throw new ForbiddenError("document:comment");
+    if (!resolved.access.documents.some((d) => d.id === input.documentId)) throw new NotFoundError();
+    data.comments.push({
+      id: newId("com"),
+      workspaceId: resolved.link.workspaceId,
+      documentId: input.documentId,
+      authorId: actorId(resolved.link, actor),
+      kind: input.kind,
+      quote: input.quote,
+      body: input.body,
+      resolvedAt: null,
+      resolvedById: null,
+      createdAt: now(),
+      deletedAt: null,
+    });
+  });
+}
+
+/* ==========================================================================
+   Dados de exemplo (Definições → Equipa & dados)
+   ========================================================================== */
+
+export async function clearExampleData(user: SessionUser): Promise<number> {
+  assertCan(user, "project:manage");
+  return mutate((data) => removeExampleData(data, workspaceIdFor(data, user)));
+}
+
+export async function restoreExampleData(user: SessionUser): Promise<void> {
+  assertCan(user, "project:manage");
+  await mutate((data) => {
+    const workspaceId = workspaceIdFor(data, user);
+    removeExampleData(data, workspaceId);
+    addExampleData(data, workspaceId, user.userId);
+  });
+}
+
+export { isExampleId };

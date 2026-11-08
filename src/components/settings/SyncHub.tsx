@@ -25,7 +25,7 @@ import {
   importWorkspaceSnapshotAction,
 } from "@/app/(workspace)/actions";
 import { Button } from "@/components/ui/Button";
-import { Label, Select } from "@/components/ui/Field";
+import { Input, Label, Select } from "@/components/ui/Field";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { downloadText } from "@/lib/exporters/download";
 import { hasPermission } from "@/lib/rbac";
@@ -262,20 +262,27 @@ function CalendarSync() {
    II. Documentos Markdown
    ========================================================================== */
 
+const NEW_PROJECT = "__novo__";
+
 function MarkdownImport() {
-  const { run, snapshot, subjectFor, isPending } = useWorkspace();
+  const { run, snapshot, subjectFor, can, isPending } = useWorkspace();
   const selectId = useId();
+  const nameId = useId();
   const writable = snapshot.projects.filter((p) => hasPermission(subjectFor(p.id), "document:create"));
-  const [projectId, setProjectId] = useState(writable[0]?.id ?? "");
+  const canCreateProject = can("project:manage");
+  const [projectId, setProjectId] = useState(writable[0]?.id ?? (canCreateProject ? NEW_PROJECT : ""));
+  const [newName, setNewName] = useState("");
   const [result, setResult] = useState<{
     tone: "info" | "error";
     text: string;
+    projectId?: string;
     links?: { id: string; title: string }[];
   } | null>(null);
-  const target = writable.find((p) => p.id === projectId) ?? writable[0];
+  const creating = projectId === NEW_PROJECT && canCreateProject;
+  const target = creating ? null : (writable.find((p) => p.id === projectId) ?? writable[0] ?? null);
 
   async function importFiles(files: File[]) {
-    if (!target) return;
+    if (!target && !creating) return;
     const chosen = files.slice(0, MAX_MARKDOWN_FILES);
     const tooBig = chosen.find((f) => f.size > MAX_MARKDOWN_BYTES);
     if (tooBig) {
@@ -283,20 +290,40 @@ function MarkdownImport() {
       return;
     }
     const payload = await Promise.all(chosen.map(async (f) => ({ name: f.name, text: await f.text() })));
-    const response = await run(() => importMarkdownAction({ projectId: target.id, files: payload }), { silent: true });
+    // Sem nome: o projeto novo herda o nome do primeiro ficheiro.
+    const fallbackName =
+      chosen[0]?.name
+        .replace(/\.(md|markdown|txt)$/i, "")
+        .replace(/[-_]+/g, " ")
+        .trim() || "Importação Markdown";
+    const response = await run(
+      () =>
+        importMarkdownAction({
+          projectId: creating ? null : target!.id,
+          newProjectName: creating ? newName.trim() || fallbackName : undefined,
+          files: payload,
+        }),
+      { silent: true },
+    );
     if (!response.ok) {
       setResult({ tone: "error", text: response.error });
       return;
     }
+    const destination = response.snapshot.projects.find((p) => p.id === response.data.projectId);
     const docs = response.data.ids
       .map((id) => response.snapshot.documents.find((d) => d.id === id))
       .filter((d): d is NonNullable<typeof d> => Boolean(d));
     const skipped = files.length - chosen.length;
+    if (creating && destination) {
+      setProjectId(destination.id);
+      setNewName("");
+    }
     setResult({
       tone: "info",
-      text: `${docs.length} ${docs.length === 1 ? "documento criado" : "documentos criados"} em «${target.name}».${
-        skipped ? ` ${skipped} ficheiros ignorados (máximo ${MAX_MARKDOWN_FILES}).` : ""
-      }`,
+      text: `${docs.length} ${docs.length === 1 ? "documento criado" : "documentos criados"} em «${destination?.name ?? "projeto"}»${
+        creating ? " (projeto novo)" : ""
+      }.${skipped ? ` ${skipped} ficheiros ignorados (máximo ${MAX_MARKDOWN_FILES}).` : ""}`,
+      projectId: response.data.projectId,
       links: docs.map((d) => ({ id: d.id, title: d.title })),
     });
   }
@@ -309,20 +336,39 @@ function MarkdownImport() {
       description="Títulos, listas, tarefas, tabelas, callouts e blocos ```mermaid passam a documentos do Editor Rico."
       testId="sync-markdown"
     >
-      {writable.length === 0 ? (
+      {writable.length === 0 && !canCreateProject ? (
         <Locked>Precisa do papel de Editor ou superior num projeto para importar documentos.</Locked>
       ) : (
         <div className="flex flex-wrap items-end gap-3">
           <div className="min-w-[14rem] flex-1 sm:max-w-xs">
             <Label htmlFor={selectId}>Projeto de destino</Label>
-            <Select id={selectId} value={target?.id ?? ""} onChange={(e) => setProjectId(e.target.value)}>
+            <Select
+              id={selectId}
+              data-testid="md-import-project"
+              value={creating ? NEW_PROJECT : (target?.id ?? "")}
+              onChange={(e) => setProjectId(e.target.value)}
+            >
               {writable.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
+              {canCreateProject && <option value={NEW_PROJECT}>+ Novo projeto…</option>}
             </Select>
           </div>
+          {creating && (
+            <div className="min-w-[12rem] flex-1 sm:max-w-xs">
+              <Label htmlFor={nameId}>Nome do novo projeto</Label>
+              <Input
+                id={nameId}
+                data-testid="md-import-new-name"
+                value={newName}
+                maxLength={80}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Por omissão, o nome do ficheiro"
+              />
+            </div>
+          )}
           <FilePick
             label="Importar ficheiros .md"
             accept=".md,.markdown,.txt,text/markdown,text/plain"
@@ -341,12 +387,12 @@ function MarkdownImport() {
       {result && (
         <Result tone={result.tone}>
           {result.text}
-          {result.links && result.links.length > 0 && target && (
+          {result.links && result.links.length > 0 && result.projectId && (
             <span className="mt-1 block space-x-3">
               {result.links.slice(0, 6).map((link) => (
                 <Link
                   key={link.id}
-                  href={routes.page(target.id, link.id)}
+                  href={routes.page(result.projectId!, link.id)}
                   className="text-accent-primary hover:underline"
                 >
                   {link.title}

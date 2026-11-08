@@ -24,7 +24,7 @@ import { Topbar } from "@/components/layout/Topbar";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { Toaster } from "@/components/ui/Toaster";
 import { ProjectFormDialog } from "@/components/workspace/ProjectFormDialog";
-import { ProjectMembersDialog } from "@/components/workspace/ProjectMembersDialog";
+import { ShareModal, type ShareTarget } from "@/components/share/ShareDialog";
 import { useTelemetry } from "@/context/TelemetryContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { useEventReminders } from "@/hooks/useNotifications";
@@ -52,9 +52,9 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [projectForm, setProjectForm] = useState<{ open: boolean; projectId?: string }>({ open: false });
-  const [membersFor, setMembersFor] = useState<{ open: boolean; projectId: string | null }>({
+  const [shareFor, setShareFor] = useState<{ open: boolean; target: ShareTarget }>({
     open: false,
-    projectId: null,
+    target: { projectId: null, documentId: null },
   });
   const [isExporting, setExporting] = useState(false);
   const [exportDocId, setExportDocId] = useState<string | null>(null);
@@ -145,7 +145,8 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
     () => ({
       openPalette: () => setPaletteOpen(true),
       openProjectForm: (projectId?: string) => setProjectForm({ open: true, projectId }),
-      openMembers: (projectId: string | null) => setMembersFor({ open: true, projectId }),
+      openMembers: (projectId: string | null) => setShareFor({ open: true, target: { projectId, documentId: null } }),
+      openShare: (target) => setShareFor({ open: true, target }),
       exportMarkdown,
       openExport: (documentId: string) => setExportDocId(documentId),
       registerFlush: (flush) => {
@@ -209,10 +210,10 @@ export function WorkspaceShell({ children, demoProfiles }: WorkspaceShellProps) 
         projectId={projectForm.projectId}
         onClose={() => setProjectForm({ open: false })}
       />
-      <ProjectMembersDialog
-        open={membersFor.open}
-        projectId={membersFor.projectId}
-        onClose={() => setMembersFor((s) => ({ ...s, open: false }))}
+      <ShareModal
+        open={shareFor.open}
+        target={shareFor.target}
+        onClose={() => setShareFor((s) => ({ ...s, open: false }))}
       />
       <ExportModal
         open={exportDocId !== null}

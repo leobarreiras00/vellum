@@ -271,10 +271,62 @@ export interface DayNoteRecord {
   workspaceId: string;
   userId: string;
   date: string;
+  /**
+   * Texto estruturado: linhas «- [ ] …»/«- [x] …» são a checklist do dia,
+   * linhas «* …» são pontos-chave e o resto é o registo livre
+   * (src/lib/day-note-format.ts). Notas antigas são só registo.
+   */
   content: string;
+  /** Dia marcado como importante (★) por esta pessoa. */
+  isImportant?: boolean;
   /** Documentos de projeto ligados a este dia. */
   documentIds: string[];
   updatedAt: string;
+}
+
+/* ==========================================================================
+   Partilha (links diretos e convites por email)
+   ========================================================================== */
+
+/** Papéis que um link ou convite pode conceder (nunca Proprietário). */
+export const SHARE_ROLES = ["VIEWER", "COMMENTER", "EDITOR"] as const;
+export type ShareRole = (typeof SHARE_ROLES)[number];
+
+export const SHARE_ROLE_LABELS: Record<ShareRole, string> = {
+  VIEWER: "Pode ler",
+  COMMENTER: "Pode comentar",
+  EDITOR: "Pode editar",
+};
+
+export const SHARE_EXPIRY_DAYS = [0, 7, 30] as const;
+export const SHARE_EXPIRY_LABELS: Record<(typeof SHARE_EXPIRY_DAYS)[number], string> = {
+  0: "Sem expiração",
+  7: "7 dias",
+  30: "30 dias",
+};
+
+export interface ShareLinkRecord {
+  id: string;
+  workspaceId: string;
+  projectId: string;
+  /** `null` = o projeto inteiro. */
+  documentId: string | null;
+  /** «link» = qualquer pessoa com o link; «invite» = convite enviado a um email. */
+  kind: "link" | "invite";
+  email: string | null;
+  role: ShareRole;
+  /** SHA-256 do token (procura); o token nunca é guardado em claro. */
+  tokenHash: string;
+  /** Token cifrado (AES-256-GCM com chave derivada do AUTH_SECRET) para «Copiar link» mais tarde. */
+  tokenSealed: string;
+  /** Palavra-passe opcional do link (scrypt). */
+  passwordHash: string | null;
+  expiresAt: string | null;
+  createdById: string;
+  createdAt: string;
+  revokedAt: string | null;
+  lastOpenedAt: string | null;
+  openCount: number;
 }
 
 export const READING_FONTS = ["serif", "sans"] as const;
@@ -303,6 +355,8 @@ export interface StoreData {
   preferences: Record<string, UserPreferences>;
   /** Snapshots .vellum.json já importados (por workspace), para não duplicar. */
   importedSnapshots?: Array<{ workspaceId: string; snapshotId: string; importedAt: string }>;
+  /** Links de partilha e convites por email. */
+  shareLinks?: ShareLinkRecord[];
 }
 
 /* ==========================================================================
@@ -336,6 +390,24 @@ export type LegendView = Omit<CalendarLegendRecord, "deletedAt" | "workspaceId">
 export type CalendarEventView = Omit<CalendarEventRecord, "deletedAt" | "workspaceId">;
 export type DayNoteView = Omit<DayNoteRecord, "workspaceId" | "userId">;
 
+/** Link ou convite visível a quem gere o projeto (sem hashes). */
+export interface ShareLinkView {
+  id: string;
+  projectId: string;
+  documentId: string | null;
+  kind: "link" | "invite";
+  email: string | null;
+  role: ShareRole;
+  hasPassword: boolean;
+  expiresAt: string | null;
+  createdById: string;
+  createdAt: string;
+  lastOpenedAt: string | null;
+  openCount: number;
+  /** URL completo, quando o token ainda pode ser decifrado neste servidor. */
+  url: string | null;
+}
+
 /** Agregados de esforço do utilizador atual (por dia AAAA-MM-DD, Lisboa). */
 export interface EffortSummary {
   todaySeconds: number;
@@ -359,6 +431,10 @@ export interface WorkspaceSnapshot {
   events: CalendarEventView[];
   /** Notas do Dia do utilizador atual. */
   dayNotes: DayNoteView[];
+  /** Links e convites ativos dos projetos que a pessoa gere. */
+  shareLinks: ShareLinkView[];
+  /** O atelier tem dados de exemplo (para «Limpar dados de demonstração»). */
+  hasExampleData: boolean;
   /** Diagramas Mermaid ativos em todos os documentos. */
   diagramCount: number;
   preferences: UserPreferences;
@@ -489,6 +565,43 @@ export const dayNoteInputSchema = z.object({
   date: dayKey,
   content: z.string().max(20_000, "Máximo de 20 000 caracteres."),
   documentIds: z.array(id).max(20, "No máximo 20 documentos ligados.").default([]),
+  /** Omitido = mantém a marca atual. */
+  isImportant: z.boolean().optional(),
+});
+
+const shareRoleSchema = z.enum(SHARE_ROLES, { error: "Escolha um papel válido." });
+const expirySchema = z
+  .number()
+  .int()
+  .refine((v) => (SHARE_EXPIRY_DAYS as readonly number[]).includes(v), "Validade inválida.")
+  .default(0);
+
+export const shareLinkInputSchema = z.object({
+  projectId: id,
+  documentId: id.nullable().default(null),
+  role: shareRoleSchema,
+  password: z
+    .string()
+    .max(128, "Máximo de 128 caracteres.")
+    .nullable()
+    .default(null)
+    .refine((v) => v === null || v === "" || v.length >= 4, "A palavra-passe do link tem pelo menos 4 caracteres."),
+  expiresInDays: expirySchema,
+});
+export type ShareLinkInput = z.infer<typeof shareLinkInputSchema>;
+
+export const inviteInputSchema = z.object({
+  projectId: id,
+  documentId: id.nullable().default(null),
+  email: z.string().trim().toLowerCase().email("Indique um email válido.").max(254),
+  role: shareRoleSchema,
+  expiresInDays: expirySchema,
+});
+export type InviteInput = z.infer<typeof inviteInputSchema>;
+
+export const workspaceMemberInputSchema = z.object({
+  userId: id,
+  role: z.enum(WORKSPACE_ROLES).nullable(),
 });
 export type DayNoteInput = z.infer<typeof dayNoteInputSchema>;
 

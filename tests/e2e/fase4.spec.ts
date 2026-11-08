@@ -49,14 +49,46 @@ test("Calendário: evento importante, legendas, vistas mês/semana e Agenda com 
   await filter.getByRole("button", { name: "Entrega Crítica" }).click();
   await expect(chip).toBeVisible();
 
-  // Edição rápida da Nota do Dia dentro da célula.
-  await cell.getByRole("button", { name: /Escrever nota do dia|Nota do dia:/ }).click();
-  await page
-    .getByRole("dialog", { name: /Nota do dia/ })
-    .getByLabel("Nota do dia")
-    .fill("Fechar o manuscrito hoje.");
-  await page.getByRole("button", { name: "Guardar nota" }).click();
-  await expect(cell.getByRole("button", { name: "Nota do dia: Fechar o manuscrito hoje." })).toBeVisible();
+  // Clicar no dia abre-o no Day Studio Inspector (sem popovers dentro da célula).
+  await cell.click({ position: { x: 60, y: 100 } });
+  const inspector = page.getByTestId("day-inspector");
+  await expect(inspector).toHaveAttribute("data-day", today);
+  await expect(inspector.getByRole("region", { name: "Eventos do dia" })).toContainText(EVENT);
+  await inspector.getByLabel("Registo").fill("Fechar o manuscrito hoje.");
+  await expect(inspector.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
+  await expect(cell.getByTestId("cell-note")).toContainText("Fechar o manuscrito hoje.");
+
+  // Nota estruturada: checklist e pontos-chave; ★ dia importante.
+  await inspector.getByLabel("Nova tarefa").fill("Rever bibliografia");
+  await inspector.getByLabel("Nova tarefa").press("Enter");
+  await inspector.getByLabel("Nova tarefa").fill("Enviar à editora");
+  await inspector.getByLabel("Nova tarefa").press("Enter");
+  await inspector.getByRole("checkbox", { name: "Rever bibliografia" }).click();
+  await expect(inspector.getByRole("checkbox", { name: "Rever bibliografia" })).toHaveAttribute("aria-checked", "true");
+  await inspector.getByLabel("Novo ponto-chave").fill("Capítulo 4 precisa de outro fecho");
+  await inspector.getByLabel("Novo ponto-chave").press("Enter");
+  await expect(inspector.getByTestId("day-keypoints")).toContainText("Capítulo 4 precisa de outro fecho");
+  await expect(inspector.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
+  await expect(cell).toContainText("1/2");
+  const star = inspector.getByTestId("day-important");
+  await star.click();
+  await expect(star).toHaveAttribute("aria-pressed", "true");
+
+  // Feriados de Portugal na grelha (1 de novembro).
+  await expect(page.locator('td[data-day="2026-11-01"]')).toContainText("Dia de Todos os Santos");
+
+  // Personalizar Vista: densidade, início da semana e fins de semana.
+  await page.getByTestId("calendar-customize").click();
+  await page.getByTestId("density-compacta").click();
+  await expect(page.getByTestId("month-grid")).toHaveAttribute("data-density", "compacta");
+  await page.getByTestId("week-start-0").click();
+  await expect(page.getByTestId("month-grid").locator("thead th").first()).toHaveText("dom");
+  await page.getByTestId("pref-showWeekends").uncheck();
+  await expect(page.getByTestId("month-grid").locator("thead th")).toHaveCount(5);
+  await page.getByRole("button", { name: "Repor predefinições" }).click();
+  await expect(page.getByTestId("month-grid").locator("thead th")).toHaveCount(7);
+  await expect(page.getByTestId("month-grid").locator("thead th").first()).toHaveText("seg");
+  await page.keyboard.press("Escape");
 
   // Vista semanal.
   await page.getByRole("radio", { name: "Semana" }).click();
@@ -64,32 +96,39 @@ test("Calendário: evento importante, legendas, vistas mês/semana e Agenda com 
   await expect(page.getByRole("grid").getByRole("button", { name: new RegExp(EVENT) })).toBeVisible();
   await page.getByRole("radio", { name: "Mês" }).click();
 
-  // Agenda com Notas: registo diário com gravação automática e documento ligado.
+  // Agenda com Notas: mini-calendário, filtros e cartões; o inspector mantém o dia.
   await page.getByRole("radio", { name: "Agenda com Notas" }).click();
-  const sheet = page.getByTestId("day-sheet");
-  await expect(sheet.getByRole("list", { name: "Eventos do dia" })).toContainText(EVENT);
-  const log = sheet.getByLabel("Registo diário");
+  await expect(page.getByTestId("mini-calendar")).toBeVisible();
+  await page.getByTestId("agenda-filter-importantes").click();
+  const card = page.getByTestId("agenda-card").filter({ hasText: EVENT });
+  await expect(card).toBeVisible();
+  await expect(card).toContainText("Fechar o manuscrito hoje.");
+  await page.getByTestId("agenda-filter-notas").click();
+  await expect(card).toBeVisible();
+  await page.getByTestId("agenda-filter-todos").click();
+
+  const log = inspector.getByLabel("Registo");
   await expect(log).toHaveValue(/Fechar o manuscrito hoje\./);
   await log.fill("Fechar o manuscrito hoje.\n\nRevi os capítulos 3 e 4; falta a bibliografia.");
-  await expect(sheet.getByText("Guardado")).toBeVisible();
-  await sheet.getByLabel("Ligar documento de projeto").selectOption({ label: "Guião de entrevistas" });
-  await sheet.getByRole("button", { name: "Ligar", exact: true }).click();
-  await expect(sheet.getByRole("list", { name: "Documentos ligados a este dia" })).toContainText(
+  await expect(inspector.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
+  await inspector.getByLabel("Ligar documento de projeto").selectOption({ label: "Guião de entrevistas" });
+  await inspector.getByRole("button", { name: "Ligar", exact: true }).click();
+  await expect(inspector.getByRole("list", { name: "Documentos ligados a este dia" })).toContainText(
     "Guião de entrevistas",
   );
   // Só recarrega depois de o servidor confirmar (com a base remota, a gravação demora mais).
-  await expect(sheet.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
+  await expect(inspector.locator('[data-save-state="saved"]')).toBeVisible({ timeout: 15_000 });
 
   await page.reload();
   await expect(page.getByRole("radio", { name: "Agenda com Notas" })).toHaveAttribute("aria-checked", "true");
-  await expect(page.getByTestId("day-sheet").getByLabel("Registo diário")).toHaveValue(/falta a bibliografia/);
-  await expect(page.getByTestId("day-sheet").getByRole("link", { name: "Guião de entrevistas" })).toBeVisible();
+  const after = page.getByTestId("day-inspector");
+  await expect(after.getByLabel("Registo")).toHaveValue(/falta a bibliografia/);
+  await expect(after.getByRole("checkbox", { name: "Rever bibliografia" })).toHaveAttribute("aria-checked", "true");
+  await expect(after.getByTestId("day-important")).toHaveAttribute("aria-pressed", "true");
+  await expect(after.getByRole("link", { name: "Guião de entrevistas" })).toBeVisible();
 
-  // Editar o evento a partir da folha do dia.
-  await page
-    .getByTestId("day-sheet")
-    .getByRole("button", { name: new RegExp(EVENT) })
-    .click();
+  // Editar o evento a partir do inspector.
+  await after.getByRole("button", { name: new RegExp(EVENT) }).click();
   const edit = page.getByRole("dialog", { name: EVENT });
   await expect(edit.getByLabel("Notas do evento")).toHaveValue("Enviar à editora até ao fim do dia.");
   await edit.getByRole("button", { name: "Cancelar" }).click();
@@ -134,7 +173,7 @@ test("Centro de Notificações: lembretes, dias importantes e alertas do navegad
     .getByRole("link", { name: new RegExp(EVENT) })
     .click();
   await expect(page).toHaveURL(new RegExp(`/calendar\\?dia=${today}`));
-  await expect(page.getByTestId("day-sheet")).toContainText(EVENT);
+  await expect(page.getByTestId("day-inspector")).toContainText(EVENT);
 });
 
 test("Legendas: o Proprietário gere; o Comentador só filtra e não cria eventos", async ({ page }) => {
@@ -203,11 +242,9 @@ test("Telemetria e Dashboard: inatividade, sessão de foco, KPIs, heatmap e sepa
   await expect(page.getByRole("radio", { name: "30 dias" })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByRole("list", { name: "Próximos dias importantes" })).toContainText(EVENT);
 
-  // Painel RBAC continua acessível (separador com ligação direta).
-  await page.getByRole("tab", { name: "Permissões (RBAC)" }).click();
-  await expect(page).toHaveURL(/#rbac$/);
+  // O separador RBAC saiu do dashboard: a tabela de papéis vive em Definições → Equipa & Permissões.
+  await expect(page.getByRole("tab", { name: "Permissões (RBAC)" })).toHaveCount(0);
+  await page.goto("/settings#equipa");
+  await expect(page.getByRole("tab", { name: /Equipa & Permissões/ })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("table", { name: /Matriz de permissões/ })).toBeVisible();
-  await page.reload();
-  await expect(page.getByRole("tab", { name: "Permissões (RBAC)" })).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByRole("list", { name: "Ações e permissões" })).toContainText("Gerir legendas do calendário");
 });

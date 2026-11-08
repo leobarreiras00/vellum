@@ -36,7 +36,7 @@ test("calendário e dashboard no telemóvel sem deslocamento horizontal da pági
   await page.goto("/calendar");
   await expect(page.getByRole("table", { name: /Calendário de/ })).toBeVisible();
   await page.getByRole("radio", { name: "Agenda com Notas" }).click();
-  await expect(page.getByTestId("day-sheet")).toBeVisible();
+  await expect(page.getByTestId("day-inspector")).toBeVisible();
   overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
   const main = await page.locator("#conteudo").evaluate((el) => el.scrollWidth - el.clientWidth);

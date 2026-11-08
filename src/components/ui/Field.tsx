@@ -37,7 +37,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
   { className, ...props },
   ref,
 ) {
-  return <textarea ref={ref} className={cn(control, "min-h-24 resize-y py-2 leading-relaxed", className)} {...props} />;
+  return (
+    <textarea ref={ref} className={cn(control, "min-h-24 resize-none py-2 leading-relaxed", className)} {...props} />
+  );
 });
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement>>(function Select(

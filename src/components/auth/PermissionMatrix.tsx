@@ -60,7 +60,6 @@ export function PermissionMatrix({ role }: { role: EffectiveRole | null }) {
             <tr key={permission} className="border-b border-subtle/70 last:border-0">
               <th scope="row" className="py-2 pr-4 text-left font-normal text-primary">
                 {PERMISSION_LABELS[permission]}
-                <span className="ml-2 hidden font-mono text-[10.5px] text-muted lg:inline">{permission}</span>
               </th>
               {MATRIX_ROLES.map((r) => {
                 const subject = subjectFor(r);
@@ -72,7 +71,7 @@ export function PermissionMatrix({ role }: { role: EffectiveRole | null }) {
                     {allowed ? (
                       <Check aria-label="Permitido" className="mx-auto size-3.5 text-primary" strokeWidth={2} />
                     ) : ownOnly ? (
-                      <span className="font-mono text-[10.5px] text-muted">próprios</span>
+                      <span className="text-[10.5px] italic text-muted">só os seus</span>
                     ) : (
                       <span aria-label="Sem permissão" className="text-muted/60">
                         —

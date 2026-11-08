@@ -12,6 +12,8 @@
  */
 import "server-only";
 
+import { createHmac, timingSafeEqual } from "node:crypto";
+
 import { betterAuth, type BetterAuthOptions } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
 import { nextCookies } from "better-auth/next-js";
@@ -19,12 +21,16 @@ import { emailOTP, username } from "better-auth/plugins";
 
 import { hashPassword, verifyPassword } from "@/lib/auth-password";
 import { DEMO_PROFILES, DEMO_WORKSPACE_NAME, isDemoAuthEnabled } from "@/lib/demo-profiles";
-import { sendResetCodeEmail } from "@/lib/mailer";
+import { absoluteUrl } from "@/lib/app-url";
+import { confirmationEmail, resetEmail } from "@/lib/email-templates";
+import { sendMail, type SendResult } from "@/lib/mailer";
 import { configuredStoreKind } from "@/lib/store/types";
 
 /** Duração da sessão: 7 dias (renovada quando falta menos de 1 dia). */
 export const SESSION_MAX_AGE = 60 * 60 * 24 * 7;
 export const RESET_CODE_TTL_SECONDS = 15 * 60;
+/** Códigos de confirmação de conta / início de sessão: os mesmos 15 minutos. */
+export const CONFIRM_CODE_TTL_SECONDS = RESET_CODE_TTL_SECONDS;
 
 /**
  * Segredo das sessões, só por variável de ambiente. Em produção é obrigatório;
@@ -49,6 +55,36 @@ function authSecret(): string {
   return globalForSecret.vellumEphemeralSecret;
 }
 
+/* ==========================================================================
+   Valores assinados (cookies auxiliares: dispositivo confiável, confirmação pendente)
+   ========================================================================== */
+
+function hmac(value: string): string {
+  return createHmac("sha256", authSecret()).update(value).digest("base64url");
+}
+
+/** Chave de 32 bytes derivada do AUTH_SECRET para um fim concreto (ex.: cifrar tokens de partilha). */
+export function derivedKey(purpose: string): Buffer {
+  return createHmac("sha256", authSecret()).update(`vellum:${purpose}`).digest();
+}
+
+/** `payload` assinado com o AUTH_SECRET (HMAC-SHA256). */
+export function signValue(payload: string): string {
+  return `${Buffer.from(payload, "utf8").toString("base64url")}.${hmac(payload)}`;
+}
+
+/** Devolve o payload se a assinatura for válida; `null` caso contrário. */
+export function unsignValue(token: string | undefined | null): string | null {
+  if (!token) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot <= 0) return null;
+  const payload = Buffer.from(token.slice(0, dot), "base64url").toString("utf8");
+  const expected = Buffer.from(hmac(payload));
+  const given = Buffer.from(token.slice(dot + 1));
+  if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
+  return payload;
+}
+
 /** O último código gerado por email, para o mostrar no ecrã em modo de demonstração. */
 // No globalThis: a instância do Better-Auth é partilhada entre os bundles do Next.
 const globalForCodes = globalThis as unknown as { vellumLastResetCodes?: Map<string, string> };
@@ -57,6 +93,31 @@ export function takeLastResetCode(email: string): string | null {
   const code = lastCodes.get(email) ?? null;
   lastCodes.delete(email);
   return code;
+}
+
+/**
+ * Contexto do próximo código de confirmação (o plugin só passa email + código):
+ * finalidade, nome e destino, e o resultado do envio para a interface.
+ */
+export interface ConfirmationIntent {
+  purpose: "register" | "login";
+  name: string;
+  next: string;
+}
+const globalForIntents = globalThis as unknown as {
+  vellumConfirmIntents?: Map<string, ConfirmationIntent>;
+  vellumConfirmResults?: Map<string, SendResult>;
+};
+const intents = (globalForIntents.vellumConfirmIntents ??= new Map());
+const results = (globalForIntents.vellumConfirmResults ??= new Map());
+
+export function setConfirmationIntent(email: string, intent: ConfirmationIntent) {
+  intents.set(email.toLowerCase(), intent);
+}
+export function takeConfirmationResult(email: string): SendResult | null {
+  const result = results.get(email.toLowerCase()) ?? null;
+  results.delete(email.toLowerCase());
+  return result;
 }
 
 /* ==========================================================================
@@ -96,7 +157,8 @@ async function createAuth() {
       enabled: true,
       minPasswordLength: 8,
       maxPasswordLength: 128,
-      autoSignIn: true,
+      // O registo não abre sessão: primeiro confirma-se o email (src/lib/auth.ts).
+      autoSignIn: false,
       revokeSessionsOnPasswordReset: true,
       password: { hash: hashPassword, verify: ({ hash, password }) => verifyPassword(password, hash) },
     },
@@ -107,8 +169,12 @@ async function createAuth() {
         workspaceName: { type: "string", input: false, defaultValue: "Atelier", required: false },
         theme: { type: "string", input: true, defaultValue: "warm-cream", required: false },
         isDemo: { type: "boolean", input: false, defaultValue: false, required: false },
+        /** Pedir código por email em cada início de sessão num dispositivo não confiável. */
+        loginConfirmation: { type: "boolean", input: false, defaultValue: true, required: false },
       },
     },
+    // Confirmar o código de verificação abre a sessão (registo e início de sessão).
+    emailVerification: { autoSignInAfterVerification: true },
     databaseHooks: {
       user: {
         create: {
@@ -133,7 +199,7 @@ async function createAuth() {
       }),
       emailOTP({
         otpLength: 6,
-        expiresIn: RESET_CODE_TTL_SECONDS,
+        expiresIn: CONFIRM_CODE_TTL_SECONDS,
         allowedAttempts: 5,
         storeOTP: "hashed",
         disableSignUp: true,
@@ -143,8 +209,29 @@ async function createAuth() {
           return code;
         },
         sendVerificationOTP: async ({ email, otp, type }) => {
-          if (type !== "forget-password") return;
-          await sendResetCodeEmail(email, otp, RESET_CODE_TTL_SECONDS / 60);
+          const key = email.toLowerCase();
+          if (type === "forget-password") {
+            const minutes = CONFIRM_CODE_TTL_SECONDS / 60;
+            const link = absoluteUrl(`/login?vista=recuperar&conta=${encodeURIComponent(email)}`);
+            results.set(key, await sendMail("reset", email, resetEmail({ code: otp, minutes, link }), { code: otp }));
+            return;
+          }
+          if (type !== "email-verification") return;
+          const intent = intents.get(key) ?? { purpose: "login", name: "", next: "/dashboard" };
+          intents.delete(key);
+          const params = new URLSearchParams({ email, codigo: otp });
+          if (intent.next !== "/dashboard") params.set("seguinte", intent.next);
+          const content = confirmationEmail({
+            name: intent.name,
+            code: otp,
+            link: absoluteUrl(`/login/confirmar?${params.toString()}`),
+            minutes: CONFIRM_CODE_TTL_SECONDS / 60,
+            purpose: intent.purpose,
+          });
+          results.set(
+            key,
+            await sendMail(intent.purpose === "register" ? "confirm" : "login", email, content, { code: otp }),
+          );
         },
       }),
       nextCookies(),
@@ -196,6 +283,7 @@ async function seedDemoProfiles(auth: VellumAuth): Promise<void> {
         workspaceName: DEMO_WORKSPACE_NAME,
         theme: profile.theme,
         isDemo: true,
+        loginConfirmation: false,
         createdAt: now,
         updatedAt: now,
       },

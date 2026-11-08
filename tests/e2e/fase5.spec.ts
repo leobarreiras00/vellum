@@ -171,6 +171,9 @@ test("Calendário: exporta .ics com VALARM e importa um calendário externo", as
 test("Definições: Hub de Sincronização — Markdown, snapshot .vellum.json e direitos no rodapé", async ({ page }) => {
   await loginAs(page, PROFILES.leo);
   await page.goto("/settings");
+  // Quatro separadores; a sincronização é o último (também por ligação direta).
+  await page.getByTestId("settings-tab-sincronizacao").click();
+  await expect(page).toHaveURL(/#sincronizacao$/);
   const hub = page.getByTestId("sync-hub");
   await expect(hub).toBeVisible();
   await expect(hub.getByTestId("sync-calendar")).toBeVisible();
@@ -241,6 +244,20 @@ test("Definições: Hub de Sincronização — Markdown, snapshot .vellum.json e
   const rights = statusBar.getByText("© 2026 Vellum · Leonardo Barreiras — Todos os direitos reservados.");
   await expect(rights).toBeVisible();
   await expect(rights).toHaveAttribute("title", `© 2026 Vellum · Arquitetado e Desenvolvido por ${RIGHTS}`);
+
+  await page.goto("/settings#sincronizacao");
+  const mdNew = page.getByTestId("sync-hub").getByTestId("sync-markdown");
+  // Markdown para um projeto novo, criado na hora (Proprietário).
+  await mdNew.getByLabel("Projeto de destino").selectOption({ label: "+ Novo projeto…" });
+  await mdNew.getByLabel("Nome do novo projeto").fill("Importação E2E");
+  await mdNew.getByTestId("md-import-input").setInputFiles({
+    name: "notas-soltas.md",
+    mimeType: "text/markdown",
+    buffer: Buffer.from("# Notas soltas importadas\n\nUm parágrafo.\n"),
+  });
+  await expect(mdNew.getByText(/em «Importação E2E» \(projeto novo\)/)).toBeVisible();
+  await expect(mdNew.getByRole("link", { name: "Notas soltas importadas" })).toBeVisible();
+  await expect(mdNew.getByLabel("Projeto de destino")).toHaveValue(/.+/);
 });
 
 test("RBAC: Marta (Comentadora) exporta; Pedro (Leitor) não vê Exportar", async ({ page }) => {
@@ -261,6 +278,7 @@ test("RBAC: Marta (Comentadora) exporta; Pedro (Leitor) não vê Exportar", asyn
   await expect(page.getByText("Modo de leitura")).toBeVisible();
   await expect(page.getByTestId("document-export")).toHaveCount(0);
   await expect(page.getByTestId("topbar-export")).toHaveCount(0);
-  await page.goto("/settings");
+  await page.goto("/settings#sincronizacao");
+  await expect(page.getByTestId("sync-hub")).toBeVisible();
   await expect(page.getByTestId("snapshot-export")).toHaveCount(0);
 });

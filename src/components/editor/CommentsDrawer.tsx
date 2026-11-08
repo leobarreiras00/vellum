@@ -207,7 +207,7 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
                   ? "Qual é a dúvida?"
                   : "Escreva um comentário…"
             }
-            className="w-full resize-y rounded-lg border border-subtle bg-elevated px-2.5 py-2 text-sm text-primary placeholder:text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+            className="w-full resize-none rounded-lg border border-subtle bg-elevated px-2.5 py-2 text-sm text-primary placeholder:text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
           />
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-muted">

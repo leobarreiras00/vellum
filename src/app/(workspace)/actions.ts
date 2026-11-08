@@ -11,7 +11,17 @@
 
 import { z } from "zod";
 
-import { getSession, type SessionUser } from "@/lib/auth";
+import {
+  forgetTrustedDevice,
+  getAccountSecurity,
+  getSession,
+  setLoginConfirmation,
+  type AccountSecurity,
+  type SessionUser,
+} from "@/lib/auth";
+import { absoluteUrl } from "@/lib/app-url";
+import { inviteEmail, testEmail } from "@/lib/email-templates";
+import { mailStatus, sendMail, type MailMode } from "@/lib/mailer";
 import { FORBIDDEN_MESSAGE, ForbiddenError } from "@/lib/rbac";
 import { MAX_ICS_BYTES } from "@/lib/sync/ics";
 import { MAX_MARKDOWN_BYTES, MAX_MARKDOWN_FILES } from "@/lib/sync/markdown-import";
@@ -19,6 +29,12 @@ import { MAX_SNAPSHOT_BYTES, snapshotSchema } from "@/lib/sync/snapshot";
 import {
   NotFoundError,
   ValidationError,
+  clearExampleData,
+  createShareLink,
+  inviteToShare,
+  restoreExampleData,
+  revokeShareLink,
+  setWorkspaceMember,
   addComment,
   convertNoteToDocument,
   createDocument,
@@ -68,6 +84,10 @@ import {
   preferencesInputSchema,
   projectInputSchema,
   projectMemberInputSchema,
+  inviteInputSchema,
+  shareLinkInputSchema,
+  workspaceMemberInputSchema,
+  SHARE_ROLE_LABELS,
   type WorkspaceSnapshot,
 } from "@/lib/workspace-types";
 
@@ -119,6 +139,119 @@ export async function updateProjectAction(projectId: unknown, input: unknown) {
 
 export async function deleteProjectAction(projectId: unknown) {
   return run((user) => deleteProject(user, idSchema.parse(projectId)));
+}
+
+export async function setWorkspaceMemberAction(input: unknown) {
+  return run((user) => {
+    const parsed = workspaceMemberInputSchema.parse(input);
+    return setWorkspaceMember(user, parsed.userId, parsed.role);
+  });
+}
+
+/* Partilha ---------------------------------------------------------------- */
+
+export async function createShareLinkAction(input: unknown) {
+  return run((user) => createShareLink(user, shareLinkInputSchema.parse(input)));
+}
+
+export async function revokeShareLinkAction(linkId: unknown) {
+  return run((user) => revokeShareLink(user, idSchema.parse(linkId)));
+}
+
+export interface InviteActionData {
+  email: string;
+  delivered: boolean;
+  mode: MailMode;
+  deliveryError: string | null;
+  addedAsMember: boolean;
+}
+
+/** Convite por email: cria o link pessoal e envia-o (Brevo/Resend ou Caixa de Inspeção). */
+export async function inviteToShareAction(input: unknown) {
+  return run<InviteActionData>(async (user) => {
+    const parsed = inviteInputSchema.parse(input);
+    const invite = await inviteToShare(user, parsed);
+    const content = inviteEmail({
+      inviterName: user.name,
+      targetTitle: invite.targetTitle,
+      targetKind: invite.targetKind,
+      roleLabel: SHARE_ROLE_LABELS[parsed.role].replace("Pode ", "pode "),
+      link: invite.url,
+      expiresLabel: invite.expiresAt
+        ? new Intl.DateTimeFormat("pt-PT", { dateStyle: "long", timeZone: "Europe/Lisbon" }).format(
+            new Date(invite.expiresAt),
+          )
+        : null,
+      needsPassword: false,
+    });
+    const sent = await sendMail("invite", parsed.email, content);
+    return {
+      email: parsed.email,
+      delivered: sent.delivered,
+      mode: sent.mode,
+      deliveryError: sent.error ? "O serviço de email recusou o envio." : null,
+      addedAsMember: invite.addedAsMember,
+    };
+  });
+}
+
+/* Dados de exemplo -------------------------------------------------------- */
+
+export async function clearExampleDataAction() {
+  return run((user) => clearExampleData(user));
+}
+
+export async function restoreExampleDataAction() {
+  return run((user) => restoreExampleData(user));
+}
+
+/* Conta e email ----------------------------------------------------------- */
+
+export interface AccountEmailState {
+  email: string;
+  security: AccountSecurity;
+  mail: { mode: MailMode; provider: string | null; fromAddress: string | null; fromName: string; missing: string[] };
+}
+
+export async function getAccountEmailStateAction() {
+  return run<AccountEmailState>(async (user) => {
+    const status = mailStatus();
+    return {
+      email: user.email,
+      security: await getAccountSecurity(user.userId),
+      mail: {
+        mode: status.mode,
+        provider: status.provider,
+        fromAddress: status.fromAddress,
+        fromName: status.fromName,
+        missing: status.missing,
+      },
+    };
+  });
+}
+
+export async function setLoginConfirmationAction(enabled: unknown) {
+  return run(async (user) => {
+    await setLoginConfirmation(user.userId, z.boolean().parse(enabled));
+  });
+}
+
+export async function forgetTrustedDeviceAction() {
+  return run(() => forgetTrustedDevice());
+}
+
+/** Envia um email de teste para o próprio utilizador. */
+export async function sendTestEmailAction() {
+  return run(async (user) => {
+    const status = mailStatus();
+    const content = testEmail({
+      name: user.name,
+      provider: status.provider ?? "Caixa de Inspeção",
+      link: absoluteUrl("/settings"),
+    });
+    const sent = await sendMail("test", user.email, content);
+    return { delivered: sent.delivered, mode: sent.mode, error: sent.error ?? null, to: user.email };
+  });
 }
 
 export async function setProjectMemberAction(input: unknown) {
@@ -287,7 +420,9 @@ export async function importCalendarIcsAction(input: unknown) {
 }
 
 const markdownImportSchema = z.object({
-  projectId: idSchema,
+  /** `null` cria um projeto novo com `newProjectName` (Proprietário). */
+  projectId: idSchema.nullable(),
+  newProjectName: z.string().trim().max(80).optional(),
   files: z
     .array(
       z.object({
@@ -302,7 +437,7 @@ const markdownImportSchema = z.object({
 export async function importMarkdownAction(input: unknown) {
   return run((user) => {
     const parsed = markdownImportSchema.parse(input);
-    return importMarkdownDocuments(user, parsed.projectId, parsed.files);
+    return importMarkdownDocuments(user, parsed.projectId, parsed.files, parsed.newProjectName);
   });
 }
 

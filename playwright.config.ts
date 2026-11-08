@@ -5,6 +5,8 @@
  *
  * Corre sobre o build de produção (`npm run build` antes) com perfis de
  * demonstração ativos e um ficheiro de dados próprio, reposto a cada execução.
+ * O envio de email é real (modo "provider" do Brevo), mas contra um servidor
+ * falso local (scripts/e2e-mail-mock.mjs) de onde os testes leem os códigos.
  */
 import { randomBytes } from "node:crypto";
 
@@ -13,6 +15,7 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = Number(process.env.E2E_PORT ?? 3100);
 const DATA_FILE = ".data/e2e-workspace.json";
 const STORE = process.env.E2E_STORE === "postgres" ? "postgres" : "json";
+const MAIL_PORT = Number(process.env.E2E_MAIL_PORT ?? 3199);
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -34,24 +37,39 @@ export default defineConfig({
     },
     { name: "mobile", use: { ...devices["Pixel 7"] }, testMatch: /mobile\.spec\.ts/ },
   ],
-  webServer: {
-    // E2E_STORE=postgres corre a mesma suite sobre PostgreSQL. Usa E2E_DATABASE_URL (o nome da
-    // base tem de conter "e2e"), que é esvaziada a cada execução.
-    command: [
-      `node -e "require('fs').rmSync('${DATA_FILE}',{force:true})"`,
-      ...(STORE === "postgres" ? ["node scripts/e2e-reset-db.mjs"] : []),
-      `npx next start -p ${PORT}`,
-    ].join(" && "),
-    url: `http://localhost:${PORT}/login`,
-    reuseExistingServer: false,
-    timeout: 120_000,
-    env: {
-      VELLUM_DEMO_AUTH: "true",
-      VELLUM_DATA_FILE: DATA_FILE,
-      VELLUM_STORE: STORE,
-      ...(STORE === "postgres" ? { DATABASE_URL: process.env.E2E_DATABASE_URL ?? "" } : {}),
-      // Segredo descartável por execução: nada fixo no código.
-      AUTH_SECRET: process.env.AUTH_SECRET ?? randomBytes(32).toString("base64"),
+  webServer: [
+    {
+      command: `node scripts/e2e-mail-mock.mjs ${MAIL_PORT}`,
+      url: `http://127.0.0.1:${MAIL_PORT}/saude`,
+      reuseExistingServer: false,
+      timeout: 20_000,
     },
-  },
+    {
+      // E2E_STORE=postgres corre a mesma suite sobre PostgreSQL. Usa E2E_DATABASE_URL (o nome da
+      // base tem de conter "e2e"), que é esvaziada a cada execução.
+      command: [
+        `node -e "require('fs').rmSync('${DATA_FILE}',{force:true})"`,
+        ...(STORE === "postgres" ? ["node scripts/e2e-reset-db.mjs"] : []),
+        `npx next start -p ${PORT}`,
+      ].join(" && "),
+      url: `http://localhost:${PORT}/login`,
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: {
+        VELLUM_DEMO_AUTH: "true",
+        VELLUM_DATA_FILE: DATA_FILE,
+        VELLUM_STORE: STORE,
+        ...(STORE === "postgres" ? { DATABASE_URL: process.env.E2E_DATABASE_URL ?? "" } : {}),
+        // Segredo descartável por execução: nada fixo no código.
+        AUTH_SECRET: process.env.AUTH_SECRET ?? randomBytes(32).toString("base64"),
+        // Email: Brevo contra o servidor falso local (chave descartável).
+        EMAIL_PROVIDER: "brevo",
+        BREVO_API_KEY: `e2e-${randomBytes(8).toString("hex")}`,
+        BREVO_API_URL: `http://127.0.0.1:${MAIL_PORT}/v3/smtp/email`,
+        EMAIL_FROM_ADDRESS: "atelier@vellum.local",
+        EMAIL_FROM_NAME: "Vellum E2E",
+        NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
+      },
+    },
+  ],
 });

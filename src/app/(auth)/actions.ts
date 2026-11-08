@@ -13,10 +13,13 @@ import {
   confirmPasswordReset,
   register,
   requestPasswordReset,
+  resendConfirmationCode,
   signIn,
   signInDemo,
   signOut,
+  verifyConfirmationCode,
   type SessionUser,
+  type SignInOutcome,
 } from "@/lib/auth";
 import {
   fieldErrors,
@@ -24,6 +27,7 @@ import {
   registerSchema,
   resetConfirmSchema,
   resetRequestSchema,
+  verifyCodeSchema,
   type FieldErrors,
 } from "@/lib/auth-schemas";
 
@@ -43,12 +47,33 @@ function safeRedirect(next: unknown): string {
 
 type LoginFields = { identifier: string; password: string };
 
-export async function loginAction(input: unknown, next?: string): Promise<ActionResult<LoginFields, SessionUser>> {
+export async function loginAction(input: unknown, next?: string): Promise<ActionResult<LoginFields, SignInOutcome>> {
   const parsed = loginSchema.safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: fieldErrors(parsed.error) };
-  const result = await signIn(parsed.data.identifier, parsed.data.password);
+  const destination = safeRedirect(next);
+  const result = await signIn(parsed.data.identifier, parsed.data.password, destination);
   if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data, redirectTo: destination };
+}
+
+type VerifyFields = { email: string; code: string };
+
+/** Confirma o código de 6 algarismos (vista «Confirme o seu email» ou ligação do email). */
+export async function verifyCodeAction(
+  input: unknown,
+  next?: string,
+): Promise<ActionResult<VerifyFields, SessionUser>> {
+  const parsed = verifyCodeSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, fieldErrors: fieldErrors(parsed.error) };
+  const result = await verifyConfirmationCode(parsed.data.email, parsed.data.code, parsed.data.trustDevice);
+  if (!result.ok) return { ok: false, fieldErrors: { code: result.error } };
   return { ok: true, data: result.data, redirectTo: safeRedirect(next) };
+}
+
+export async function resendCodeAction(): Promise<ActionResult<VerifyFields, SignInOutcome>> {
+  const result = await resendConfirmationCode();
+  if (!result.ok) return { ok: false, error: result.error };
+  return { ok: true, data: result.data };
 }
 
 export async function demoLoginAction(
@@ -63,10 +88,10 @@ export async function demoLoginAction(
 
 type RegisterFields = { name: string; username: string; email: string; password: string; theme: string };
 
-export async function registerAction(input: unknown): Promise<ActionResult<RegisterFields, SessionUser>> {
+export async function registerAction(input: unknown): Promise<ActionResult<RegisterFields, SignInOutcome>> {
   const parsed = registerSchema.safeParse(input);
   if (!parsed.success) return { ok: false, fieldErrors: fieldErrors(parsed.error) };
-  const result = await register(parsed.data);
+  const result = await register(parsed.data, DEFAULT_REDIRECT);
   if (!result.ok) {
     const field = result.error.includes("username") ? "username" : result.error.includes("email") ? "email" : null;
     return field ? { ok: false, fieldErrors: { [field]: result.error } } : { ok: false, error: result.error };

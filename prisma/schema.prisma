@@ -74,23 +74,25 @@ enum EffortKind {
 // -----------------------------------------------------------------------------
 
 model User {
-  id              String        @id
-  name            String
-  email           String        @unique
-  emailVerified   Boolean       @default(false)
-  image           String?
+  id                String        @id
+  name              String
+  email             String        @unique
+  emailVerified     Boolean       @default(false)
+  image             String?
   /// Username único, minúsculas, [a-z0-9._-] (plugin `username`).
-  username        String?       @unique
-  displayUsername String?
-  platformRole    PlatformRole  @default(USER)
+  username          String?       @unique
+  displayUsername   String?
+  platformRole      PlatformRole  @default(USER)
   /// Papel por omissão no atelier criado no registo.
-  workspaceRole   WorkspaceRole @default(OWNER)
-  workspaceName   String        @default("Atelier")
+  workspaceRole     WorkspaceRole @default(OWNER)
+  workspaceName     String        @default("Atelier")
   /// Um dos 5 temas (`warm-cream`, `sage-paper`, `nordic-slate`, `sand-dune`, `dark-espresso`).
-  theme           String        @default("warm-cream")
-  isDemo          Boolean       @default(false)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  theme             String        @default("warm-cream")
+  isDemo            Boolean       @default(false)
+  /// Pedir código por email em cada início de sessão num dispositivo não confiável.
+  loginConfirmation Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   sessions Session[]
   accounts Account[]
@@ -367,6 +369,8 @@ model DayNote {
   date        String
   content     String
   documentIds String[]
+  /// Dia marcado como importante (★) por esta pessoa.
+  isImportant Boolean  @default(false)
   updatedAt   DateTime
 
   @@unique([workspaceId, userId, date])
@@ -380,4 +384,31 @@ model ImportedSnapshot {
 
   @@id([workspaceId, snapshotId])
   @@map("imported_snapshot")
+}
+
+/// Partilha por link direto ou convite por email (documento ou projeto inteiro).
+model ShareLink {
+  id           String        @id
+  workspaceId  String
+  projectId    String
+  /// null = o projeto inteiro.
+  documentId   String?
+  /// "link" (qualquer pessoa com o link) ou "invite" (convite enviado a um email).
+  kind         String
+  email        String?
+  /// VIEWER, COMMENTER ou EDITOR (nunca OWNER).
+  role         WorkspaceRole
+  /// SHA-256 do token; o token só existe cifrado (AES-256-GCM) para «Copiar link».
+  tokenHash    String        @unique
+  tokenSealed  String
+  passwordHash String?
+  expiresAt    DateTime?
+  createdById  String
+  createdAt    DateTime
+  revokedAt    DateTime?
+  lastOpenedAt DateTime?
+  openCount    Int           @default(0)
+
+  @@index([workspaceId, projectId])
+  @@map("share_link")
 }

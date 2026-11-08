@@ -219,7 +219,7 @@ function ImportPane({ onApply }: { onApply: MermaidGuidePanelProps["onApply"] })
           rows={5}
           spellCheck={false}
           placeholder={"flowchart LR\n  A[Início] --> B[Fim]"}
-          className="ligatures-none mt-1 w-full resize-y rounded-lg border border-subtle bg-elevated px-2.5 py-2 font-mono text-[12px] leading-[1.6] text-primary placeholder:text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+          className="ligatures-none mt-1 w-full resize-none rounded-lg border border-subtle bg-elevated px-2.5 py-2 font-mono text-[12px] leading-[1.6] text-primary placeholder:text-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
         />
         <Button
           size="sm"
@@ -262,7 +262,7 @@ function PromptAssistant() {
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
           placeholder="Ex.: o processo de aprovação de uma despesa, desde o pedido do colaborador até ao pagamento, com rejeição pelo gestor."
-          className="w-full resize-y rounded-lg border border-subtle bg-elevated px-2.5 py-2 text-sm text-primary placeholder:text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
+          className="w-full resize-none rounded-lg border border-subtle bg-elevated px-2.5 py-2 text-sm text-primary placeholder:text-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary"
         />
         <label htmlFor={`${id}-kind`} className="block text-xs text-muted">
           Tipo de diagrama

@@ -41,6 +41,15 @@ export const registerSchema = z.object({
 
 export const resetRequestSchema = z.object({ identifier });
 
+export const verifyCodeSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Email inválido."),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "O código tem 6 algarismos."),
+  trustDevice: z.boolean().default(false),
+});
+
 export const resetConfirmSchema = z
   .object({
     identifier,

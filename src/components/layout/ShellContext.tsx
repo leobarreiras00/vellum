@@ -13,6 +13,8 @@ export interface ShellContextValue {
   openPalette: () => void;
   openProjectForm: (projectId?: string) => void;
   openMembers: (projectId: string | null) => void;
+  /** Abre o <ShareModal /> para um documento, um projeto ou o workspace. */
+  openShare: (target: { projectId: string | null; documentId: string | null }) => void;
   exportMarkdown: (target: { kind: "document" | "project"; id: string }) => void;
   /** Abre o Modal de Exportação (PDF, Word, Markdown, HTML) de um documento. */
   openExport: (documentId: string) => void;

@@ -4,9 +4,11 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
  * Template base duplo, alternável no cabeçalho:
- *  1. Vista Calendário — grelha mensal ou semanal clássica;
- *  2. Vista Agenda — lista cronológica do mês + Folha de Notas do dia.
- * Legendas filtráveis, Dias Importantes, eventos com lembretes e Notas do Dia.
+ *  1. Vista Calendário — grelha mensal ou semanal;
+ *  2. Agenda com Notas — mini-calendário, filtros e cartões dos dias.
+ * Em ambas, o Day Studio Inspector (360px) mostra o dia escolhido. «Personalizar
+ * Vista» ajusta densidade, início da semana, fins de semana, feriados e o que
+ * cada célula mostra. Legendas filtráveis, Dias Importantes e lembretes.
  * Escrever eventos exige calendar:edit (o servidor volta a verificar).
  */
 "use client";
@@ -18,13 +20,23 @@ import {
   ChevronRight,
   NotebookTabs,
   Plus,
+  RotateCcw,
+  Settings2,
   SlidersHorizontal,
   Star,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 
-import { AgendaView } from "@/components/calendar/AgendaView";
+import { AgendaView, type AgendaFilter } from "@/components/calendar/AgendaView";
+import { DayInspector } from "@/components/calendar/DayInspector";
+import {
+  DENSITY_LABELS,
+  useCalendarPrefs,
+  type CalendarDensity,
+  type CalendarPrefs,
+} from "@/components/calendar/useCalendarPrefs";
+import { Popover } from "@/components/ui/Popover";
 import { EventDialog, type EventDialogState } from "@/components/calendar/EventDialog";
 import { LegendManager } from "@/components/calendar/LegendManager";
 import { SyncHub } from "@/components/settings/SyncHub";
@@ -44,6 +56,7 @@ import {
   shiftMonth,
   weekDays,
 } from "@/lib/calendar";
+import { holidayMap } from "@/lib/pt-holidays";
 import { expandEvents } from "@/lib/recurrence";
 import { sumRange } from "@/lib/telemetry";
 import { EASE_EDITORIAL, cn, formatDuration, formatNumber } from "@/lib/utils";
@@ -90,6 +103,8 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
   const [dialog, setDialog] = useState<EventDialogState>({ open: false });
   const [legendsOpen, setLegendsOpen] = useState(false);
   const [syncOpen, setSyncOpen] = useState(false);
+  const [prefs, setPrefs, resetPrefs] = useCalendarPrefs();
+  const [agendaFilter, setAgendaFilter] = useState<AgendaFilter>("todos");
 
   // Preferências locais da vista.
   useEffect(() => {
@@ -187,6 +202,8 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
     setCursor({ year: parseDayKey(day).year, month: parseDayKey(day).month });
   };
 
+  const holidays = useMemo(() => holidayMap([cursor.year - 1, cursor.year, cursor.year + 1]), [cursor.year]);
+
   const gridProps = {
     eventsByDay,
     legends,
@@ -198,11 +215,10 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
     canEdit,
     onOpenEvent: (eventId: string, date?: string) => setDialog({ open: true, eventId, occurrenceDate: date }),
     onNewEvent: (date: string) => setDialog({ open: true, date }),
-    onOpenDay: (day: string) => {
-      selectDay(day);
-      chooseView("agenda");
-    },
-    onSaveNote: (date: string, content: string) => saveNote(date, content, notes.get(date)?.documentIds ?? []),
+    onOpenDay: selectDay,
+    onSelectDay: selectDay,
+    prefs,
+    holidays,
   };
 
   const legendChips = [
@@ -213,7 +229,7 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 md:px-8 lg:pt-10">
+    <div className="mx-auto w-full max-w-[1440px] px-4 pb-16 pt-8 md:px-8 lg:pt-10">
       <header className="flex flex-wrap items-end justify-between gap-x-8 gap-y-5">
         <div className="min-w-0">
           <p className="eyebrow">Calendário · agenda editorial</p>
@@ -243,6 +259,7 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
             reduce={Boolean(reduce)}
             id="vista"
           />
+          <ViewCustomizer prefs={prefs} onChange={setPrefs} onReset={resetPrefs} />
           {view === "grelha" && (
             <Segmented
               label="Escala da grelha"
@@ -348,34 +365,54 @@ export function CalendarWorkspace({ initialDay }: { initialDay?: string }) {
         </p>
       )}
 
-      <motion.div
-        key={view + scale}
-        initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.22, ease: EASE_EDITORIAL }}
-        className="mt-5"
-      >
-        {view === "agenda" ? (
-          <AgendaView
-            {...gridProps}
-            year={cursor.year}
-            month={cursor.month}
-            onSelectDay={selectDay}
-            onSaveNote={saveNote}
-          />
-        ) : scale === "semana" ? (
-          <WeekGrid {...gridProps} anchor={selected} label={weekLabel} />
-        ) : (
-          <MonthGrid {...gridProps} year={cursor.year} month={cursor.month} label={label} />
-        )}
-      </motion.div>
+      <div className="mt-5 grid grid-cols-[minmax(0,1fr)] items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <motion.div
+          key={view + scale}
+          initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22, ease: EASE_EDITORIAL }}
+          className="min-w-0"
+        >
+          {view === "agenda" ? (
+            <AgendaView
+              {...gridProps}
+              year={cursor.year}
+              month={cursor.month}
+              filter={agendaFilter}
+              onFilterChange={setAgendaFilter}
+              onShiftMonth={(delta) => move(delta)}
+              onSelectDay={selectDay}
+            />
+          ) : scale === "semana" ? (
+            <WeekGrid {...gridProps} anchor={selected} label={weekLabel} />
+          ) : (
+            <MonthGrid {...gridProps} year={cursor.year} month={cursor.month} label={label} />
+          )}
+          {view === "grelha" && (
+            <p className="mt-3 text-xs text-muted">
+              Clique num dia para o abrir no painel lateral: eventos, ★ dia importante, esforço e a nota do dia
+              (checklist, pontos-chave e registo).
+            </p>
+          )}
+        </motion.div>
 
-      {view === "grelha" && (
-        <p className="mt-4 text-xs text-muted">
-          Cada dia mostra os eventos pela cor da legenda, o selo de Dia Importante, o esforço focado (a terracota quando
-          cumpre a meta) e a Nota do Dia. Clique no número do dia para abrir a Agenda com Notas.
-        </p>
-      )}
+        <div className="xl:sticky xl:top-4">
+          <DayInspector
+            day={selected}
+            today={today}
+            note={notes.get(selected)}
+            events={eventsByDay.get(selected) ?? []}
+            legends={legends}
+            effortSeconds={snapshot.effort.byDay[selected] ?? 0}
+            goalSeconds={goalSeconds}
+            holiday={prefs.holidays ? holidays.get(selected) : undefined}
+            canEdit={canEdit}
+            onOpenEvent={gridProps.onOpenEvent}
+            onNewEvent={gridProps.onNewEvent}
+            onSave={saveNote}
+          />
+        </div>
+      </div>
 
       <EventDialog state={dialog} onClose={() => setDialog({ open: false })} />
       <LegendManager open={legendsOpen} onClose={() => setLegendsOpen(false)} hidden={hidden} onToggle={toggleLegend} />
@@ -438,5 +475,136 @@ function Segmented<T extends string>({ id, label, value, onChange, options, redu
         );
       })}
     </div>
+  );
+}
+
+/* ==========================================================================
+   Personalizar Vista
+   ========================================================================== */
+
+const DENSITIES: CalendarDensity[] = ["compacta", "confortavel", "expandida"];
+
+function ViewCustomizer({
+  prefs,
+  onChange,
+  onReset,
+}: {
+  prefs: CalendarPrefs;
+  onChange: (patch: Partial<CalendarPrefs>) => void;
+  onReset: () => void;
+}) {
+  const toggles: Array<{
+    key: "showWeekends" | "holidays" | "notePreview" | "effortBadge" | "legendDots";
+    label: string;
+    hint: string;
+  }> = [
+    { key: "showWeekends", label: "Fins de semana", hint: "Sábado e domingo na grelha" },
+    { key: "holidays", label: "Feriados de Portugal", hint: "Nacionais, calculados para cada ano" },
+    { key: "notePreview", label: "Resumo da nota", hint: "Duas linhas da nota do dia" },
+    { key: "effortBadge", label: "Selo de esforço", hint: "Tempo focado em cada dia" },
+    { key: "legendDots", label: "Pontos de legenda", hint: "Cores das legendas do dia" },
+  ];
+  return (
+    <Popover
+      label="Personalizar vista"
+      align="end"
+      panelClassName="w-[300px] p-3"
+      trigger={(props) => (
+        <Button {...props} variant="secondary" size="sm" data-testid="calendar-customize">
+          <Settings2 aria-hidden="true" strokeWidth={1.5} />
+          Personalizar Vista
+        </Button>
+      )}
+    >
+      {() => (
+        <div className="space-y-3.5 text-sm">
+          <div>
+            <p className="eyebrow">Densidade</p>
+            <div
+              role="radiogroup"
+              aria-label="Densidade"
+              className="mt-1.5 grid grid-cols-3 gap-1 rounded-lg bg-surface p-0.5"
+            >
+              {DENSITIES.map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  role="radio"
+                  aria-checked={prefs.density === d}
+                  data-testid={`density-${d}`}
+                  onClick={() => onChange({ density: d })}
+                  className={cn(
+                    "h-7 rounded-md text-xs transition-colors",
+                    prefs.density === d
+                      ? "border border-subtle bg-elevated text-primary shadow-paper"
+                      : "text-muted hover:text-primary",
+                  )}
+                >
+                  {DENSITY_LABELS[d]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="eyebrow">A semana começa</p>
+            <div
+              role="radiogroup"
+              aria-label="Início da semana"
+              className="mt-1.5 grid grid-cols-2 gap-1 rounded-lg bg-surface p-0.5"
+            >
+              {([1, 0] as const).map((w) => (
+                <button
+                  key={w}
+                  type="button"
+                  role="radio"
+                  aria-checked={prefs.weekStart === w}
+                  data-testid={`week-start-${w}`}
+                  onClick={() => onChange({ weekStart: w })}
+                  className={cn(
+                    "h-7 rounded-md text-xs transition-colors",
+                    prefs.weekStart === w
+                      ? "border border-subtle bg-elevated text-primary shadow-paper"
+                      : "text-muted hover:text-primary",
+                  )}
+                >
+                  {w === 1 ? "À segunda-feira" : "Ao domingo"}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="eyebrow">Mostrar</p>
+            <ul className="mt-1 divide-y divide-subtle">
+              {toggles.map((t) => (
+                <li key={t.key}>
+                  <label className="flex cursor-pointer items-center gap-3 py-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13px] text-primary">{t.label}</span>
+                      <span className="block text-[11px] text-muted">{t.hint}</span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      data-testid={`pref-${t.key}`}
+                      checked={prefs[t.key]}
+                      onChange={(e) => onChange({ [t.key]: e.target.checked })}
+                      className="size-4 shrink-0 accent-[rgb(var(--accent-primary-rgb))]"
+                    />
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <button
+            type="button"
+            onClick={onReset}
+            className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-accent-primary"
+          >
+            <RotateCcw aria-hidden="true" className="size-3" strokeWidth={1.5} />
+            Repor predefinições
+          </button>
+        </div>
+      )}
+    </Popover>
   );
 }

@@ -3,7 +3,7 @@
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras (Leo Barreiras). Todos os direitos reservados.
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
-**Estado atual:** ✅ Todas as fases do Vellum (0 a 5) 100% Concluídas, mais o primeiro bloco do Roteiro pós-lançamento (2026-11-08): PostgreSQL + Prisma + Better-Auth, repetição de eventos, fila offline com resolução de conflitos, auditoria AA nos 5 temas e preparação de deploy (Docker, health check, build standalone). O que ainda depende do Leonardo (base de dados de produção, segredos, email, alojamento) está em «Para pôr em produção».
+**Estado atual:** ✅ Todas as fases do Vellum (0 a 5) 100% Concluídas, o primeiro bloco do Roteiro pós-lançamento e a Refatoração UX/UI + E-mails + Partilha por link (2026-11-08). Em produção no Railway: https://vellumpt.up.railway.app (Neon `production`): PostgreSQL + Prisma + Better-Auth, repetição de eventos, fila offline com resolução de conflitos, auditoria AA nos 5 temas e preparação de deploy (Docker, health check, build standalone). O que ainda depende do Leonardo (base de dados de produção, segredos, email, alojamento) está em «Para pôr em produção».
 **Última atualização:** 2026-11-08
 
 ---
@@ -265,6 +265,49 @@
 - [x] Verificado: `tsc`, ESLint e Prettier nos ficheiros alterados; `next build` standalone; servidor standalone serve `/favicon.ico`, `/icon.svg`, `/apple-icon.png`, `/opengraph-image.png`, `/manifest.webmanifest`, `/icons/*`; sidebar com o novo logótipo em `warm-cream` e `dark-espresso`
 - [ ] Opcional: alinhar o monograma da introdução da caneta (`PenWritingIntro`) com o ponto terracota
 
+### Refatoração UX/UI, E-mails, Confirmação de Conta e Partilha por Link ✅ CONCLUÍDA (2026-11-08)
+
+**1. E-mails (Brevo / Resend) e confirmação**
+- [x] `src/lib/mailer.ts`: envio por `fetch` (sem SDK) para o Brevo (`/v3/smtp/email`) ou o Resend; 3 modos: `provider` (chave definida), `dev-inbox` (sem chave fora de produção → `/dev/caixa`) e `off` (produção sem chave: nada é enviado e a confirmação não é exigida). `BREVO_API_URL`/`RESEND_API_URL` só para testes
+- [x] `src/lib/email-templates.ts`: modelos HTML creme (tabelas + estilos inline, Newsreader com fallback Georgia), versão texto, copyright no rodapé: código de confirmação, recuperação, convite de partilha, email de teste
+- [x] Registo → vista «Confirme o seu email» com código de 6 dígitos (Better-Auth `emailOTP` email-verification, `autoSignInAfterVerification`); o dashboard fica bloqueado até confirmar
+- [x] Login com código por email + «Confiar neste dispositivo por 7 dias» (cookie assinado `vellum.trusted_device`); link mágico `/login/confirmar` («Confirmar e entrar»); preferência por conta `loginConfirmation`
+- [x] Perfis de demonstração mantêm o login de 1 clique
+- [x] Segurança: o código de recuperação deixou de aparecer no ecrã em produção para contas reais (antes qualquer pessoa podia repor a palavra-passe de outra conta com a demo ligada)
+
+**2. Partilha**
+- [x] `src/components/share/ShareDialog.tsx`: link com papel (Leitor/Comentador/Editor), palavra-passe opcional e validade; convites por email; gestão de membros e papéis; o Proprietário já não vê «só leitura»
+- [x] Modelo `share_link` (token guardado com hash + selado para o Proprietário poder copiar), revogação, contagem de aberturas
+- [x] `/shared/[token]` (`src/app/shared/`): portões de palavra-passe/expirado/revogado (`SharedGates.tsx`), editor TipTap com gravação automática e conflitos, comentários de convidados (nome em `localStorage`), lista de documentos do projeto partilhado
+
+**3. Calendário**
+- [x] `DayInspector.tsx` (Day Studio) na coluna direita: dia importante ★, esforço vs. meta, eventos, checklist, pontos-chave, registo (formato em `src/lib/day-note-format.ts`), documentos ligados, gravação automática
+- [x] «Personalizar Vista» (`useCalendarPrefs.ts`, `vellum:calendar-prefs`): densidade, início da semana, fins de semana, feriados, pré-visualização da nota, esforço, pontos de legenda
+- [x] Feriados nacionais PT (`src/lib/pt-holidays.ts`, Páscoa por Computus; Carnaval opcional)
+- [x] Agenda com mini-calendário, filtros (todos/notas/eventos/importantes) e cartões por dia; popovers sem cortes
+
+**4. Dashboard** — separador RBAC removido (matriz passou para Definições › Equipa); 3 projetos de exemplo (`src/lib/example-seed.ts`, `VELLUM_EXAMPLE_DATA=false` desliga); limpar/repor dados de exemplo; estado vazio rico
+
+**5. Notas e Definições** — Notas: barra de filtros fixa no topo (pesquisa, projeto, cor) e grelha de 3 colunas; textareas sem `resize`. Definições em 4 separadores (Aparência, Conta, Equipa, Sincronização) com `#hash`; Conta mostra o estado do email e envia email de teste; importação Markdown pode criar projeto novo
+
+**6. Barra de estado** — toggle A4/Fluido só em rotas de documento e `/shared` (`isDocumentRoute` em `AppFooter.tsx`)
+
+**Base de dados** — migração `20261108160000_partilha_confirmacao`: só colunas com valor por omissão (`user.loginConfirmation`, `day_note.isImportant`) e a tabela nova `share_link` → segura no Neon de produção com `migrate deploy` no arranque
+
+**Testes**
+- [x] `scripts/e2e-mail-mock.mjs`: servidor falso do Brevo (porta 3199; `POST /v3/smtp/email`, `GET /ultima?para=`, `GET /saude`); o Playwright arranca-o antes da app e corre em modo `provider` real
+- [x] `tests/e2e/partilha.spec.ts` (novo), `auth.spec.ts` com códigos lidos do email, `fase4/fase5/workspace/mobile` atualizados; `tests/unit/day-notes-holidays.test.ts` (6)
+- [x] Validado: `tsc --noEmit`, ESLint (0 erros, 3 avisos antigos), Vitest 75/75, `next build`, Playwright 45/45 em `json` e 45/45 em `postgres`; capturas revistas (calendário, agenda, notas, definições, documento partilhado, confirmação, dashboard vazio)
+
+**Para apagar no repositório** (o dispositivo não permite apagar): `src/app/(workspace)/dashboard/_components/RbacPanel.tsx`, `src/components/calendar/DayNoteSheet.tsx`
+
+**Variáveis novas** (Railway + Keychain `vellum-env`, nunca em ficheiros): `EMAIL_PROVIDER` (`brevo`|`resend`), `BREVO_API_KEY` ou `RESEND_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`, `NEXT_PUBLIC_APP_URL` (produção `https://vellumpt.up.railway.app`), opcional `VELLUM_EXAMPLE_DATA`
+
+**Armadilhas registadas**
+- Attrs do TipTap são objetos sem protótipo: clonar com `JSON.parse(JSON.stringify())` antes de qualquer Server Action (senão chega `"$T"` e o Zod recusa)
+- Prisma: chave composta (`a_b`) não é válida em `deleteMany`; usar `plainWhereOf` (campos simples)
+- Brevo com remetente `@gmail.com`: o DMARC do Gmail faz muitos emails cair em spam; para entregabilidade real, domínio próprio verificado (Brevo ou Resend)
+
 ### Para pôr em produção (o que falta do Leonardo)
 
 Plataforma escolhida: **Railway** (Docker com Chromium para o PDF; a Vercel limita pedidos a 4,5 MB e não traz Chromium).
@@ -273,7 +316,7 @@ Plataforma escolhida: **Railway** (Docker com Chromium para o PDF; a Vercel limi
 2. Railway: novo projeto a partir do repositório GitHub `leobarreiras00/vellum`, região próxima da do Neon
 3. Variáveis no painel do Railway: `DATABASE_URL` (Neon `production`, base `vellum`, ligação direta), `AUTH_SECRET` (`openssl rand -base64 32`), `BETTER_AUTH_URL` (domínio público https)
 4. Domínio: gerar o `*.up.railway.app` ou ligar um domínio próprio (CNAME) e atualizar `BETTER_AUTH_URL`
-5. Email: Resend com o domínio verificado (DNS) → `RESEND_API_KEY` e `MAIL_FROM`
+5. ✅ Deploy feito em https://vellumpt.up.railway.app. Email: variáveis do Brevo no Railway (`EMAIL_PROVIDER`, `BREVO_API_KEY`, `EMAIL_FROM_NAME`, `EMAIL_FROM_ADDRESS`, `NEXT_PUBLIC_APP_URL`) e remetente verificado no Brevo; mais tarde, domínio próprio
 6. `VELLUM_DEMO_AUTH` desligado em produção (ligar só temporariamente para rever o RBAC)
 7. Apagar `.claude/PROGRESS 2.md` (cópia antiga criada pelo Finder)
 
@@ -330,6 +373,9 @@ Plataforma escolhida: **Railway** (Docker com Chromium para o PDF; a Vercel limi
 | 2026-11-08 | Auditoria AA inclui WCAG 2.2 (alvos de 24 px). Acentos do `warm-cream` e `sand-dune` escurecidos para 4,5:1 em todas as superfícies. |
 | 2026-11-08 | Logótipo «folha + V + ponto»: o «V» é o contorno real do Newsreader (sem quarta família), o ponto final terracota repete a regra do logótipo da skill tipográfica. Ícones de app em fundo `bg-surface` com a folha `bg-elevated` e sombra quente; favicon em folha de tinta (claro) / creme (escuro). |
 | 2026-11-08 | Alojamento: Railway com o `Dockerfile` em vez da Vercel (Chromium para o PDF, pedidos até 30 MB, processo contínuo para o agregado em memória do repositório PostgreSQL). Migrações aplicadas no arranque do contentor. |
+| 2026-11-08 | E-mail por `fetch` direto às APIs do Brevo/Resend (sem SDK); em produção sem chave o modo é `off` e a confirmação por código não é exigida, para nunca bloquear contas. |
+| 2026-11-08 | Partilha por link: token aleatório guardado com hash (pesquisa) e selado (para o Proprietário copiar de novo); convidados anónimos nunca recebem sessão Better-Auth, só acesso ao documento/projeto do link. |
+| 2026-11-08 | Separador RBAC sai do dashboard; matriz e membros vivem em Definições › Equipa e no diálogo de Partilha. |
 
 ---
 

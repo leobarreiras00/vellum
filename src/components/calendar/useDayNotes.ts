@@ -16,8 +16,8 @@ export function useDayNotes() {
   const byDate = useMemo(() => new Map(snapshot.dayNotes.map((n) => [n.date, n])), [snapshot.dayNotes]);
 
   const save = useCallback(
-    async (date: string, content: string, documentIds: string[]) => {
-      const result = await run(() => saveDayNoteAction({ date, content, documentIds }));
+    async (date: string, content: string, documentIds: string[], isImportant?: boolean) => {
+      const result = await run(() => saveDayNoteAction({ date, content, documentIds, isImportant }));
       return result.ok;
     },
     [run],

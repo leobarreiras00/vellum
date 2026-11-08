@@ -44,6 +44,9 @@ export function upgradeStoreData(data: StoreData): StoreData {
   data.calendarLegends ??= [];
   data.dayNotes ??= [];
   data.importedSnapshots ??= [];
+  // Partilha por link e Dias Importantes nas Notas do Dia.
+  data.shareLinks ??= [];
+  for (const note of data.dayNotes) note.isImportant ??= false;
   // Pós-lançamento: repetição de eventos.
   for (const event of data.calendarEvents) {
     event.recurrence ??= null;

@@ -242,8 +242,28 @@ const TABLES: readonly TableSpec[] = [
     keyFields: ["id"],
     orderBy: { date: "asc" },
     rows: (d) => d.dayNotes as unknown as Row[],
-    toRow: (r) => ({ ...r, updatedAt: toDate(r.updatedAt as string) }),
+    toRow: (r) => ({ ...r, isImportant: Boolean(r.isImportant), updatedAt: toDate(r.updatedAt as string) }),
     fromRow: (r) => ({ ...r, updatedAt: iso(r.updatedAt) }),
+  },
+  {
+    model: "shareLink",
+    keyFields: ["id"],
+    orderBy: { createdAt: "asc" },
+    rows: (d) => (d.shareLinks ?? []) as unknown as Row[],
+    toRow: (r) => ({
+      ...r,
+      expiresAt: toDateOrNull(r.expiresAt as string | null),
+      createdAt: toDate(r.createdAt as string),
+      revokedAt: toDateOrNull(r.revokedAt as string | null),
+      lastOpenedAt: toDateOrNull(r.lastOpenedAt as string | null),
+    }),
+    fromRow: (r) => ({
+      ...r,
+      expiresAt: isoOrNull(r.expiresAt),
+      createdAt: iso(r.createdAt),
+      revokedAt: isoOrNull(r.revokedAt),
+      lastOpenedAt: isoOrNull(r.lastOpenedAt),
+    }),
   },
   {
     model: "importedSnapshot",
@@ -260,6 +280,9 @@ const whereOf = (spec: TableSpec, row: Row): Row =>
   spec.keyFields.length === 1
     ? { [spec.keyFields[0]!]: row[spec.keyFields[0]!] }
     : { [spec.keyFields.join("_")]: Object.fromEntries(spec.keyFields.map((f) => [f, row[f]])) };
+
+/** Filtro para deleteMany: chaves compostas como campos simples (o `a_b` só vale em operações únicas). */
+const plainWhereOf = (spec: TableSpec, row: Row): Row => Object.fromEntries(spec.keyFields.map((f) => [f, row[f]]));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- delegados do Prisma acedidos pelo nome da tabela
 const delegate = (tx: Tx | PrismaClient, model: string) => (tx as any)[model];
@@ -328,6 +351,7 @@ async function loadAll(tx: Tx): Promise<StoreData> {
     calendarEvents: result.calendarEvent as never,
     dayNotes: result.dayNote as never,
     importedSnapshots: result.importedSnapshot as never,
+    shareLinks: result.shareLink as never,
   };
 }
 
@@ -355,7 +379,7 @@ async function writeDiff(tx: Tx, data: StoreData, before: Fingerprints): Promise
   }
   // Remoções dos filhos para os pais.
   for (const { spec, rows } of deletes.reverse()) {
-    await delegate(tx, spec.model).deleteMany({ where: { OR: rows.map((r) => whereOf(spec, r)) } });
+    await delegate(tx, spec.model).deleteMany({ where: { OR: rows.map((r) => plainWhereOf(spec, r)) } });
   }
   return after;
 }

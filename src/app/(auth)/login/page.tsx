@@ -14,13 +14,14 @@ import { PenWritingIntro } from "@/components/auth/PenWritingIntro";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { getSession } from "@/lib/auth";
 import { DEMO_PROFILES, demoRoleTag, isDemoAuthEnabled } from "@/lib/demo-profiles";
+import { mailStatus } from "@/lib/mailer";
 
 export const metadata: Metadata = {
   title: "Entrar",
 };
 
 interface LoginPageProps {
-  searchParams: Promise<{ seguinte?: string | string[]; vista?: string | string[] }>;
+  searchParams: Promise<{ seguinte?: string | string[]; vista?: string | string[]; conta?: string | string[] }>;
 }
 
 function initialsOf(name: string) {
@@ -32,6 +33,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (await getSession()) redirect("/dashboard");
   const params = await searchParams;
   const next = typeof params.seguinte === "string" ? params.seguinte : undefined;
+  const account = typeof params.conta === "string" ? params.conta.slice(0, 254) : "";
   const view = params.vista === "registo" ? "register" : params.vista === "recuperar" ? "reset" : "login";
 
   // Só passa ao cliente o necessário: nunca as palavras-passe dos perfis.
@@ -49,7 +51,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <PenWritingIntro footer={<AppFooter variant="full" />}>
-      <AuthModal demoProfiles={demoProfiles} next={next} initialView={view} />
+      <AuthModal
+        demoProfiles={demoProfiles}
+        next={next}
+        initialView={view}
+        initialIdentifier={account}
+        devInbox={mailStatus().mode === "dev-inbox"}
+      />
     </PenWritingIntro>
   );
 }

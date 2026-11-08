@@ -170,10 +170,34 @@ E2E_DATABASE_URL="postgresql://…/vellum_e2e" npm run test:e2e:pg   # sobre Pos
 | `AUTH_SECRET` | app | em produção | 32+ caracteres (`openssl rand -base64 32`); sem ele, em desenvolvimento usa-se um segredo temporário |
 | `BETTER_AUTH_URL` | app | em produção | URL pública (`https://…`) |
 | `VELLUM_DEMO_AUTH` | app | não | `true` liga os perfis de demonstração em produção |
-| `RESEND_API_KEY`, `MAIL_FROM` | app | para email | Códigos de recuperação por email (Resend) |
+| `NEXT_PUBLIC_APP_URL` | app | em produção | URL pública usada nas ligações dos emails e dos links de partilha (produção: `https://vellumpt.up.railway.app`; local: `http://localhost:3000`). Sem ela, usa `BETTER_AUTH_URL` |
+| `EMAIL_PROVIDER` | app | não | `brevo` ou `resend` (sem ela, usa o fornecedor cuja chave existir) |
+| `BREVO_API_KEY` | app | para email (Brevo) | Chave da API do Brevo (SMTP & API → API Keys) |
+| `RESEND_API_KEY` | app | para email (Resend) | Chave da API do Resend (exige domínio próprio verificado) |
+| `EMAIL_FROM_ADDRESS` | app | para email | Remetente verificado no fornecedor |
+| `EMAIL_FROM_NAME` | app | não (`Vellum`) | Nome mostrado no remetente, ex.: `Vellum Atelier` |
+| `EMAIL_FROM` | app | não | Alternativa num só valor: `Nome <email>` (`MAIL_FROM` continua a ser aceite) |
+| `BREVO_API_URL`, `RESEND_API_URL` | testes | não | Outro endereço da API (os E2E apontam para `scripts/e2e-mail-mock.mjs`) |
+| `VELLUM_EXAMPLE_DATA` | app | não | `false` cria ateliers novos sem os 3 projetos de exemplo |
 | `VELLUM_DATA_FILE` | app | não | Ficheiro do modo `json` |
 | `POSTGRES_PASSWORD` | docker compose | com Docker | Palavra-passe do PostgreSQL local |
 | `E2E_DATABASE_URL` | testes | com `test:e2e:pg` | Base dos testes (nome com «e2e») |
+
+#### Email: Brevo ou Resend
+
+Sem chave de API, o Vellum continua a funcionar: em desenvolvimento os emails ficam na **Caixa de Inspeção** (`/dev/caixa`) e o código aparece numa nota discreta no ecrã; em produção nada é enviado e a confirmação por código fica suspensa (ninguém fica trancado fora). Com chave e remetente, os códigos de confirmação de conta e de início de sessão, os convites de partilha e a recuperação de palavra-passe seguem pelo fornecedor. Em **Definições → Conta & E-mail** vê-se o estado e envia-se um email de teste.
+
+No Mac, as variáveis ficam no Porta-chaves e entram na shell com a função `vellum-env` (nada em ficheiros). Exemplo para acrescentar o email:
+
+```bash
+security add-generic-password -a "$USER" -s vellum-BREVO_API_KEY -w "$(pbpaste)"   # copie a chave antes
+# dentro de vellum-env():
+export EMAIL_PROVIDER="brevo"
+export BREVO_API_KEY="$(security find-generic-password -a "$USER" -s vellum-BREVO_API_KEY -w)"
+export EMAIL_FROM_NAME="Vellum Atelier"
+export EMAIL_FROM_ADDRESS="o-remetente-verificado@exemplo.pt"
+export NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
 
 ### Produção (Docker)
 
@@ -186,7 +210,7 @@ A imagem (Next standalone + Chromium para o PDF) aplica `prisma migrate deploy` 
 
 #### Railway (recomendado)
 
-O `railway.json` diz ao Railway para construir com o `Dockerfile`, verificar `GET /api/health` e reiniciar em caso de falha. Variáveis no painel do serviço (nunca em ficheiros): `DATABASE_URL` (Neon, branch `production`, ligação direta), `AUTH_SECRET`, `BETTER_AUTH_URL` (`https://` do domínio público), `VELLUM_STORE=postgres` (já definido na imagem) e, para email, `RESEND_API_KEY` + `MAIL_FROM`. As migrações correm no arranque de cada deploy.
+O `railway.json` diz ao Railway para construir com o `Dockerfile`, verificar `GET /api/health` e reiniciar em caso de falha. Variáveis no painel do serviço (nunca em ficheiros): `DATABASE_URL` (Neon, branch `production`, ligação direta), `AUTH_SECRET`, `BETTER_AUTH_URL` (`https://` do domínio público), `VELLUM_STORE=postgres` (já definido na imagem), `NEXT_PUBLIC_APP_URL` (o mesmo `https://`) e, para email, `EMAIL_PROVIDER`, `BREVO_API_KEY` (ou `RESEND_API_KEY`), `EMAIL_FROM_ADDRESS` e `EMAIL_FROM_NAME`. As migrações correm no arranque de cada deploy.
 
 A Vercel não é recomendada para este stack: as funções serverless não trazem Chromium (o PDF no servidor passaria à impressão do navegador) e limitam o corpo dos pedidos a 4,5 MB (snapshots `.vellum.json` e PDFs com fontes embutidas chegam a 26–30 MB).
 
@@ -220,13 +244,16 @@ O **Hub de Sincronização** (Calendário → «Sincronizar .ics» e Definiçõe
 | -------------------------------------- | ------------------------------------------------------------------------- |
 | `/`                                    | Redireciona para `/dashboard` (com sessão) ou `/login` (sem sessão)      |
 | `/login`                               | Caneta SVG + modal (Entrar, Criar conta, Recuperar); `?vista=registo` ou `?vista=recuperar` |
-| `/dashboard`                           | Dashboard executivo: 4 KPIs de esforço, horas por projeto (7/30 dias), mapa de consistência anual, «Continuar a Escrever», dias importantes; separador RBAC (`#rbac`) |
+| `/dashboard`                           | Dashboard executivo: 4 KPIs de esforço, horas por projeto (7/30 dias), mapa de consistência anual, «Continuar a Escrever», dias importantes; atelier vazio com «Carregar dados de exemplo» |
 | `/projects`                            | Hub de projetos em grelha ou lista editorial                             |
 | `/projects/[id]`                       | Projeto: árvore de documentos, notas associadas, membros e exportação    |
 | `/projects/[id]/documents/[docId]`     | Editor rico (Folha A4/Fluido, Mermaid, comentários) e modal de exportação |
 | `/notes`                               | Mural de Notas Rápidas (`?nova=1`, `?projeto=<id>`, `?nota=<id>`)         |
-| `/calendar`                            | Calendário (grelha mês/semana) e Agenda com Notas do Dia; eventos, legendas, Dias Importantes e lembretes (`?dia=AAAA-MM-DD`) |
-| `/settings`                            | 5 temas, fonte de leitura, meta diária, matriz RBAC e Hub de Sincronização |
+| `/calendar`                            | Calendário (grelha mês/semana) e Agenda com Notas, com o Day Studio Inspector (★, esforço, eventos, nota estruturada), «Personalizar Vista» e feriados de Portugal (`?dia=AAAA-MM-DD`) |
+| `/settings`                            | Separadores: Aparência & Papel, Conta & E-mail, Equipa & Permissões, Sincronização & Backups (`#aparencia`, `#conta`, `#equipa`, `#sincronizacao`) |
+| `/shared/[token]`                      | Documento ou projeto aberto por link (Leitor, Comentador ou Editor), com ou sem conta; palavra-passe e validade opcionais |
+| `/login/confirmar`                     | Ligação mágica do email de confirmação (confirma com um clique) |
+| `/dev/caixa`                           | Caixa de Inspeção dos emails (só fora de produção) |
 | `/design-system`                       | Página de verificação do Design System (Fase 1A)                          |
 
 Todas as rotas do workspace partilham o App Shell (Sidebar retrátil, Topbar contextual, Command Palette `⌘K` e `<AppFooter variant="statusbar" />`).
