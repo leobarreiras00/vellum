@@ -184,6 +184,16 @@ docker run -p 3000:3000 -e DATABASE_URL -e AUTH_SECRET -e BETTER_AUTH_URL -e VEL
 
 A imagem (Next standalone + Chromium para o PDF) aplica `prisma migrate deploy` no arranque, corre sem privilégios e expõe `GET /api/health`. Numa plataforma (Railway, Fly.io, Render…), as variáveis definem-se no painel da própria plataforma.
 
+#### Railway (recomendado)
+
+O `railway.json` diz ao Railway para construir com o `Dockerfile`, verificar `GET /api/health` e reiniciar em caso de falha. Variáveis no painel do serviço (nunca em ficheiros): `DATABASE_URL` (Neon, branch `production`, ligação direta), `AUTH_SECRET`, `BETTER_AUTH_URL` (`https://` do domínio público), `VELLUM_STORE=postgres` (já definido na imagem) e, para email, `RESEND_API_KEY` + `MAIL_FROM`. As migrações correm no arranque de cada deploy.
+
+A Vercel não é recomendada para este stack: as funções serverless não trazem Chromium (o PDF no servidor passaria à impressão do navegador) e limitam o corpo dos pedidos a 4,5 MB (snapshots `.vellum.json` e PDFs com fontes embutidas chegam a 26–30 MB).
+
+### Identidade visual
+
+Logótipo: folha de velino com a orelha dobrada, o «V» do Newsreader e o ponto final terracota. Componente `VellumMark` (tokens, inverte no `dark-espresso`); favicon `src/app/icon.svg` (segue o tema claro/escuro do navegador) + `favicon.ico`; `apple-icon.png`; ícones PWA em `public/icons/` (`manifest.ts`); imagem Open Graph `src/app/opengraph-image.png` (1200 × 630). Gerador: `scripts/brand/gerar-logotipo.py`.
+
 ### Repetição de eventos e trabalho sem rede
 
 - **Eventos que se repetem**: diário, semanal (escolhendo os dias), mensal ou anual, a cada N, até uma data ou N vezes. Cada ocorrência pode ser removida sem apagar a série; o `.ics` exporta e importa `RRULE` e `EXDATE`.

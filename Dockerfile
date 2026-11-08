@@ -10,7 +10,7 @@
 # No arranque aplica as migrações (`prisma migrate deploy`) e serve em :3000.
 # =============================================================================
 
-FROM node:20-bookworm-slim AS deps
+FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json .npmrc ./
@@ -24,7 +24,7 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     NEXT_OUTPUT=standalone
 RUN npx prisma generate && npm run build
 
-FROM node:20-bookworm-slim AS runner
+FROM node:22-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
@@ -38,6 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-cert
 # Aplicação (standalone), estáticos, Prisma (CLI + migrações) e playwright-core.
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/node_modules/prisma ./node_modules/prisma
 COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma

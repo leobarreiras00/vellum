@@ -255,14 +255,27 @@
 - [x] `tsc --noEmit`, ESLint (0 erros; os 5 avisos antigos), Prettier, Vitest 69/69, `next build`
 - [x] Playwright 41/41 em modo `json` e 41/41 em modo `postgres` (desktop + Pixel 7)
 
+**Logótipo e preparação do deploy (2026-11-08)**
+- [x] Logótipo: folha de velino (proporção A4) com orelha dobrada, «V» do Newsreader (opsz 72, peso 500) e ponto final terracota; `VellumMark` reescrito só com tokens (`fill-current`, `fill-canvas`, `fill-accent-primary`), inverte no `dark-espresso`; nome com ponto em `text-accent-primary`
+- [x] `src/app/icon.svg` (favicon com `prefers-color-scheme`), `favicon.ico` (16/32/48), `apple-icon.png` (180), `public/icons/icon-192|512|maskable-512.png`, `src/app/manifest.ts` (PWA, `start_url` `/dashboard`)
+- [x] `src/app/opengraph-image.png` (1200 × 630) + `.alt.txt`; `metadataBase` a partir de `BETTER_AUTH_URL`/`APP_URL`, `openGraph`, `twitter`, `appleWebApp`, `themeColor` claro/escuro
+- [x] Gerador reprodutível em `scripts/brand/gerar-logotipo.py`; SVG mestre em `public/brand/vellum-app-icon.svg`
+- [x] `Dockerfile`: Node 22 (o 20 terminou o suporte em abril de 2026) e cópia de `public/` para a imagem standalone (sem isto os ícones PWA não seriam servidos)
+- [x] `railway.json`: build pelo `Dockerfile`, healthcheck `/api/health` (120 s, cobre a migração no arranque), reinício em falha, 1 réplica
+- [x] Verificado: `tsc`, ESLint e Prettier nos ficheiros alterados; `next build` standalone; servidor standalone serve `/favicon.ico`, `/icon.svg`, `/apple-icon.png`, `/opengraph-image.png`, `/manifest.webmanifest`, `/icons/*`; sidebar com o novo logótipo em `warm-cream` e `dark-espresso`
+- [ ] Opcional: alinhar o monograma da introdução da caneta (`PenWritingIntro`) com o ponto terracota
+
 ### Para pôr em produção (o que falta do Leonardo)
 
-1. **Base de dados PostgreSQL de produção** (Neon, Supabase, RDS, ou o `docker compose` num servidor) → `DATABASE_URL`
-2. **`AUTH_SECRET`** com 32+ caracteres (`openssl rand -base64 32`) e **`BETTER_AUTH_URL`** com o domínio público (https)
-3. **Email**: conta Resend com o domínio verificado → `RESEND_API_KEY` e `MAIL_FROM`
-4. **Alojamento** para a imagem Docker (Fly.io, Railway, Render, VPS…) e o domínio
-5. Decidir se os perfis de demonstração ficam ativos em produção (`VELLUM_DEMO_AUTH`)
-6. Em migração de dados reais: a primeira execução importa `.data/workspace.json` se estiver presente
+Plataforma escolhida: **Railway** (Docker com Chromium para o PDF; a Vercel limita pedidos a 4,5 MB e não traz Chromium).
+
+1. Commit e push das alterações do logótipo e do `railway.json`
+2. Railway: novo projeto a partir do repositório GitHub `leobarreiras00/vellum`, região próxima da do Neon
+3. Variáveis no painel do Railway: `DATABASE_URL` (Neon `production`, base `vellum`, ligação direta), `AUTH_SECRET` (`openssl rand -base64 32`), `BETTER_AUTH_URL` (domínio público https)
+4. Domínio: gerar o `*.up.railway.app` ou ligar um domínio próprio (CNAME) e atualizar `BETTER_AUTH_URL`
+5. Email: Resend com o domínio verificado (DNS) → `RESEND_API_KEY` e `MAIL_FROM`
+6. `VELLUM_DEMO_AUTH` desligado em produção (ligar só temporariamente para rever o RBAC)
+7. Apagar `.claude/PROGRESS 2.md` (cópia antiga criada pelo Finder)
 
 ---
 
@@ -315,6 +328,8 @@
 | 2026-11-08 | Séries de eventos guardadas uma vez (`recurrence` + `exdates`) e expandidas no cliente; subconjunto RRULE sem BYSETPOS nem «2.ª terça». |
 | 2026-11-08 | Conflitos de edição detetados por `baseUpdatedAt` só quando outra pessoa gravou depois; a mesma pessoa noutro separador continua a gravar por cima. |
 | 2026-11-08 | Auditoria AA inclui WCAG 2.2 (alvos de 24 px). Acentos do `warm-cream` e `sand-dune` escurecidos para 4,5:1 em todas as superfícies. |
+| 2026-11-08 | Logótipo «folha + V + ponto»: o «V» é o contorno real do Newsreader (sem quarta família), o ponto final terracota repete a regra do logótipo da skill tipográfica. Ícones de app em fundo `bg-surface` com a folha `bg-elevated` e sombra quente; favicon em folha de tinta (claro) / creme (escuro). |
+| 2026-11-08 | Alojamento: Railway com o `Dockerfile` em vez da Vercel (Chromium para o PDF, pedidos até 30 MB, processo contínuo para o agregado em memória do repositório PostgreSQL). Migrações aplicadas no arranque do contentor. |
 
 ---
 

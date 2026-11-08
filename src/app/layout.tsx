@@ -33,7 +33,13 @@ const mono = JetBrains_Mono({
   variable: "--font-mono",
 });
 
+/** URL pública (variável de ambiente da plataforma) para as ligações absolutas da imagem Open Graph. */
+const siteUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+const description = "Escrever, organizar e paginar — num atelier editorial em tons creme.";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  applicationName: "Vellum",
   title: {
     default: "Vellum — Workspace & Knowledge Platform",
     template: "%s · Vellum",
@@ -42,12 +48,25 @@ export const metadata: Metadata = {
     "A flexibilidade do Notion, a organização do OneNote e o rigor do Word, num atelier editorial em tons creme.",
   authors: [{ name: "Leonardo Barreiras (Leo Barreiras)", url: "https://github.com/leobarreiras00" }],
   creator: "Leonardo Barreiras (Leo Barreiras)",
+  openGraph: {
+    type: "website",
+    locale: "pt_PT",
+    siteName: "Vellum",
+    title: "Vellum — Workspace & Knowledge Platform",
+    description,
+  },
+  twitter: { card: "summary_large_image", title: "Vellum — Workspace & Knowledge Platform", description },
+  appleWebApp: { capable: true, title: "Vellum", statusBarStyle: "default" },
   robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F2ECE1" },
+    { media: "(prefers-color-scheme: dark)", color: "#221F1D" },
+  ],
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
