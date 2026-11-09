@@ -27,7 +27,7 @@ import {
   demoPlatformRole,
   isDemoAuthEnabled,
 } from "@/lib/demo-profiles";
-import { absoluteUrl } from "@/lib/app-url";
+import { absoluteUrl, appUrl } from "@/lib/app-url";
 import { confirmationEmail, resetEmail } from "@/lib/email-templates";
 import { sendMail, type SendResult } from "@/lib/mailer";
 import { configuredStoreKind } from "@/lib/store/types";
@@ -156,7 +156,7 @@ async function createAuth() {
   return betterAuth({
     appName: "Vellum",
     secret: authSecret(),
-    baseURL: process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000",
+    baseURL: appUrl(),
     database: await database(),
     session: { expiresIn: SESSION_MAX_AGE, updateAge: 60 * 60 * 24 },
     emailAndPassword: {

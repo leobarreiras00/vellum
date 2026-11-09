@@ -47,14 +47,16 @@ jobs:
       - run: npm run build
       - name: Testes HTTP de segurança (cabeçalhos, CSP, rotas privadas) sobre o build
         run: |
+          # Porta própria (3101) e `node` direto: `npx` não propaga o sinal ao `next`, que ficava
+          # vivo e ocupava a porta 3100 que o Playwright (E2E) exige livre.
           export AUTH_SECRET="$(openssl rand -base64 48)"
           export VELLUM_DATA_FILE="$RUNNER_TEMP/http-tests.json"
-          export APP_URL=http://127.0.0.1:3100
-          npx next start -p 3100 &
+          export APP_URL=http://127.0.0.1:3101
+          node node_modules/next/dist/bin/next start -p 3101 &
           SERVER=$!
-          trap 'kill $SERVER 2>/dev/null || true' EXIT
-          for i in $(seq 1 60); do curl -fs http://127.0.0.1:3100/api/health >/dev/null && break; sleep 1; done
-          VELLUM_TEST_URL=http://127.0.0.1:3100 npm run test:http
+          trap 'kill $SERVER 2>/dev/null || true; wait $SERVER 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do curl -fs http://127.0.0.1:3101/api/health >/dev/null && break; sleep 1; done
+          VELLUM_TEST_URL=http://127.0.0.1:3101 npm run test:http
       - run: npm run test:e2e
         env:
           CI: "true"

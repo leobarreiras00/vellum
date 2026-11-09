@@ -11,6 +11,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { WallpaperProvider } from "@/components/providers/WallpaperProvider";
 import { SupportModalHost } from "@/components/support/SupportModal";
 import { AuthProvider } from "@/context/AuthContext";
+import { appUrl } from "@/lib/app-url";
 import { getSession } from "@/lib/auth";
 import { DEFAULT_THEME, THEME_INIT_SCRIPT } from "@/lib/themes";
 
@@ -40,7 +41,7 @@ const mono = JetBrains_Mono({
 });
 
 /** URL pública (variável de ambiente da plataforma) para as ligações absolutas da imagem Open Graph. */
-const siteUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+const siteUrl = appUrl();
 const description = "Escrever, organizar e paginar — num atelier editorial em tons creme.";
 
 export const metadata: Metadata = {
