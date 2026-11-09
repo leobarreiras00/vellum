@@ -411,9 +411,21 @@ export interface ProjectView extends Omit<ProjectRecord, "deletedAt" | "workspac
   lastEditedAt: string;
 }
 
-export interface DocumentView extends Omit<DocumentRecord, "deletedAt" | "workspaceId"> {
+/**
+ * Documento no instantâneo do cliente: SEM `contentJson`. O conteúdo rico pode ter
+ * megabytes (imagens) e cada Server Action devolve o instantâneo; o editor pede o
+ * conteúdo só do documento aberto (`DocumentContentView`, getDocumentContentAction).
+ */
+export interface DocumentView extends Omit<DocumentRecord, "deletedAt" | "workspaceId" | "contentJson"> {
   /** Esforço total registado neste documento (todas as pessoas), em segundos. */
   effortSeconds: number;
+}
+/** Conteúdo de um único documento, para o editor. */
+export interface DocumentContentView {
+  id: string;
+  contentJson: DocContent | null;
+  plainText: string;
+  updatedAt: string;
 }
 export type CommentView = Omit<DocumentCommentRecord, "deletedAt" | "workspaceId">;
 export type NoteView = Omit<QuickNoteRecord, "deletedAt" | "workspaceId">;

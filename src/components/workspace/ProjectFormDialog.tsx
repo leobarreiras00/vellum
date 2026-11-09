@@ -50,6 +50,9 @@ export function ProjectFormDialog({ open, projectId, onClose }: ProjectFormDialo
     setColor(project?.color ?? "terracota");
     setErrors({});
     setConfirmDelete(false);
+    // Repõe o formulário ao abrir ou ao mudar de projeto; editar o nome noutro lado
+    // não deve apagar o que a pessoa está a escrever.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, projectId]);
 
   async function submit(event: React.FormEvent) {

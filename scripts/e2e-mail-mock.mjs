@@ -55,5 +55,4 @@ const server = createServer((req, res) => {
   send(404, { error: "rota desconhecida" });
 });
 
-// eslint-disable-next-line no-console
 server.listen(port, "127.0.0.1", () => console.log(`[e2e-mail] a ouvir em http://127.0.0.1:${port}`));

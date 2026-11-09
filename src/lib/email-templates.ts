@@ -128,6 +128,37 @@ export function confirmationEmail(input: {
 }
 
 /* ==========================================================================
+   a2) Aviso: já existe uma conta com este email (tentativa de registo)
+   ========================================================================== */
+
+export function accountExistsEmail(input: { loginLink: string; resetLink: string }): EmailContent {
+  const subject = "Vellum · já tem uma conta com este email";
+  const html = layout({
+    eyebrow: "Registo",
+    title: "Já tem conta no Vellum",
+    preheader: "Alguém tentou criar uma conta com este email.",
+    body: [
+      paragraph("Recebemos um pedido para criar uma conta com este email, mas já existe uma conta associada."),
+      paragraph("Se foi você, entre com os dados que já tem. Se não se lembra da palavra-passe, pode recuperá-la."),
+      button(input.loginLink, "Entrar no atelier"),
+      fallbackLink(input.resetLink),
+      small("Se não foi você, ignore esta mensagem: a sua conta não foi alterada."),
+    ].join("\n"),
+  });
+  const text = [
+    "Recebemos um pedido para criar uma conta Vellum com este email, mas já existe uma conta associada.",
+    "",
+    `Entrar: ${input.loginLink}`,
+    `Recuperar a palavra-passe: ${input.resetLink}`,
+    "",
+    "Se não foi você, ignore esta mensagem: a sua conta não foi alterada.",
+    "",
+    COPYRIGHT_LINE,
+  ].join("\n");
+  return { subject, html, text };
+}
+
+/* ==========================================================================
    b) Convite para documento / projeto
    ========================================================================== */
 

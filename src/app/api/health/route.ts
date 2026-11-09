@@ -14,14 +14,10 @@ import { APP_VERSION } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const started = Date.now();
   try {
     const backend = await getStoreBackend();
     await backend.read();
-    return NextResponse.json(
-      { status: "ok", version: APP_VERSION, store: backend.kind, ms: Date.now() - started },
-      { headers: { "Cache-Control": "no-store" } },
-    );
+    return NextResponse.json({ status: "ok", version: APP_VERSION }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[vellum] Verificação de saúde falhou.", error);
     return NextResponse.json(

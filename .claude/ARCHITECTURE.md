@@ -18,7 +18,17 @@ flowchart LR
     B --> F
 ```
 
-Todos os módulos vivem em `src/modules/<módulo>/` e comunicam apenas através do respetivo `index.ts`. A autorização (RBAC) do Módulo 1 é transversal e verificada em todas as Server Actions.
+Os módulos são uma divisão **lógica**, não pastas separadas: a interface de cada um vive em `src/components/<área>/` e em `src/app/(workspace)/<rota>/_components/`, e as regras e serviços em `src/lib/` (`rbac.ts`, `auth*.ts`, `workspace-store.ts`, `store/` com os repositórios `json` e `postgres`, `calendar.ts`, `telemetry.ts`, `exporters/`, `sync/`). A autorização (RBAC) do Módulo 1 é transversal e verificada no repositório (`workspace-store.ts`) em todas as Server Actions; o repositório nunca confia no cliente.
+
+### Segurança em camadas (estado atual)
+
+- **Pedidos:** `middleware.ts` protege as rotas privadas e gera um *nonce* por pedido para a Content-Security-Policy (`src/lib/csp.ts`; `VELLUM_CSP=report-only|off` como válvula de escape). `next.config.ts` acrescenta HSTS (só em produção), COOP, Permissions-Policy e restantes cabeçalhos.
+- **Abuso:** limitador de taxa em janela fixa com várias regras por pedido — IP, conta+IP e conta (`src/lib/rate-limit.ts`) — aplicado ao login, registo, códigos, desbloqueio de links partilhados e PDF. O IP do cliente lê-se do `X-Forwarded-For` a partir da direita (`VELLUM_PROXY_HOPS`).
+- **Contas:** `scrypt2$N$r$p$…` (N=2^15) com atualização transparente de hashes antigos no login; respostas sem enumeração de utilizadores; `?next=` validado por `safeNextPath`. Perfis de demonstração desligados em produção (ver README).
+- **Conteúdo:** o JSON do editor passa por uma lista fechada de nós/marcas/atributos (`document-content.ts`) à entrada e é revalidado à saída (`storedContent` em `workspace-store.ts`: editor, conflito, exportação e links; se falhar, devolve-se o texto simples); as ligações passam por `safeHref`; Mermaid em modo `strict`.
+- **Dados:** o instantâneo enviado ao cliente não leva o conteúdo rico dos documentos; este é pedido por documento (`getDocumentContent`, com verificação de permissão).
+- **Testes herméticos:** `tests/support/hermetic-env.ts` limpa as variáveis da aplicação antes de cada ficheiro (nunca BD nem email reais); `npm run test:pg` corre a suite do repositório sobre PostgreSQL (`tests/support/pg-env.ts` só aceita bases com «e2e»/«test» no nome) e `scripts/check-integrity.mjs` verifica linhas órfãs.
+- **Limite conhecido:** o repositório mantém o atelier inteiro em memória com um bloqueio global por escrita (adequado a um processo único; um segundo réplica exigiria transações por linha).
 
 ---
 
@@ -69,7 +79,7 @@ Todos os módulos vivem em `src/modules/<módulo>/` e comunicam apenas através 
 
 **Objetivo:** ligar o conhecimento ao tempo.
 
-- **FullCalendar** com vistas dia, semana, mês e agenda; cores de eventos derivadas dos tokens do tema.
+- **Calendário próprio** (`src/components/calendar`) com vistas semana, mês e agenda; cores de eventos derivadas dos tokens do tema.
 - Eventos ligados a páginas/projetos; tarefas com data de entrega extraídas de checklists.
 - Recorrência (RRULE), lembretes e categorias personalizáveis.
 - **Notificações:** centro de notificações in-app, menções (`@utilizador`), lembretes, convites; preferências por canal (in-app / email).
@@ -85,7 +95,7 @@ Todos os módulos vivem em `src/modules/<módulo>/` e comunicam apenas através 
 
 - Recolha de **telemetria de esforço**: tempo ativo de edição (heartbeats com deteção de inatividade), palavras escritas, páginas criadas/editadas, tarefas concluídas.
 - Dados agregados por dia/projeto; nunca regista conteúdo, apenas métricas.
-- **Dashboard** com **Recharts**: tempo por projeto, sequência (streak) de escrita, mapa de calor de atividade, progresso de tarefas.
+- **Dashboard** com componentes próprios, sem biblioteca de gráficos: tempo por projeto, sequência (streak) de escrita, mapa de calor de atividade (`ConsistencyHeatmap`).
 - O utilizador controla a recolha (ativar/desativar, exportar, apagar os seus dados).
 
 **Modelos Prisma:** `ActivitySession`, `EffortMetricDaily`.
@@ -100,7 +110,7 @@ Todos os módulos vivem em `src/modules/<módulo>/` e comunicam apenas através 
 - **DOCX:** conversão do JSON ProseMirror com a biblioteca **`docx`**, mapeando estilos de parágrafo, tabelas, listas, cabeçalhos/rodapés e quebras de página — **sem desformatação**.
 - **Markdown/HTML** para interoperabilidade; importação de Markdown e DOCX.
 - Testes de regressão visual (Playwright) para garantir fidelidade da exportação.
-- **Sincronização:** atualizações otimistas, fila offline (IndexedDB) e resolução de conflitos por versão; preparado para colaboração em tempo real (Yjs) numa fase posterior.
+- **Sincronização:** atualizações otimistas, fila offline (`localStorage`, por conta e apagada ao terminar sessão) e resolução de conflitos por versão; preparado para colaboração em tempo real (Yjs) numa fase posterior.
 
 **Modelos Prisma:** `ExportJob`, `SyncCursor`.
 
@@ -109,7 +119,7 @@ Todos os módulos vivem em `src/modules/<módulo>/` e comunicam apenas através 
 ## Transversal
 
 - **Footer** global com o aviso de direitos reservados (ver `CLAUDE.md` §8).
-- **Temas:** os 5 temas curados aplicam-se a todos os módulos, incluindo Mermaid, FullCalendar e Recharts.
+- **Temas:** os 5 temas curados aplicam-se a todos os módulos, incluindo Mermaid e o calendário.
 - **i18n:** PT-PT como idioma base.
 
 ---

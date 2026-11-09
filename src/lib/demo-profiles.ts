@@ -3,9 +3,14 @@
  * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  *
- * Contas semeadas no motor de sessão provisório para testar a matriz RBAC com
- * um clique. Desativadas em produção, salvo VELLUM_DEMO_AUTH="true".
- * As palavras-passe são públicas de propósito: só existem neste modo.
+ * Contas semeadas para testar a matriz RBAC com um clique.
+ *
+ *  - Desenvolvimento e testes: sempre ativas, com as palavras-passe fixas abaixo
+ *    (públicas de propósito: só existem neste modo).
+ *  - Produção: desligadas. Só arrancam com `VELLUM_DEMO_AUTH=true` E uma
+ *    `VELLUM_DEMO_PASSWORD` própria (12+ caracteres, definida na plataforma).
+ *    As palavras-passe fixas deste ficheiro NUNCA são aceites em produção, e as
+ *    contas de demonstração nunca são SUPER_ADMIN em produção.
  */
 import type { PlatformRole, WorkspaceRole } from "@/lib/rbac";
 import type { ThemeId } from "@/lib/themes";
@@ -15,6 +20,7 @@ export interface DemoProfile {
   name: string;
   username: string;
   email: string;
+  /** Palavra-passe de desenvolvimento (pública). Em produção vale `VELLUM_DEMO_PASSWORD`. */
   password: string;
   platformRole: PlatformRole;
   workspaceRole: WorkspaceRole;
@@ -24,6 +30,7 @@ export interface DemoProfile {
 }
 
 export const DEMO_WORKSPACE_NAME = "Atelier Vellum";
+export const DEMO_PASSWORD_MIN_LENGTH = 12;
 
 export const DEMO_PROFILES: readonly DemoProfile[] = [
   {
@@ -72,12 +79,55 @@ export const DEMO_PROFILES: readonly DemoProfile[] = [
   },
 ];
 
-/** Avaliado no servidor; o resultado é passado ao cliente como prop. */
+const isProduction = () => process.env.NODE_ENV === "production";
+
+/** Palavra-passe de demonstração definida na plataforma (produção), ou `null`. */
+export function demoPasswordFromEnv(): string | null {
+  const value = process.env.VELLUM_DEMO_PASSWORD?.trim();
+  if (!value || value.length < DEMO_PASSWORD_MIN_LENGTH) return null;
+  // Uma palavra-passe que já é pública (está neste repositório) não serve.
+  if (DEMO_PROFILES.some((p) => p.password === value)) return null;
+  return value;
+}
+
+/**
+ * Avaliado no servidor. Produção exige a flag explícita E a palavra-passe própria;
+ * sem ela os perfis ficam desligados, mesmo com `VELLUM_DEMO_AUTH=true`.
+ */
 export function isDemoAuthEnabled(): boolean {
   const flag = process.env.VELLUM_DEMO_AUTH;
   if (flag === "false") return false;
-  if (flag === "true") return true;
-  return process.env.NODE_ENV !== "production";
+  if (isProduction()) return flag === "true" && demoPasswordFromEnv() !== null;
+  return true;
+}
+
+/** Palavra-passe com que o perfil é semeado neste ambiente. */
+export function demoPasswordFor(profile: DemoProfile): string {
+  return isProduction() ? (demoPasswordFromEnv() ?? randomUnusablePassword()) : profile.password;
+}
+
+/**
+ * Em produção as contas de demonstração nunca administram a plataforma, salvo
+ * `VELLUM_DEMO_SUPER_ADMIN=true` (só para a suite E2E, que valida o papel
+ * Super Admin; nunca numa demonstração pública).
+ */
+export function demoPlatformRole(profile: DemoProfile): PlatformRole {
+  const keep = process.env.VELLUM_DEMO_SUPER_ADMIN === "true";
+  return isProduction() && !keep && profile.platformRole === "SUPER_ADMIN" ? "USER" : profile.platformRole;
+}
+
+/**
+ * Verdadeiro se `password` é uma das palavras-passe públicas deste ficheiro
+ * e o ambiente é de produção — nesse caso a conta deve recusar a entrada.
+ */
+export function isCompromisedDemoPassword(userId: string, password: string): boolean {
+  if (!isProduction()) return false;
+  const profile = DEMO_PROFILES.find((p) => p.id === userId);
+  return Boolean(profile && profile.password === password);
+}
+
+function randomUnusablePassword(): string {
+  return `x-${crypto.randomUUID()}-${crypto.randomUUID()}`;
 }
 
 /** Rótulo do perfil, ex.: "Super Admin / Owner". */

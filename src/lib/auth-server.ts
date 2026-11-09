@@ -20,7 +20,13 @@ import { nextCookies } from "better-auth/next-js";
 import { emailOTP, username } from "better-auth/plugins";
 
 import { hashPassword, verifyPassword } from "@/lib/auth-password";
-import { DEMO_PROFILES, DEMO_WORKSPACE_NAME, isDemoAuthEnabled } from "@/lib/demo-profiles";
+import {
+  DEMO_PROFILES,
+  DEMO_WORKSPACE_NAME,
+  demoPasswordFor,
+  demoPlatformRole,
+  isDemoAuthEnabled,
+} from "@/lib/demo-profiles";
 import { absoluteUrl } from "@/lib/app-url";
 import { confirmationEmail, resetEmail } from "@/lib/email-templates";
 import { sendMail, type SendResult } from "@/lib/mailer";
@@ -247,6 +253,7 @@ const globalForInstance = globalThis as unknown as { vellumAuth?: Promise<Vellum
 export function getAuth(): Promise<VellumAuth> {
   globalForInstance.vellumAuth ??= createAuth().then(async (auth) => {
     await seedDemoProfiles(auth);
+    await auditDemoAccounts(auth);
     return auth;
   });
   return globalForInstance.vellumAuth;
@@ -255,24 +262,43 @@ export function getAuth(): Promise<VellumAuth> {
 /**
  * Cria (ou atualiza) as contas de demonstração com ids fixos, porque o seed do
  * workspace as referencia. Só quando o modo de demonstração está ativo.
+ * Em produção: palavra-passe vinda do ambiente, nunca SUPER_ADMIN; contas que já
+ * existiam com a palavra-passe pública passam à do ambiente.
  */
 async function seedDemoProfiles(auth: VellumAuth): Promise<void> {
   if (!isDemoAuthEnabled()) return;
   const ctx = await auth.$context;
   const adapter = ctx.adapter;
   for (const profile of DEMO_PROFILES) {
-    const existing = await adapter.findOne<{ id: string; username?: string | null; email: string }>({
+    const password = demoPasswordFor(profile);
+    const platformRole = demoPlatformRole(profile);
+    const existing = await adapter.findOne<{
+      id: string;
+      username?: string | null;
+      email: string;
+      platformRole?: string | null;
+    }>({
       model: "user",
       where: [{ field: "id", value: profile.id }],
     });
     if (existing) {
       // Perfis de demonstração antigos (ex.: «leo») passam ao username e email atuais.
+      const update: Record<string, unknown> = {};
       if (existing.username !== profile.username || existing.email !== profile.email) {
-        await adapter.update({
-          model: "user",
-          where: [{ field: "id", value: profile.id }],
-          update: { username: profile.username, displayUsername: profile.username, email: profile.email },
-        });
+        Object.assign(update, { username: profile.username, displayUsername: profile.username, email: profile.email });
+      }
+      if (existing.platformRole !== platformRole) update.platformRole = platformRole;
+      if (Object.keys(update).length) {
+        await adapter.update({ model: "user", where: [{ field: "id", value: profile.id }], update });
+      }
+      const accounts = (await ctx.internalAdapter.findAccounts(profile.id)) as Array<{
+        providerId: string;
+        password?: string | null;
+      }>;
+      const credential = accounts.find((a) => a.providerId === "credential");
+      if (!credential?.password || !(await verifyPassword(password, credential.password))) {
+        await ctx.internalAdapter.updatePassword(profile.id, await hashPassword(password));
+        await adapter.deleteMany({ model: "session", where: [{ field: "userId", value: profile.id }] });
       }
       continue;
     }
@@ -288,7 +314,7 @@ async function seedDemoProfiles(auth: VellumAuth): Promise<void> {
         image: null,
         username: profile.username,
         displayUsername: profile.username,
-        platformRole: profile.platformRole,
+        platformRole,
         workspaceRole: profile.workspaceRole,
         workspaceName: DEMO_WORKSPACE_NAME,
         theme: profile.theme,
@@ -304,10 +330,37 @@ async function seedDemoProfiles(auth: VellumAuth): Promise<void> {
         accountId: profile.id,
         providerId: "credential",
         userId: profile.id,
-        password: await hashPassword(profile.password),
+        password: await hashPassword(password),
         createdAt: now,
         updatedAt: now,
       },
     });
+  }
+}
+
+/**
+ * Em produção, avisa de forma bem visível (log) se alguma conta de demonstração
+ * ainda aceita a palavra-passe pública do repositório. O início de sessão recusa-a
+ * (src/lib/auth.ts); isto serve para o dono do serviço agir (scripts/security-audit-demo.mjs).
+ */
+async function auditDemoAccounts(auth: VellumAuth): Promise<void> {
+  if (process.env.NODE_ENV !== "production" || process.env.NEXT_PHASE === "phase-production-build") return;
+  try {
+    const ctx = await auth.$context;
+    for (const profile of DEMO_PROFILES) {
+      const accounts = (await ctx.internalAdapter.findAccounts(profile.id)) as Array<{
+        providerId: string;
+        password?: string | null;
+      }>;
+      const credential = accounts.find((a) => a.providerId === "credential" && a.password);
+      if (credential?.password && (await verifyPassword(profile.password, credential.password))) {
+        console.error(
+          `[vellum] SEGURANÇA: a conta «${profile.id}» ainda tem a palavra-passe pública do repositório. ` +
+            "O início de sessão está bloqueado para ela; corra scripts/security-audit-demo.mjs --rotate.",
+        );
+      }
+    }
+  } catch (error) {
+    console.error("[vellum] Não foi possível auditar as contas de demonstração.", error);
   }
 }

@@ -4,7 +4,7 @@
 > Ler no início de cada sessão e atualizar no fim de cada tarefa.
 
 **Estado atual:** ✅ Todas as fases do Vellum (0 a 5) 100% Concluídas, o primeiro bloco do Roteiro pós-lançamento e a Refatoração UX/UI + E-mails + Partilha por link (2026-11-08). Em produção no Railway: https://vellumpt.up.railway.app (Neon `production`): PostgreSQL + Prisma + Better-Auth, repetição de eventos, fila offline com resolução de conflitos, auditoria AA nos 5 temas e preparação de deploy (Docker, health check, build standalone). O que ainda depende do Leonardo (base de dados de produção, segredos, email, alojamento) está em «Para pôr em produção».
-**Última atualização:** 2026-11-08
+**Última atualização:** 2026-11-09
 
 ---
 
@@ -357,6 +357,74 @@ Guião completo (vistoria antes/depois e especificação): `.claude/GUIAO_VISTOR
 - Imagens WEBP ou remotas (https) não são incorporadas no Word (fica «[Imagem: …]»); as imagens coladas são sempre convertidas para JPEG/PNG, por isso o caso é raro
 - Termos e Política de Privacidade são modelos e precisam de revisão jurídica
 
+## Fase 7 — Menus, fotografia de perfil, fundos geométricos, login e calendário ✅ CONCLUÍDA (2026-11-08)
+
+**1. Menus por cima do editor e um só avatar**
+- [x] `<Topbar />` em `relative z-50`; barra do editor (`RichWordToolbar`) continua em `z-30`; `Popover` e `Combobox` em `z-[100]` com Liquid Glass mais opaco (`bg-elevated/90`): o menu de Temas, Notificações e restantes passam por cima da barra, da régua A4, da folha e do botão «Diagrama Mermaid»
+- [x] Gaveta móvel da Sidebar e gaveta de comentários sobem para `z-[60]` (ficam acima da Topbar)
+- [x] Avatar duplicado removido: a pilha de membros da Topbar já não inclui a própria pessoa; fica só o botão de perfil à direita
+- [x] Menu de Temas da Topbar passa a ter também o «Fundo geométrico» (8 amostras + intensidade)
+
+**2. Fotografia de perfil persistente**
+- [x] Ao escolher a fotografia (PNG/JPEG/WEBP ≤ 2 MB) é logo redimensionada em Canvas para 256×256 WEBP (qualidade 0,85) e aparece no círculo do modal; «Ajustar enquadramento» abre o recorte (zoom/arrasto) opcional; «Remover foto» volta às iniciais
+- [x] Tudo é gravado com «Guardar perfil» (antes a fotografia só era gravada com «Aplicar» no recorte, e perdia-se quem clicava logo em «Guardar perfil»)
+- [x] Fonte de verdade: base de dados (`user_profile.avatar`, Fase 6); cópia global em `AuthContext.avatarUrl` + `localStorage` (`vellum:avatar:<userId>`); nunca no cookie de sessão
+- [x] `<UserAvatar user={…} size="…" />` (`src/components/ui/UserAvatar.tsx`) no ProfileModal, Sidebar, Topbar, cabeçalho do documento e Comentários: `<img … rounded-full object-cover>` com iniciais como alternativa
+
+**3. Wallpapers geométricos premium**
+- [x] `src/lib/geometric-wallpapers.ts`: 8 composições SVG determinísticas (Catmull-Rom → Bézier, desfoque gaussiano para feixes e sombras quentes, grão `feTurbulence`): `sequoia-amber` (por omissão), `sonoma-arches`, `ventura-prism`, `sage-topography`, `nordic-aurora`, `dune-sculpture`, `obsidian-pro`, `none`; variantes de ângulo/cor
+- [x] `<GeometricBackground />`, `<WallpaperPicker />`, `<WallpaperThumb />`, `<InstitutionalBanner />` em `src/components/wallpapers/`; `WallpaperProvider` (localStorage `vellum:wallpaper`, por dispositivo) no layout raiz
+- [x] Fundo do workspace (Desligado · Subtil · Imersivo, com véu de leitura no Imersivo), cabeçalho do Dashboard (substitui a vinheta ilustrada), Definições › Aparência «02 Fundo geométrico» logo a seguir às 5 cores de papel (substitui a «Coleção de ilustrações»), menu de Temas da Topbar e rodapé do login
+- [x] Capas de projetos e documentos: Estúdio de capas com as 7 composições + «Gerar variação» + «Carregar»; novo tipo `{ type: "wallpaper", wallpaper, variant }` em `coverSpecSchema`; capas antigas (ilustrações) continuam a ser mostradas
+- [x] Tema Espresso Escuro escurece os wallpapers claros (`.geo-bg` em `globals.css`)
+
+**4. Login, páginas institucionais e rodapé compacto**
+- [x] `/login` com `sequoia-amber` em ecrã inteiro (ou o fundo escolhido), caneta e modal em Liquid Glass (`backdrop-blur-2xl bg-elevated/82`), conteúdo centrado com `pb` acima do rodapé
+- [x] `<AppFooter variant="compact" />`: barra única de 48px `fixed bottom-0 inset-x-0 z-40` em Liquid Glass: marca + direitos (esquerda), cor do papel + fundo geométrico (centro), Licença · Termos · Privacidade (RGPD) · Centro de Suporte (direita)
+- [x] `/termos`, `/privacidade` e `/design-system` com banner geométrico e texto em cartão de papel limpo; aviso «Modelo a rever por jurista» removido
+
+**5. Calendário**
+- [x] Densidades bem visíveis: grelha `min-h-[68px] p-1.5 text-xs` / `min-h-[96px] p-2.5` / `min-h-[132px] p-3.5` (até 3 linhas de nota); Agenda com Notas: Compacta numa linha por dia (`py-2 px-3`, sem «Página em branco»), Confortável `py-3.5 px-4` com 1 linha de resumo, Expandida `py-5 px-5` com checklist, pontos-chave e eventos no cartão
+- [x] Badge «Todos» conta todos os dias do mês (30 em novembro)
+
+**6. Username**
+- [x] Placeholder do login: «leonardo_barreiras ou leonardo@vellum.pt»; perfil de demonstração do Proprietário passa a `leonardo_barreiras` / `leonardo@vellum.pt`
+- [x] Migração `20261108220000_username_leonardo`: `leo_barreiras` → `leonardo_barreiras` (só se o novo estiver livre); o início de sessão, a recuperação e os perfis de demonstração aceitam os nomes antigos (`leo_barreiras`, `leo`, `leo@vellum.local`) como alias
+
+**7. Validação**
+- [x] `tsc --noEmit` 0 erros · ESLint 0 erros (3 avisos antigos) · Prettier · Vitest 93/93 · `next build`
+- [x] Playwright: suite nova `tests/e2e/fase7.spec.ts` (login com fundo, placeholder e rodapé de 48px fixo; alias `leo_barreiras`; menu de Temas por cima da barra e da folha + um só avatar; fotografia guardada e visível depois de recarregar na Topbar, Sidebar e modal, 256×256 WEBP, fora dos cookies; 8 wallpapers nas Definições e 7 capas + variação; densidades na grelha e na agenda + «Todos»); RESULTADOS_E2E
+
+## Fase 8 — Endurecimento de segurança e qualidade ✅ CONCLUÍDA (2026-11-09)
+
+Origem: auditoria técnica de 15 pontos. Cada ponto tem teste automatizado; o que não foi possível testar aqui está listado no fim.
+
+- [x] **1 · Contas de demonstração:** desligadas em produção por omissão; só com `VELLUM_DEMO_AUTH=true` **e** `VELLUM_DEMO_PASSWORD` privada (12+); palavras-passe públicas recusadas em produção; nunca `SUPER_ADMIN` (exceto `VELLUM_DEMO_SUPER_ADMIN=true`, só E2E). `scripts/security-audit-demo.mjs` (relatório; `--rotate` invalida palavras-passe públicas, apaga sessões e despromove).
+- [x] **2 · Limitação de pedidos:** `src/lib/rate-limit.ts` (janela fixa, várias regras por pedido, limpeza e teto de chaves); IP do cliente a partir da direita do `X-Forwarded-For` (`VELLUM_PROXY_HOPS`); aplicado a login, registo, códigos, desbloqueio de links, abertura de links partilhados e PDF.
+- [x] **3 · Conteúdo do editor:** lista fechada de nós/marcas/atributos (`sanitizeDocContent`), `safeHref`, exportação Markdown segura; chaves `__proto__`/`constructor` recusadas.
+- [x] **4 · Dependências:** `npm audit --omit=dev` sem altas/críticas (CI falha em `high`). Restam 2 avisos moderados do TipTap (GHSA-cp6q-959q-f8rh): fact-check feito — o `@tiptap/core` 2.27.3 instalado já define `__proto__` como propriedade de dados (teste `tiptap-advisory`), o aviso apenas não lista correção para a linha 2.x; mais uma 2.ª barreira (revalidação do conteúdo à saída). Migração para v3 fica como tarefa própria (CLAUDE.md fixa a v2).
+- [x] **5 · Cabeçalhos:** CSP com nonce por pedido (`VELLUM_CSP`), HSTS em produção, COOP, Permissions-Policy, X-Permitted-Cross-Domain-Policies; verificados por `tests/http/security.test.ts` sobre o build de produção.
+- [x] **6 · Enumeração de utilizadores:** o login gasta o mesmo trabalho com conta inexistente (`verifyAgainstDummy`) e responde igual; o registo com email real não revela contas existentes (envia um aviso à conta, limitado a 3/hora; sem fornecedor de email o erro explícito mantém-se para não bloquear o utilizador); scrypt reforçado (`scrypt2`, N=2^15) com atualização no login.
+- [x] **7 · `/design-system`:** passa a rota privada (middleware + sessão).
+- [x] **8 · Instantâneo leve:** o snapshot do cliente não inclui `contentJson`; `getDocumentContent` (com `document:read`) fornece o conteúdo; o editor usa o conteúdo do RSC se a versão coincidir, senão pede-o.
+- [x] **9 · Dados:** `markShareOpened` limitado por IP/link; suite do repositório (25 testes: RBAC, isolamento, conflitos reais com 2.º membro, partilha) corre sobre JSON **e sobre PostgreSQL real** (`npm run test:pg`, verificado com PostgreSQL 18 e as migrações verdadeiras); `scripts/check-integrity.mjs` (23 verificações de órfãs, com teste negativo) no CI em vez de uma migração de FKs não validada em produção. **Residual:** agregado inteiro em memória com bloqueio global (uma só réplica).
+- [x] **10 · PDF:** limites por utilizador e IP, semáforo (2 simultâneos, fila de 4), corpo limitado, 429 com `Retry-After`; `/api/health` só devolve estado e versão.
+- [x] **11 · Fila offline:** entradas por conta, apagada ao terminar sessão, quota esgotada avisada (a alteração fica por gravar no editor).
+- [x] **12 · Documentação:** README, CLAUDE.md (estrutura real, §9 Segurança) e ARCHITECTURE.md alinhados com o código (sem FullCalendar/Recharts/`src/modules`).
+- [x] **13 · `.env.example`** criado e `.gitignore` com `!.env.example`.
+- [x] **14 · Testes e CI:** novos testes unitários (limitador, IP, `next`, palavras-passe, demo, fluxos de auth, esquema do documento, CSP, semáforo, partilha, repositório, fila offline) e HTTP; CI com `npm audit`, testes HTTP e E2E em PostgreSQL.
+- [x] **15 · Qualidade:** itálicos fora de metadados/estados vazios; ESLint sem avisos.
+
+### Fase 8b — Repositório público, testes herméticos e acabamento (2026-11-09)
+
+- [x] **Testes herméticos:** o log do Mac mostrou 45 testes a falhar porque a shell tinha `DATABASE_URL`/`VELLUM_STORE=postgres` (e chaves de email) exportados e os testes tentaram usar a BD/email reais. `tests/support/hermetic-env.ts` (setupFiles) apaga o ambiente da aplicação e fixa `json`; `playwright.config.ts` deixa de herdar `DATABASE_URL` e outras variáveis de produção. Reproduzido aqui com ambiente poluído: 24 falhas sem a correção, 0 com ela (311 testes).
+- [x] **Repo público:** varridos árvore e histórico completo (14 commits, todos os blobs) por chaves, URLs com credenciais, `.env`, dumps, emails e telefones: nada de real (só placeholders de CI e `vellum:vellum@localhost`). Criados `SECURITY.md`, `.github/dependabot.yml`, CodeQL (`.github/workflows/codeql.yml`) e `CODEOWNERS`. Os commits expõem o email de autor (público por natureza): usar o email *noreply* do GitHub daqui para a frente.
+- [x] **Conteúdo guardado:** revalidado à saída (`storedContent`) no editor, conflito, exportação e links partilhados.
+- [x] **UI:** alvo táctil do «Novo evento» do calendário 24 px (WCAG 2.2); barra do editor só *sticky* a partir de `md`; filtros das Notas com rótulo+campo agrupados; «1 nota» no singular; fontes só `latin` e mono sem pré-carregamento (8 → 3 ficheiros pré-carregados). O segundo `<h1>` visto em `/notes` é uma cópia `display:none` (sem impacto em tecnologias de apoio).
+- [ ] Não alterado de propósito: Folha A4 escalada em telemóvel (decisão de produto, coberta por `mobile.spec.ts`).
+
+**Não verificado nesta fase (precisa do Leonardo):** E2E em navegador real (CI); CSP numa sessão real (começar com `VELLUM_CSP=report-only`); variáveis do Railway (`VELLUM_DEMO_AUTH`, `VELLUM_DEMO_PASSWORD`); correr `node scripts/security-audit-demo.mjs` contra a base de produção.
+
 ## Registo de decisões
 
 | Data       | Decisão                                                                 |
@@ -416,7 +484,16 @@ Guião completo (vistoria antes/depois e especificação): `.claude/GUIAO_VISTOR
 | 2026-11-08 | `MAX_CONTENT_BYTES` do documento sobe de 1 MB para 8 MB por causa das imagens; cada imagem é comprimida no navegador e só data URLs de imagem ou https passam a validação. |
 | 2026-11-08 | Partilhar/Exportar só na Topbar e A4 | Fluido só no cabeçalho do documento (a barra de estado fica só com telemetria e direitos). |
 | 2026-11-08 | `--text-muted` do `warm-cream` passa a `#57534C`; cores de estado (Sálvia, Âmbar, Carmim, Ardósia) fora dos 7 tokens de tema; Liquid Glass só em elementos flutuantes. |
-
+| 2026-11-08 | Fase 7: os wallpapers geométricos (incluindo os gradientes de `nordic-aurora`) são pigmentos de conteúdo pedidos pelo Leonardo, como as ilustrações: vivem só em `src/lib/geometric-wallpapers.ts` e nunca em superfícies de leitura (a folha e os cartões continuam opacos). |
+| 2026-11-08 | Fundo geométrico e intensidade são preferência por dispositivo (localStorage), como a densidade do calendário; a fotografia de perfil fica na base de dados (`user_profile.avatar`) e não numa coluna nova `User.avatarUrl`, para não mexer na tabela do Better-Auth. |
+| 2026-11-08 | A fotografia de perfil grava-se com «Guardar perfil» (um só CTA no modal); o recorte passa a ser um ajuste opcional. |
+| 2026-11-09 | Testes unitários herméticos por omissão; testes PostgreSQL só com `test:pg` e base com «e2e»/«test» no nome. |
+| 2026-11-09 | Sem migração de FKs: verificação contínua de órfãs (`check-integrity`) até haver migração validada numa cópia da base de produção. |
+| 2026-11-09 | Fontes só `latin` (PT-PT); `JetBrains Mono` sem preload. |
+| 2026-11-09 | Fase 8: limitador em memória (processo único), coerente com o repositório; com mais de uma réplica passa a precisar de armazenamento partilhado (Redis/Postgres). |
+| 2026-11-09 | Perfis de demonstração em produção exigem palavra-passe privada e nunca são `SUPER_ADMIN`; as palavras-passe públicas continuam válidas só fora de produção. |
+| 2026-11-09 | Itálico do Newsreader fica só em citações; sumário do documento, legendas Mermaid e estados vazios passam a romano (taste-skill regra 1). |
+| 2026-11-09 | CLAUDE.md: estrutura de pastas passa de «alvo» (`src/modules`) a «real»; cabeçalho de copyright exigido a todos os ficheiros de código novos. |
 
 ---
 

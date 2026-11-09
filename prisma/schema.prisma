@@ -127,7 +127,7 @@ model Account {
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
   scope                 String?
-  /// Hash scrypt (`scrypt$salt$hash`, src/lib/auth-password.ts).
+  /// Hash scrypt versionado (`scrypt2$N$r$p$salt$hash`; o formato antigo `scrypt$salt$hash` ainda verifica — src/lib/auth-password.ts).
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt

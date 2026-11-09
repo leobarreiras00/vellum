@@ -57,6 +57,7 @@ import {
   type LegendInput,
   type CommentKind,
   type DocumentCommentRecord,
+  type DocumentContentView,
   type DocumentRecord,
   type NoteInput,
   type ProjectInput,
@@ -267,7 +268,10 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
       }),
     documents: documents
       .sort((a, b) => a.position - b.position)
-      .map(({ deletedAt: _d, workspaceId: _w, ...doc }) => ({ ...doc, effortSeconds: effortByDoc.get(doc.id) ?? 0 })),
+      .map(({ deletedAt: _d, workspaceId: _w, contentJson: _c, ...doc }) => ({
+        ...doc,
+        effortSeconds: effortByDoc.get(doc.id) ?? 0,
+      })),
     notes: notes
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .map(({ deletedAt: _d, workspaceId: _w, ...note }) => note),
@@ -290,6 +294,32 @@ export async function getWorkspaceSnapshot(user: SessionUser): Promise<Workspace
     effort,
     generatedAt: now(),
   };
+}
+
+/**
+ * Conteúdo de um documento para o editor (o instantâneo não o inclui). Exige
+ * `document:read` no projeto do documento.
+ */
+export async function getDocumentContent(user: SessionUser, documentId: string): Promise<DocumentContentView> {
+  const data = await loadFor(user);
+  const workspaceId = workspaceIdFor(data, user);
+  const doc = liveDocument(data, workspaceId, documentId);
+  assertCan(subjectIn(user, liveProject(data, workspaceId, doc.projectId)), "document:read");
+  return { id: doc.id, contentJson: storedContent(doc), plainText: doc.plainText, updatedAt: doc.updatedAt };
+}
+
+/**
+ * Conteúdo guardado, revalidado à saída. Tudo o que entra passa por `docContentSchema`,
+ * mas esta segunda barreira cobre dados gravados antes dessa regra existir (ou escritos
+ * diretamente na base): o que não passar na lista fechada nunca chega ao editor, ao
+ * exportador nem a quem abre um link; devolve-se o texto simples do documento.
+ */
+function storedContent(doc: { contentJson?: DocContent | null; plainText: string }): DocContent | null {
+  if (!doc.contentJson) return null;
+  const checked = docContentSchema.safeParse(doc.contentJson);
+  if (checked.success) return checked.data;
+  console.warn("[vellum] Conteúdo guardado recusado pela lista fechada; a devolver texto simples.");
+  return plainTextDoc(doc.plainText);
 }
 
 /** Verificação no servidor para as páginas dinâmicas (notFound se não existir). */
@@ -527,7 +557,7 @@ export async function saveDocumentContent(
         server: {
           title: doc.title,
           summary: doc.summary,
-          contentJson: doc.contentJson ?? null,
+          contentJson: storedContent(doc),
           plainText: doc.plainText,
           updatedAt: doc.updatedAt,
           version: doc.version,
@@ -1162,7 +1192,7 @@ export async function getExportBundle(user: SessionUser, documentId: string): Pr
     updatedAt: doc.updatedAt,
     exportedAt: now(),
     exportedBy: user.name,
-    content: doc.contentJson ? structuredClone(doc.contentJson) : plainTextDoc(doc.plainText),
+    content: storedContent(doc) ?? plainTextDoc(doc.plainText),
   };
 }
 
@@ -2023,7 +2053,7 @@ export async function readSharedDocument(
       parentId: doc.parentId,
       title: doc.title,
       summary: doc.summary,
-      contentJson: doc.contentJson ?? plainTextDoc(doc.plainText),
+      contentJson: storedContent(doc) ?? plainTextDoc(doc.plainText),
       wordCount: doc.wordCount,
       version: doc.version,
       updatedAt: doc.updatedAt,

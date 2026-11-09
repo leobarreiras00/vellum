@@ -30,7 +30,23 @@ export default async function DocumentPage({ params, searchParams }: Props) {
   const user = await getSession();
   if (!user) redirect("/login");
   const { projectId, docId } = await params;
-  if (!(await findDocument(user, projectId, docId))) notFound();
+  const doc = await findDocument(user, projectId, docId);
+  if (!doc) notFound();
   const query = await searchParams;
-  return <DocumentEditorClient key={docId} projectId={projectId} documentId={docId} isNew={query.editar === "1"} />;
+  // O conteúdo vai só com este documento (o instantâneo do cliente não o traz). `updatedAt`
+  // deixa o cliente confirmar que esta cópia não está atrasada (voltar atrás no navegador).
+  return (
+    <DocumentEditorClient
+      key={docId}
+      projectId={projectId}
+      documentId={docId}
+      isNew={query.editar === "1"}
+      initialContent={{
+        id: doc.id,
+        contentJson: doc.contentJson ?? null,
+        plainText: doc.plainText,
+        updatedAt: doc.updatedAt,
+      }}
+    />
+  );
 }

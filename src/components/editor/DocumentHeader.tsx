@@ -140,7 +140,7 @@ export const DocumentHeader = forwardRef<DocumentHeaderHandle, DocumentHeaderPro
               }
             }}
             className={cn(
-              "mt-3 font-serif text-xl italic leading-snug text-muted",
+              "mt-3 font-serif text-xl leading-snug text-muted",
               editable && "focus:outline-none focus-visible:outline-none",
             )}
           >

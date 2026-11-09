@@ -10,13 +10,15 @@
  */
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { z } from "zod";
 
 import { getSession } from "@/lib/auth";
 import { signValue, unsignValue } from "@/lib/auth-server";
+import { clientIpFrom } from "@/lib/client-ip";
 import { docContentSchema } from "@/lib/document-content";
 import { ForbiddenError } from "@/lib/rbac";
+import { MINUTE, rateLimiter } from "@/lib/rate-limit";
 import {
   NotFoundError,
   addSharedComment,
@@ -76,9 +78,20 @@ export async function unlockSharedAction(token: unknown, password: unknown): Pro
     const parsedPassword = z.string().min(1).max(128).parse(password);
     const resolved = await resolveShareToken(parsedToken);
     if (!resolved.ok) return { ok: false, error: "Este link já não está disponível." };
+    // Tentativas de adivinhar a palavra-passe do link: por origem, por link+origem e um teto por link.
+    const ip = clientIpFrom(await headers());
+    const rules = [
+      { key: `share-unlock:ip:${ip}`, max: 40, windowMs: 10 * MINUTE },
+      { key: `share-unlock:link-ip:${resolved.link.id}:${ip}`, max: 8, windowMs: 10 * MINUTE },
+      { key: `share-unlock:link:${resolved.link.id}`, max: 40, windowMs: 10 * MINUTE },
+    ];
+    if (rateLimiter.consume(rules).limited) {
+      return { ok: false, error: "Demasiadas tentativas. Aguarde alguns minutos e tente de novo." };
+    }
     if (!(await checkSharePassword(parsedToken, parsedPassword))) {
       return { ok: false, error: "Palavra-passe incorreta." };
     }
+    rateLimiter.reset(rules[1]!.key);
     const exp = Date.now() + UNLOCK_HOURS * 3_600_000;
     (await cookies()).set(unlockCookie(resolved.link.id), signValue(`${resolved.link.id}|${exp}`), {
       httpOnly: true,

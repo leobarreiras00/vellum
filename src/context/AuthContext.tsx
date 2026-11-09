@@ -23,6 +23,7 @@ import {
 
 import { logoutAction } from "@/app/(auth)/actions";
 import type { SessionUser } from "@/lib/auth";
+import { clearOfflineQueue } from "@/lib/offline-queue";
 import {
   effectiveRole,
   hasAnyRole,
@@ -109,6 +110,8 @@ export function AuthProvider({ initialUser, children }: AuthProviderProps) {
 
   const logout = useCallback(() => {
     startLogout(async () => {
+      // Trabalho por enviar de uma conta nunca pode sobreviver à sessão.
+      clearOfflineQueue();
       setUser(null);
       await logoutAction();
       router.refresh();

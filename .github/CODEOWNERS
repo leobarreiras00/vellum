@@ -1,0 +1,8 @@
+# Vellum — Responsáveis por revisão
+# Alterações a CI, segurança e autenticação exigem a revisão do proprietário.
+*                          @leobarreiras00
+/.github/                  @leobarreiras00
+/src/lib/auth*             @leobarreiras00
+/src/lib/rbac.ts           @leobarreiras00
+/src/middleware.ts         @leobarreiras00
+/SECURITY.md               @leobarreiras00

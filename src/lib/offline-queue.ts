@@ -10,6 +10,11 @@
  * fazer (manter a minha, usar a do servidor ou guardar a minha como cópia).
  *
  * Uma entrada por documento: gravações seguidas substituem a anterior.
+ *
+ * Cada entrada pertence a quem a criou (`userId`): outra conta no mesmo
+ * navegador nunca a vê nem a envia, e terminar a sessão apaga a fila. Se o
+ * armazenamento estiver cheio, `enqueueSave` devolve `false` para o editor
+ * avisar que a alteração NÃO ficou guardada no dispositivo.
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
 
@@ -20,6 +25,8 @@ const CHANGE_EVENT = "vellum:offline-queue";
 
 export interface QueuedSave {
   id: string;
+  /** Conta a que a entrada pertence. */
+  userId: string;
   projectId: string;
   title: string;
   summary: string;
@@ -43,29 +50,48 @@ function readQueue(): Queue {
   }
 }
 
-function writeQueue(queue: Queue): void {
+/** Devolve `false` se a escrita falhou (quota esgotada ou armazenamento bloqueado). */
+function writeQueue(queue: Queue): boolean {
+  let ok = true;
   try {
     if (Object.keys(queue).length) window.localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
     else window.localStorage.removeItem(OFFLINE_QUEUE_KEY);
   } catch {
-    // Quota esgotada ou armazenamento bloqueado: a edição continua no editor.
+    ok = false;
   }
   cachedRaw = undefined;
   window.dispatchEvent(new Event(CHANGE_EVENT));
+  return ok;
 }
 
-export function queuedSaves(): QueuedSave[] {
-  return Object.values(readQueue()).sort((a, b) => a.queuedAt.localeCompare(b.queuedAt));
+/** Entradas de uma conta, da mais antiga para a mais recente. */
+export function queuedSaves(userId: string): QueuedSave[] {
+  return Object.values(readQueue())
+    .filter((entry) => entry.userId === userId)
+    .sort((a, b) => a.queuedAt.localeCompare(b.queuedAt));
 }
 
-export function queuedSave(id: string): QueuedSave | null {
-  return readQueue()[id] ?? null;
+export function queuedSave(id: string, userId: string): QueuedSave | null {
+  const entry = readQueue()[id];
+  return entry && entry.userId === userId ? entry : null;
 }
 
-export function enqueueSave(entry: Omit<QueuedSave, "queuedAt">): void {
+/** `false` quando não foi possível guardar no dispositivo. */
+export function enqueueSave(entry: Omit<QueuedSave, "queuedAt">): boolean {
   const queue = readQueue();
   queue[entry.id] = { ...entry, queuedAt: new Date().toISOString() };
-  writeQueue(queue);
+  return writeQueue(queue);
+}
+
+/** Apaga toda a fila deste dispositivo (terminar sessão). */
+export function clearOfflineQueue(): void {
+  try {
+    window.localStorage.removeItem(OFFLINE_QUEUE_KEY);
+  } catch {
+    // Armazenamento bloqueado: não há nada guardado que se possa apagar.
+  }
+  cachedRaw = undefined;
+  window.dispatchEvent(new Event(CHANGE_EVENT));
 }
 
 export function markConflict(id: string): void {

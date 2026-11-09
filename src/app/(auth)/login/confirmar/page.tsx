@@ -13,6 +13,7 @@ import { redirect } from "next/navigation";
 import { ConfirmLinkCard } from "@/components/auth/ConfirmLinkCard";
 import { AppFooter } from "@/components/layout/AppFooter";
 import { getSession } from "@/lib/auth";
+import { safeNextPath } from "@/lib/safe-next";
 
 export const metadata: Metadata = { title: "Confirmar acesso" };
 
@@ -25,7 +26,7 @@ export default async function ConfirmLinkPage({ searchParams }: PageProps) {
   const email = typeof params.email === "string" ? params.email.slice(0, 254) : "";
   const code = typeof params.codigo === "string" && /^\d{6}$/.test(params.codigo) ? params.codigo : "";
   const next = typeof params.seguinte === "string" ? params.seguinte : undefined;
-  if (await getSession()) redirect(next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+  if (await getSession()) redirect(safeNextPath(next));
 
   return (
     <div className="flex min-h-dvh flex-col">

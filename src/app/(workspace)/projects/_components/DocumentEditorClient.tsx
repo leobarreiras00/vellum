@@ -29,9 +29,14 @@ import { CoverBanner } from "@/components/illustrations/CoverBanner";
 import { AnimatePresence } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { createDocumentAction, deleteDocumentAction, saveDocumentContentAction } from "@/app/(workspace)/actions";
+import {
+  createDocumentAction,
+  deleteDocumentAction,
+  getDocumentContentAction,
+  saveDocumentContentAction,
+} from "@/app/(workspace)/actions";
 import { BlockPlusButton } from "@/components/editor/BlockPlusButton";
 import { EDITOR_ERROR_EVENT } from "@/components/editor/block-commands";
 import { CommentsDrawer } from "@/components/editor/CommentsDrawer";
@@ -47,6 +52,7 @@ import { VellumEditor, editorQuote, useVellumEditor } from "@/components/editor/
 import { useShell } from "@/components/layout/ShellContext";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { docToPlainText, plainTextToDoc, type DocContent } from "@/lib/document-content";
 import { canCommentDocument, canDeleteDocument, canEditDocument, hasPermission } from "@/lib/rbac";
@@ -55,7 +61,7 @@ import { claimDocument, dequeueSave, enqueueSave, queuedSave } from "@/lib/offli
 import { cn, countWords, formatNumber } from "@/lib/utils";
 import type { DocumentConflict } from "@/lib/workspace-store";
 import { routes } from "@/lib/workspace-routes";
-import { documentAncestors } from "@/lib/workspace-types";
+import { documentAncestors, type DocumentContentView } from "@/lib/workspace-types";
 
 const AUTOSAVE_MS = 900;
 
@@ -63,11 +69,75 @@ interface DocumentEditorClientProps {
   projectId: string;
   documentId: string;
   isNew: boolean;
+  /** Conteúdo lido no servidor para esta página (o instantâneo do cliente não traz o conteúdo). */
+  initialContent: DocumentContentView;
 }
 
-export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentEditorClientProps) {
+/** Ponto de partida do editor: o conteúdo e a versão do servidor a que corresponde. */
+interface EditorSeed {
+  content: DocContent;
+  updatedAt: string;
+}
+
+const seedFrom = (view: DocumentContentView): EditorSeed => ({
+  content: view.contentJson ?? plainTextToDoc(view.plainText),
+  updatedAt: view.updatedAt,
+});
+
+/**
+ * Garante que o editor só arranca com o conteúdo certo. O conteúdo vem da página
+ * (servidor); se a versão não coincidir com a do instantâneo (ex.: voltar atrás no
+ * navegador mostra uma página antiga) pede-se de novo. Nunca se arranca a partir
+ * do texto simples do instantâneo: a gravação automática apagaria a formatação.
+ */
+export function DocumentEditorClient(props: DocumentEditorClientProps) {
+  const { documentId, initialContent } = props;
+  const { snapshot } = useWorkspace();
+  const snapshotUpdatedAt = snapshot.documents.find((d) => d.id === documentId)?.updatedAt;
+  const [seed, setSeed] = useState<EditorSeed | null>(() =>
+    snapshotUpdatedAt === undefined || snapshotUpdatedAt === initialContent.updatedAt ? seedFrom(initialContent) : null,
+  );
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (seed) return;
+    let cancelled = false;
+    void getDocumentContentAction(documentId).then((result) => {
+      if (cancelled) return;
+      if (result.ok) setSeed(seedFrom(result.data));
+      else setLoadError(result.error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [seed, documentId]);
+
+  if (seed) return <DocumentEditorBody {...props} seed={seed} />;
+  return (
+    <div className="mx-auto max-w-prose px-6 py-16" aria-busy={!loadError} data-testid="editor-loading">
+      {loadError ? (
+        <p role="alert" className="text-sm text-danger">
+          {loadError}
+        </p>
+      ) : (
+        <p role="status" className="text-sm text-muted">
+          A abrir o documento…
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DocumentEditorBody({
+  projectId,
+  documentId,
+  isNew,
+  seed,
+}: Omit<DocumentEditorClientProps, "initialContent"> & { seed: EditorSeed }) {
   const router = useRouter();
   const { snapshot, run, subjectFor, isPending, notify } = useWorkspace();
+  const { user: viewer } = useAuth();
+  const viewerId = viewer?.userId ?? "";
   const { registerFlush } = useShell();
   const project = snapshot.projects.find((p) => p.id === projectId);
   const doc = snapshot.documents.find((d) => d.id === documentId);
@@ -94,12 +164,8 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
 
   /* Estado de edição -------------------------------------------------------- */
 
-  const initialContent = useMemo<DocContent>(
-    () => doc?.contentJson ?? plainTextToDoc(doc?.plainText ?? ""),
-    // Só ao montar: o editor passa a ser a fonte de verdade.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [documentId],
-  );
+  // Só ao montar: o editor passa a ser a fonte de verdade.
+  const initialContent = seed.content;
   const contentRef = useRef<DocContent>(initialContent);
   const titleRef = useRef(doc?.title ?? "");
   const summaryRef = useRef(doc?.summary ?? "");
@@ -113,7 +179,7 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
   const timer = useRef<number | undefined>(undefined);
 
   // Fila offline e conflitos: `baseUpdatedAt` é a versão do servidor em que a edição assenta.
-  const baseUpdatedAt = useRef<string | null>(doc?.updatedAt ?? null);
+  const baseUpdatedAt = useRef<string | null>(seed.updatedAt);
   const forceNext = useRef(false);
   const conflictRef = useRef<DocumentConflict | null>(null);
   const [conflict, setConflict] = useState<DocumentConflict | null>(null);
@@ -134,9 +200,22 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
 
   const queueLocally = useCallback(
     (isConflict = false) => {
-      enqueueSave({ ...currentPayload(), projectId, baseUpdatedAt: baseUpdatedAt.current, conflict: isConflict });
+      const stored = enqueueSave({
+        ...currentPayload(),
+        userId: viewerId,
+        projectId,
+        baseUpdatedAt: baseUpdatedAt.current,
+        conflict: isConflict,
+      });
+      if (!stored) {
+        notify(
+          "Sem espaço no dispositivo para guardar esta alteração offline. Mantenha o separador aberto e volte a ligar-se antes de o fechar.",
+          "error",
+        );
+      }
+      return stored;
     },
-    [currentPayload, projectId],
+    [currentPayload, projectId, viewerId, notify],
   );
 
   const save = useCallback(async () => {
@@ -149,9 +228,10 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
       return;
     }
     if (typeof navigator !== "undefined" && !navigator.onLine) {
-      dirty.current = false;
-      queueLocally();
-      setSaveState("offline");
+      // Se o dispositivo não consegue guardar, a alteração continua por gravar.
+      const stored = queueLocally();
+      dirty.current = !stored;
+      setSaveState(stored ? "offline" : "error");
       return;
     }
     if (saving.current) {
@@ -182,8 +262,9 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
       queueLocally(true);
       setSaveState("conflict");
     } else if (!result.ok && result.network) {
-      queueLocally();
-      setSaveState("offline");
+      const stored = queueLocally();
+      dirty.current = !stored;
+      setSaveState(stored ? "offline" : "error");
     } else if (!result.ok) {
       dirty.current = true;
       setSaveState("error");
@@ -277,7 +358,7 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
   useEffect(() => {
     if (!canEdit) return;
     const release = claimDocument(documentId);
-    const pending = queuedSave(documentId);
+    const pending = queuedSave(documentId, viewerId);
     if (pending && editor) {
       editor.commands.setContent(pending.contentJson, false);
       contentRef.current = pending.contentJson;
@@ -290,7 +371,7 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
       void saveRef.current();
     }
     const onOnline = () => {
-      if (conflictRef.current || !queuedSave(documentId)) return;
+      if (conflictRef.current || !queuedSave(documentId, viewerId)) return;
       dirty.current = true;
       void saveRef.current();
     };
@@ -300,7 +381,7 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
       window.removeEventListener("online", onOnline);
     };
     // O editor só existe depois do primeiro render (immediatelyRender: false).
-  }, [canEdit, documentId, editor]);
+  }, [canEdit, documentId, editor, viewerId]);
 
   /** Mostra no editor a versão do servidor (descarta a local). */
   const applyServerVersion = useCallback(
@@ -411,8 +492,9 @@ export function DocumentEditorClient({ projectId, documentId, isNew }: DocumentE
   return (
     <div className="flex min-h-full items-start">
       <div className="min-w-0 flex-1">
+        {/* A barra só fica fixa no topo a partir de md: em ecrãs estreitos ocupa várias linhas e tirava 1/5 do ecrã. */}
         {canEdit && editor && (
-          <div className="sticky top-0 z-30">
+          <div className="z-30 md:sticky md:top-0">
             <RichWordToolbar
               editor={editor}
               onFind={() => setFind((f) => ({ mode: "find", key: (f?.key ?? 0) + 1 }))}

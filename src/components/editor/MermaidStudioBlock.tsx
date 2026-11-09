@@ -223,11 +223,11 @@ export function MermaidStudioBlock({ node, updateAttributes, editor, deleteNode,
               value={caption}
               onChange={(e) => updateAttributes({ caption: e.target.value.slice(0, 200) })}
               placeholder="Legenda da figura (ex.: Figura 1 — Fluxo de aprovação)"
-              className="min-w-0 flex-1 bg-transparent font-serif text-[14px] italic text-primary placeholder:text-muted/60 focus-visible:outline-none"
+              className="min-w-0 flex-1 bg-transparent font-serif text-[14px] text-primary placeholder:text-muted/60 focus-visible:outline-none"
             />
           </>
         ) : (
-          <span className="min-w-0 flex-1 font-serif text-[14px] italic text-primary">{caption || typeLabel}</span>
+          <span className="min-w-0 flex-1 font-serif text-[14px] text-primary">{caption || typeLabel}</span>
         )}
         <span className="nums shrink-0 font-mono text-[10.5px]">
           {typeLabel} · {Math.round(zoom * 100)}%

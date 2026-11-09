@@ -16,6 +16,9 @@ const PORT = Number(process.env.E2E_PORT ?? 3100);
 const DATA_FILE = ".data/e2e-workspace.json";
 const STORE = process.env.E2E_STORE === "postgres" ? "postgres" : "json";
 const MAIL_PORT = Number(process.env.E2E_MAIL_PORT ?? 3199);
+// Em produção os perfis de demonstração exigem uma palavra-passe privada (não a do repositório).
+// Definida aqui, no processo principal, para os workers e os testes a herdarem.
+const DEMO_PASSWORD = (process.env.E2E_DEMO_PASSWORD ??= randomBytes(12).toString("base64url"));
 
 export default defineConfig({
   testDir: "./tests/e2e",
@@ -57,9 +60,13 @@ export default defineConfig({
       timeout: 120_000,
       env: {
         VELLUM_DEMO_AUTH: "true",
+        VELLUM_DEMO_PASSWORD: DEMO_PASSWORD,
+        // A suite valida o papel Super Admin; em produção real isto fica desligado.
+        VELLUM_DEMO_SUPER_ADMIN: "true",
         VELLUM_DATA_FILE: DATA_FILE,
         VELLUM_STORE: STORE,
-        ...(STORE === "postgres" ? { DATABASE_URL: process.env.E2E_DATABASE_URL ?? "" } : {}),
+        // Nunca herdar a DATABASE_URL da shell (pode ser a de produção): só a base E2E, ou nenhuma.
+        DATABASE_URL: STORE === "postgres" ? (process.env.E2E_DATABASE_URL ?? "") : "",
         // Segredo descartável por execução: nada fixo no código.
         AUTH_SECRET: process.env.AUTH_SECRET ?? randomBytes(32).toString("base64"),
         // Email: Brevo contra o servidor falso local (chave descartável).
@@ -69,6 +76,17 @@ export default defineConfig({
         EMAIL_FROM_ADDRESS: "atelier@vellum.local",
         EMAIL_FROM_NAME: "Vellum E2E",
         NEXT_PUBLIC_APP_URL: `http://localhost:${PORT}`,
+        // Variáveis de produção que a shell possa ter exportadas não podem vazar para os E2E.
+        EMAIL_FROM: "",
+        MAIL_FROM: "",
+        RESEND_API_KEY: "",
+        RESEND_API_URL: "",
+        SUPPORT_EMAIL: "",
+        BETTER_AUTH_URL: "",
+        BETTER_AUTH_SECRET: "",
+        APP_URL: "",
+        VELLUM_CSP: "",
+        VELLUM_PROXY_HOPS: "",
       },
     },
   ],

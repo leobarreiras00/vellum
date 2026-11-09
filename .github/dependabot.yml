@@ -1,0 +1,31 @@
+# Vellum — Atualizações automáticas de dependências
+# © 2026 Leonardo Barreiras. Todos os direitos reservados.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Europe/Lisbon
+    open-pull-requests-limit: 5
+    groups:
+      desenvolvimento:
+        dependency-type: development
+        update-types: [minor, patch]
+      producao-menores:
+        dependency-type: production
+        update-types: [minor, patch]
+    # O editor fica na v2 (CLAUDE.md §3); a v3 é uma migração própria.
+    ignore:
+      - dependency-name: "@tiptap/*"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly

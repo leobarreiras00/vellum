@@ -15,7 +15,7 @@ import { cookies, headers } from "next/headers";
 import { cache } from "react";
 
 import type { RegisterInput } from "@/lib/auth-schemas";
-import { verifyPassword } from "@/lib/auth-password";
+import { hashPassword, needsRehash, verifyAgainstDummy, verifyPassword } from "@/lib/auth-password";
 import {
   getAuth,
   setConfirmationIntent,
@@ -24,8 +24,12 @@ import {
   takeLastResetCode,
   unsignValue,
 } from "@/lib/auth-server";
-import { mailStatus } from "@/lib/mailer";
-import { DEMO_PROFILES, isDemoAuthEnabled } from "@/lib/demo-profiles";
+import { clientIpFrom } from "@/lib/client-ip";
+import { DEMO_PROFILES, demoPasswordFor, isCompromisedDemoPassword, isDemoAuthEnabled } from "@/lib/demo-profiles";
+import { accountExistsEmail } from "@/lib/email-templates";
+import { mailStatus, sendMail } from "@/lib/mailer";
+import { MINUTE, rateLimiter, type RateRule } from "@/lib/rate-limit";
+import { absoluteUrl } from "@/lib/app-url";
 import { PLATFORM_ROLES, WORKSPACE_ROLES, type PlatformRole, type RbacSubject, type WorkspaceRole } from "@/lib/rbac";
 import { THEME_IDS, type ThemeId } from "@/lib/themes";
 
@@ -62,27 +66,32 @@ interface AuthUserRow {
 }
 
 /* ==========================================================================
-   Limitação de tentativas (por instância)
+   Limitação de tentativas (src/lib/rate-limit.ts)
    ========================================================================== */
 
-const globalForLimits = globalThis as unknown as {
-  vellumAuthAttempts?: Map<string, { count: number; resetAt: number }>;
-};
-const attempts = (globalForLimits.vellumAuthAttempts ??= new Map());
+const RATE_LIMITED = "Demasiadas tentativas. Aguarde alguns minutos e tente de novo.";
 
-function isRateLimited(key: string, max: number, windowMs: number): boolean {
-  const now = Date.now();
-  const entry = attempts.get(key);
-  if (!entry || entry.resetAt < now) {
-    attempts.set(key, { count: 1, resetAt: now + windowMs });
-    return false;
-  }
-  entry.count++;
-  return entry.count > max;
+async function currentIp(): Promise<string> {
+  return clientIpFrom(await headers());
 }
 
-const clearRateLimit = (key: string) => attempts.delete(key);
-const RATE_LIMITED = "Demasiadas tentativas. Aguarde alguns minutos e tente de novo.";
+/** Conta uma tentativa em todas as regras; `true` se alguma foi excedida. */
+function isLimited(rules: readonly RateRule[]): boolean {
+  return rateLimiter.consume(rules).limited;
+}
+
+/**
+ * Regras para tentativas de adivinhar uma credencial: por origem (IP), por
+ * conta+origem e um teto por conta. Assim, uma só origem não bloqueia a conta
+ * de outra pessoa, mas muitas origens também não passam do teto da conta.
+ */
+function credentialRules(scope: string, subject: string, ip: string, windowMs: number, max: number): RateRule[] {
+  return [
+    { key: `${scope}:ip:${ip}`, max: max * 4, windowMs },
+    { key: `${scope}:acct-ip:${subject}:${ip}`, max, windowMs },
+    { key: `${scope}:acct:${subject}`, max: max * 5, windowMs },
+  ];
+}
 
 /* ==========================================================================
    Sessão
@@ -279,48 +288,84 @@ async function sendConfirmation(
   };
 }
 
-/** Confere username/email + palavra-passe sem abrir sessão. */
-async function verifyCredentials(identifier: string, password: string): Promise<AuthUserRow | null> {
+/**
+ * Confere username/email + palavra-passe sem abrir sessão. Se a conta não
+ * existe (ou não tem palavra-passe) gasta o mesmo tempo de uma verificação real,
+ * para que o tempo de resposta não revele se o utilizador está registado.
+ */
+async function verifyCredentials(
+  identifier: string,
+  password: string,
+): Promise<{ user: AuthUserRow; hash: string } | null> {
   const user = await findUser(identifier);
-  if (!user) return null;
+  if (!user) return verifyAgainstDummy(password);
   const ctx = await (await getAuth()).$context;
   const accounts = (await ctx.internalAdapter.findAccounts(user.id)) as Array<{
     providerId: string;
     password?: string | null;
   }>;
   const credential = accounts.find((a) => a.providerId === "credential" && a.password);
-  if (!credential?.password) return null;
-  return (await verifyPassword(password, credential.password)) ? user : null;
+  if (!credential?.password) return verifyAgainstDummy(password);
+  return (await verifyPassword(password, credential.password)) ? { user, hash: credential.password } : null;
+}
+
+/** Reescreve o hash com os parâmetros atuais (best effort: nunca impede a entrada). */
+async function upgradeHash(userId: string, password: string, hash: string): Promise<void> {
+  if (!needsRehash(hash)) return;
+  try {
+    const ctx = await (await getAuth()).$context;
+    await ctx.internalAdapter.updatePassword(userId, await hashPassword(password));
+  } catch (error) {
+    console.error("[vellum] Não foi possível atualizar o hash da palavra-passe.", error);
+  }
 }
 
 /**
  * Passo 1 do início de sessão. Contas por confirmar, ou com «pedir código»
  * ativo num dispositivo não confiável, recebem um código por email; as
- * restantes (e os perfis de demonstração) entram logo.
+ * restantes (e os perfis de demonstração, enquanto ativos) entram logo.
  */
 export async function signIn(
   identifier: string,
   password: string,
   next = "/dashboard",
 ): Promise<AuthResult<SignInOutcome>> {
-  const key = `login:${identifier.trim().toLowerCase()}`;
-  if (isRateLimited(key, 8, 10 * 60_000)) return { ok: false, error: RATE_LIMITED };
+  const ip = await currentIp();
+  const subject = identifier.trim().toLowerCase();
+  const rules = credentialRules("login", subject, ip, 10 * MINUTE, 8);
+  if (isLimited(rules)) return { ok: false, error: RATE_LIMITED };
   const resolved = await resolveIdentifier(identifier);
-  const user = await verifyCredentials(resolved, password);
-  if (!user) return { ok: false, error: INVALID_CREDENTIALS };
-  clearRateLimit(key);
+  const verified = await verifyCredentials(resolved, password);
+  if (!verified) return { ok: false, error: INVALID_CREDENTIALS };
+  const { user, hash } = verified;
+  // As palavras-passe públicas do repositório nunca abrem uma conta em produção.
+  if (isCompromisedDemoPassword(user.id, password)) {
+    console.error(`[vellum] Início de sessão recusado: «${user.id}» usou a palavra-passe pública de demonstração.`);
+    return { ok: false, error: INVALID_CREDENTIALS };
+  }
+  rateLimiter.reset(rules[1]!.key);
+  await upgradeHash(user.id, password, hash);
 
   const trusted = (await trustedUserId()) === user.id;
+  const exemptDemo = Boolean(user.isDemo) && isDemoAuthEnabled();
   const needsCode =
-    confirmationEnforced() && !user.isDemo && (!user.emailVerified || (user.loginConfirmation !== false && !trusted));
+    confirmationEnforced() && !exemptDemo && (!user.emailVerified || (user.loginConfirmation !== false && !trusted));
   if (needsCode) {
-    if (isRateLimited(`send:${user.email}`, 6, 15 * 60_000)) return { ok: false, error: RATE_LIMITED };
+    if (isLimited(sendRules(user.email, ip))) return { ok: false, error: RATE_LIMITED };
     return { ok: true, data: await sendConfirmation(user, user.emailVerified ? "login" : "register", next) };
   }
 
   const session = await passwordSignIn(resolved, password);
   if (!session) return { ok: false, error: INVALID_CREDENTIALS };
   return { ok: true, data: { status: "signed-in", user: session } };
+}
+
+/** Envio de códigos por email: por destinatário (anti-spam) e por origem. */
+function sendRules(email: string, ip: string): RateRule[] {
+  return [
+    { key: `send:email:${email.toLowerCase()}`, max: 6, windowMs: 15 * MINUTE },
+    { key: `send:ip:${ip}`, max: 30, windowMs: 15 * MINUTE },
+  ];
 }
 
 /** Passo 2: valida o código de 6 algarismos (ou a ligação do email) e abre a sessão. */
@@ -330,14 +375,16 @@ export async function verifyConfirmationCode(
   trustDevice: boolean,
 ): Promise<AuthResult<SessionUser>> {
   const needle = email.trim().toLowerCase();
-  if (isRateLimited(`verify:${needle}`, 10, 15 * 60_000)) return { ok: false, error: RATE_LIMITED };
+  const ip = await currentIp();
+  const rules = credentialRules("verify", needle, ip, 15 * MINUTE, 10);
+  if (isLimited(rules)) return { ok: false, error: RATE_LIMITED };
   const auth = await getAuth();
   try {
     await auth.api.verifyEmailOTP({ body: { email: needle, otp: code }, headers: await headers() });
   } catch {
     return { ok: false, error: "Código inválido ou expirado. Peça um novo código." };
   }
-  clearRateLimit(`verify:${needle}`);
+  rateLimiter.reset(rules[1]!.key);
   const user = await findUser(needle);
   if (!user) return { ok: false, error: "Conta não encontrada." };
   if (trustDevice) await trustThisDevice(user.id);
@@ -349,7 +396,7 @@ export async function verifyConfirmationCode(
 export async function resendConfirmationCode(): Promise<AuthResult<Extract<SignInOutcome, { status: "code-sent" }>>> {
   const pending = await readPending();
   if (!pending) return { ok: false, error: "O pedido expirou. Volte a iniciar sessão." };
-  if (isRateLimited(`send:${pending.email}`, 6, 15 * 60_000)) return { ok: false, error: RATE_LIMITED };
+  if (isLimited(sendRules(pending.email, await currentIp()))) return { ok: false, error: RATE_LIMITED };
   const user = await findUser(pending.email);
   if (!user) return { ok: false, error: "O pedido expirou. Volte a iniciar sessão." };
   return { ok: true, data: await sendConfirmation(user, pending.purpose, pending.next) };
@@ -360,15 +407,59 @@ export async function signInDemo(profileId: string): Promise<AuthResult<SessionU
   if (!isDemoAuthEnabled()) return { ok: false, error: "Os perfis de demonstração estão desativados." };
   const profile = DEMO_PROFILES.find((p) => p.id === profileId);
   if (!profile) return { ok: false, error: "Perfil de demonstração desconhecido." };
-  const user = await passwordSignIn(await resolveIdentifier(profile.username), profile.password);
+  const user = await passwordSignIn(await resolveIdentifier(profile.username), demoPasswordFor(profile));
   if (!user?.isDemo) return { ok: false, error: "Perfil de demonstração indisponível." };
   return { ok: true, data: user };
 }
 
 /** Cria a conta sem abrir sessão e envia o código de confirmação do email. */
 export async function register(input: RegisterInput, next = "/dashboard"): Promise<AuthResult<SignInOutcome>> {
-  if (isRateLimited("register", 30, 10 * 60_000)) return { ok: false, error: RATE_LIMITED };
+  const ip = await currentIp();
+  if (
+    isLimited([
+      { key: `register:ip:${ip}`, max: 10, windowMs: 10 * MINUTE },
+      { key: "register:global", max: 300, windowMs: 10 * MINUTE },
+    ])
+  ) {
+    return { ok: false, error: RATE_LIMITED };
+  }
   const auth = await getAuth();
+
+  // Anti-enumeração: com envio real de email, quem tenta registar um email que já
+  // existe vê exatamente a mesma resposta («código enviado»). O aviso segue para
+  // o dono do email, que é quem pode agir. Sem fornecedor de email (desenvolvimento)
+  // não há canal para avisar, por isso o erro explícito mantém-se.
+  const existing = await findUser(input.email);
+  if (existing && confirmationEnforced() && mailStatus().mode === "provider") {
+    await hashPassword(input.password); // gasta o tempo de criar a conta
+    if (!isLimited([{ key: `register-notice:${input.email}`, max: 3, windowMs: 60 * MINUTE }])) {
+      await sendMail(
+        "notice",
+        existing.email,
+        accountExistsEmail({
+          loginLink: absoluteUrl("/login"),
+          resetLink: absoluteUrl(`/login?vista=recuperar&conta=${encodeURIComponent(existing.email)}`),
+        }),
+      );
+    }
+    return {
+      ok: true,
+      data: {
+        status: "code-sent",
+        email: input.email,
+        maskedEmail: maskEmail(input.email),
+        purpose: "register",
+        devCode: null,
+        deliveryFailed: false,
+      },
+    };
+  }
+
+  // Sem canal para avisar o dono (sem fornecedor de email) o erro é explícito. Nunca se
+  // segue para o fluxo de confirmação: o Better-Auth responde com um sucesso sintético
+  // a emails existentes e o código acabaria associado à conta de outra pessoa.
+  if (existing) return { ok: false, error: "Já existe uma conta com esse email." };
+
   try {
     await auth.api.signUpEmail({
       body: {
@@ -440,7 +531,13 @@ export async function forgetTrustedDevice(): Promise<void> {
  * para ser mostrado no ecrã.
  */
 export async function requestPasswordReset(identifier: string): Promise<AuthResult<{ demoCode: string | null }>> {
-  if (isRateLimited(`reset:${identifier.trim().toLowerCase()}`, 5, 15 * 60_000)) {
+  const ip = await currentIp();
+  if (
+    isLimited([
+      { key: `reset:ip:${ip}`, max: 20, windowMs: 15 * MINUTE },
+      { key: `reset:acct:${identifier.trim().toLowerCase()}`, max: 5, windowMs: 15 * MINUTE },
+    ])
+  ) {
     return { ok: false, error: RATE_LIMITED };
   }
   const user = await findUser(await resolveIdentifier(identifier));
@@ -463,7 +560,8 @@ const INVALID_CODE = "Código inválido ou expirado. Peça um novo código.";
 export async function confirmPasswordReset(identifier: string, code: string, password: string): Promise<AuthResult> {
   const user = await findUser(await resolveIdentifier(identifier));
   if (!user) return { ok: false, error: INVALID_CODE };
-  if (isRateLimited(`reset-confirm:${user.id}`, 6, 15 * 60_000)) return { ok: false, error: RATE_LIMITED };
+  const confirmRules = credentialRules("reset-confirm", user.id, await currentIp(), 15 * MINUTE, 6);
+  if (isLimited(confirmRules)) return { ok: false, error: RATE_LIMITED };
 
   const auth = await getAuth();
   try {
@@ -471,9 +569,7 @@ export async function confirmPasswordReset(identifier: string, code: string, pas
   } catch {
     return { ok: false, error: INVALID_CODE };
   }
-  clearRateLimit(`reset-confirm:${user.id}`);
-  clearRateLimit(`login:${user.username ?? ""}`);
-  clearRateLimit(`login:${user.email}`);
+  rateLimiter.reset(confirmRules[1]!.key);
   return { ok: true };
 }
 
@@ -504,7 +600,8 @@ export async function updateAccountIdentity(
 export async function changePassword(currentPassword: string, newPassword: string): Promise<AuthResult> {
   const session = await getSession();
   if (!session) return { ok: false, error: "A sua sessão terminou. Entre de novo." };
-  if (isRateLimited(`change-password:${session.userId}`, 6, 15 * 60_000)) return { ok: false, error: RATE_LIMITED };
+  const changeRules = credentialRules("change-password", session.userId, await currentIp(), 15 * MINUTE, 6);
+  if (isLimited(changeRules)) return { ok: false, error: RATE_LIMITED };
   const auth = await getAuth();
   try {
     await auth.api.changePassword({
@@ -519,6 +616,6 @@ export async function changePassword(currentPassword: string, newPassword: strin
     console.error("[vellum] Falha ao mudar a palavra-passe.", error);
     return { ok: false, error: "Não foi possível mudar a palavra-passe. Tente de novo." };
   }
-  clearRateLimit(`change-password:${session.userId}`);
+  rateLimiter.reset(changeRules[1]!.key);
   return { ok: true };
 }

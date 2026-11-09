@@ -4,6 +4,7 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { JetBrains_Mono, Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -16,7 +17,8 @@ import { DEFAULT_THEME, THEME_INIT_SCRIPT } from "@/lib/themes";
 import "./globals.css";
 
 const serif = Newsreader({
-  subsets: ["latin", "latin-ext"],
+  // Só «latin»: cobre todo o português; «latin-ext» duplicava os ficheiros pré-carregados sem uso.
+  subsets: ["latin"],
   style: ["normal", "italic"],
   axes: ["opsz"],
   display: "swap",
@@ -24,13 +26,15 @@ const serif = Newsreader({
 });
 
 const sans = Plus_Jakarta_Sans({
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
   display: "swap",
   variable: "--font-sans",
 });
 
 const mono = JetBrains_Mono({
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
+  // Só aparece em código e dados técnicos: não vale um pré-carregamento em todas as páginas.
+  preload: false,
   display: "swap",
   variable: "--font-mono",
 });
@@ -73,6 +77,8 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
+  // Nonce do pedido (middleware, src/lib/csp.ts): o script inline do tema só corre com ele.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html
@@ -82,7 +88,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
         <ThemeProvider>

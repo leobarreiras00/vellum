@@ -30,20 +30,14 @@ import {
   verifyCodeSchema,
   type FieldErrors,
 } from "@/lib/auth-schemas";
+import { safeNextPath } from "@/lib/safe-next";
 
 export type ActionResult<TFields, TData = undefined> =
   { ok: true; data: TData; redirectTo?: string } | { ok: false; error?: string; fieldErrors?: FieldErrors<TFields> };
 
 const DEFAULT_REDIRECT = "/dashboard";
 
-/** Aceita apenas caminhos internos ("/x"), nunca "//host" nem URLs absolutos. */
-function safeRedirect(next: unknown): string {
-  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) {
-    return DEFAULT_REDIRECT;
-  }
-  if (next.startsWith("/login")) return DEFAULT_REDIRECT;
-  return next;
-}
+const safeRedirect = (next: unknown): string => safeNextPath(next, DEFAULT_REDIRECT);
 
 type LoginFields = { identifier: string; password: string };
 

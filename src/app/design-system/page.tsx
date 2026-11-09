@@ -5,12 +5,14 @@
  *
  * Movida de / para /design-system na Fase 1B (a raiz passa a redirecionar para /login ou /dashboard).
  */
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { ButtonSpecimen, DesignSystemNav } from "@/app/design-system/_components/DesignSystemChrome";
 import { ThemeGallery } from "@/app/design-system/_components/ThemeGallery";
 import { WorkspacePreview } from "@/app/design-system/_components/WorkspacePreview";
 import { AppFooter } from "@/components/layout/AppFooter";
+import { getSession } from "@/lib/auth";
 import { APP_VERSION, cn } from "@/lib/utils";
 import { InstitutionalBanner } from "@/components/wallpapers/GeometricBackground";
 
@@ -33,7 +35,9 @@ const STATS = [
 
 export const metadata = { title: "Design System" };
 
-export default function DesignSystemPage() {
+export default async function DesignSystemPage() {
+  // Página interna: exige sessão (o middleware só vê o cookie; aqui valida-se na base de dados).
+  if (!(await getSession())) redirect("/login?seguinte=%2Fdesign-system");
   return (
     <div className="flex min-h-dvh flex-col">
       <DesignSystemNav />

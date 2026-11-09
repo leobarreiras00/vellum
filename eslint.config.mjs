@@ -25,6 +25,11 @@ const config = [
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
+  {
+    // Scripts de linha de comandos: escrever no terminal é o seu propósito.
+    files: ["scripts/**"],
+    rules: { "no-console": "off" },
+  },
 ];
 
 export default config;
