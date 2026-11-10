@@ -60,7 +60,7 @@ jobs:
       - run: npm run test:e2e
         env:
           CI: "true"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-results
@@ -106,7 +106,7 @@ jobs:
       - run: npm run test:e2e:pg
         env:
           CI: "true"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-results-postgres
