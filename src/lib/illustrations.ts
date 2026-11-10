@@ -14,6 +14,7 @@
  */
 import { z } from "zod";
 
+import "@/lib/zod-config";
 import { wallpaperDataUrl, wallpaperIdSchema } from "@/lib/geometric-wallpapers";
 
 /* ==========================================================================

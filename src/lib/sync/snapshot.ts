@@ -10,6 +10,7 @@
  */
 import { z } from "zod";
 
+import "@/lib/zod-config";
 import { docContentSchema } from "@/lib/document-content";
 import { EFFORT_KINDS, INK_COLORS, PROJECT_ICONS, recurrenceRuleSchema } from "@/lib/workspace-types";
 

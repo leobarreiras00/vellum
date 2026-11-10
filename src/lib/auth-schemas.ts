@@ -7,6 +7,7 @@
  */
 import { z } from "zod";
 
+import "@/lib/zod-config";
 import { THEME_IDS } from "@/lib/themes";
 
 const identifier = z.string().trim().min(1, "Indique o seu username ou email.").max(254, "Demasiado longo.");

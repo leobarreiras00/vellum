@@ -10,6 +10,7 @@
  */
 import { z } from "zod";
 
+import "@/lib/zod-config";
 import { isDocFont, isDocFontSize, isDocInk } from "@/components/editor/palette";
 import { isSafeImageSrc } from "@/lib/image-tools";
 import { markdownDestination, safeHref } from "@/lib/safe-href";
