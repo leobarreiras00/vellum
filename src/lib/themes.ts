@@ -8,6 +8,8 @@
  */
 import { z } from "zod";
 
+import "@/lib/zod-config";
+
 export const THEME_IDS = ["warm-cream", "sage-paper", "nordic-slate", "sand-dune", "dark-espresso"] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];

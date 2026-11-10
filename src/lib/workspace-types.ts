@@ -10,6 +10,7 @@
  */
 import { z } from "zod";
 
+import "@/lib/zod-config";
 import { docContentSchema, type DocContent } from "@/lib/document-content";
 import { dataUrlToBytes, isSafeImageSrc, sniffImageType } from "@/lib/image-tools";
 import { ILLUSTRATION_COLLECTION_IDS, type CoverSpec, type IllustrationCollection } from "@/lib/illustrations";
