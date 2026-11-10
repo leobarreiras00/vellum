@@ -10,7 +10,7 @@
 # No arranque aplica as migrações (`prisma migrate deploy`) e serve em :3000.
 # =============================================================================
 
-FROM node:22-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json .npmrc ./
@@ -26,7 +26,7 @@ RUN npx prisma generate && npm run build
 
 # CLI do Prisma isolada (com todas as dependências) só para `migrate deploy` no arranque.
 # Copiar apenas node_modules/prisma deixava de fora @prisma/config → effect, c12…
-FROM node:22-bookworm-slim AS prisma-cli
+FROM node:26-bookworm-slim AS prisma-cli
 WORKDIR /prisma-cli
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY package-lock.json /tmp/lock.json
@@ -34,7 +34,7 @@ RUN PRISMA_VERSION=$(node -p "require('/tmp/lock.json').packages['node_modules/p
     && npm init -y >/dev/null \
     && npm install --no-audit --no-fund "prisma@${PRISMA_VERSION}"
 
-FROM node:22-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
