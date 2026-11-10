@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",
-    "@prisma/client": "^6.19.0",
+    "@prisma/client": "^7.10.1",
     "@tiptap/core": "^2.27.3",
     "@tiptap/extension-color": "^2.27.3",
     "@tiptap/extension-font-family": "^2.27.3",
