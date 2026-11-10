@@ -13,7 +13,7 @@
 | `--font-sans`  | **Plus Jakarta Sans** | `font-sans`  | Controlos de interface, menus, navegação, formulários, calendário, tabelas      |
 | `--font-mono`  | **JetBrains Mono**    | `font-mono`  | **Só** editor Mermaid e código, atalhos de teclado (`<kbd>`) e tokens técnicos (IDs, versões, códigos). Contadores e horas ficam em sans + `tabular-nums` |
 
-Carregamento via `next/font/google` em `src/app/layout.tsx`, com `display: "swap"` e `subsets: ["latin", "latin-ext"]`. Newsreader carrega o eixo ótico (`axes: ["opsz"]`) e o estilo itálico.
+Carregamento via `next/font/google` em `src/app/layout.tsx`, com `display: "swap"` e `subsets: ["latin"]` (cobre o português; `latin-ext` só duplicava os ficheiros pré-carregados). Newsreader carrega o eixo ótico (`axes: ["opsz"]`) e o estilo itálico.
 
 **Proibido:** Inter, Roboto, Arial, system-ui como fonte visível, ou qualquer quarta família.
 

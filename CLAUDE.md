@@ -7,9 +7,11 @@
 
 ## 0. Protocolo obrigatório
 
-1. **Antes de qualquer tarefa**, ler sempre `CLAUDE.md` (este ficheiro), `.claude/PROGRESS.md` e as **7 skills obrigatórias** em `.claude/skills/` (ver §0.1).
+1. **Antes de qualquer tarefa**, ler sempre `CLAUDE.md` (este ficheiro), `.claude/CONTEXTO.md` (contexto, decisões, estado e passos de deploy), `.claude/PROGRESS.md` e as **7 skills obrigatórias** em `.claude/skills/` (ver §0.1).
 2. Para detalhe dos módulos, consultar `.claude/ARCHITECTURE.md`.
 3. **No fim de cada tarefa**, atualizar `.claude/PROGRESS.md` (marcar itens concluídos, registar decisões).
+   Os ficheiros `.md` **não são verdade absoluta**: se divergirem do código ou da realidade, verificar (código, testes, fontes oficiais), corrigir o que estiver errado e corrigir a documentação na mesma tarefa.
+   **Git:** o Leonardo faz sempre os commits, pushes e PRs; agentes não fazem commit nem acrescentam `Co-Authored-By`; entregam os comandos exatos. Escrever os ficheiros diretamente na pasta do projeto.
 4. **Idioma:** toda a interface, documentação, mensagens de erro visíveis ao utilizador e comentários de produto em **Português de Portugal (PT-PT)** (ex.: "ficheiro", "ecrã", "utilizador", "guardar", "definições"). Identificadores de código (variáveis, funções, tipos) em inglês.
 5. **Direitos reservados:** nunca remover avisos de copyright. Cada módulo novo e o `Footer` da aplicação devem conter a menção a Leonardo Barreiras (ver §8).
 
@@ -105,8 +107,8 @@ Carregar via `next/font/google` com `display: "swap"`. `tabular-nums` obrigatór
 | Autenticação      | **Better-Auth** com **RBAC** (papéis e permissões)            |
 | Editor            | **TipTap v2** (ProseMirror)                                   |
 | Diagramas         | **Mermaid.js**                                                |
-| Calendário        | **FullCalendar**                                              |
-| Gráficos          | **Recharts**                                                  |
+| Calendário        | Componentes próprios em `src/components/calendar` (recorrência em `src/lib/recurrence.ts`) |
+| Gráficos          | Componentes próprios (SVG/CSS), sem biblioteca de gráficos    |
 | Exportação        | **Playwright** (PDF fiel) + **`docx`** (Word sem desformatação) |
 
 ---
@@ -122,29 +124,26 @@ O sistema divide-se em 6 módulos (detalhe em `.claude/ARCHITECTURE.md`):
 5. **Telemetria de Esforço** & Dashboard
 6. **Exportação Fiel** & Sincronização
 
-### 4.1 Estrutura de pastas (alvo)
+### 4.1 Estrutura de pastas (real)
 
 ```
 src/
-├── app/                    # Rotas App Router ((auth), (workspace), api/)
-├── modules/
-│   ├── auth/               # Módulo 1
-│   ├── workspace/          # Módulo 2
-│   ├── editor/             # Módulo 3
-│   ├── calendar/           # Módulo 4
-│   ├── telemetry/          # Módulo 5
-│   └── export/             # Módulo 6
-├── components/
-│   ├── ui/                 # primitivas (Button, Dialog, Field, Popover…)
-│   └── layout/             # Shell, Sidebar, Footer
-├── lib/                    # prisma, auth, utils
-├── styles/                 # globals.css + themes.css
-└── types/
+├── app/                    # Rotas App Router ((auth), (workspace), shared, api/ …) e *_components por rota
+├── components/             # UI por área: auth/, editor/, calendar/, layout/, share/, ui/ (primitivas) …
+├── context/                # AuthContext, WorkspaceContext
+├── hooks/
+├── lib/                    # Regras e serviços (rbac, auth, workspace-store, store/, exporters/, sync/, …)
+└── middleware.ts           # Rotas privadas + CSP com nonce
 prisma/
 └── schema.prisma
+tests/                      # unit/ (Vitest), http/ (build de produção), e2e/ (Playwright)
 ```
 
-Cada módulo expõe: `components/`, `actions/` (Server Actions), `services/`, `schemas/` (Zod), `types.ts` e `index.ts` (API pública). **Um módulo não importa ficheiros internos de outro módulo**, apenas o seu `index.ts`.
+Os 6 módulos são uma divisão lógica (ver `.claude/ARCHITECTURE.md`), não pastas. Regras de fronteira:
+
+- A lógica de negócio e as permissões vivem em `src/lib/` (nunca em componentes); os componentes não acedem ao repositório diretamente, só através de Server Actions.
+- **Todas** as Server Actions verificam o RBAC no servidor (`workspace-store.ts` aplica-o) e validam a entrada com Zod.
+- Componentes de uma área não importam internals de outra; partilhe através de `src/lib` ou `src/components/ui`.
 
 ---
 
@@ -177,11 +176,11 @@ Cada módulo expõe: `components/`, `actions/` (Server Actions), `services/`, `s
 ## 8. Direitos reservados (obrigatório)
 
 - Licença: **Proprietária, código visível — Todos os direitos reservados** (ver `LICENSE`).
-- Cada ficheiro de entrada de módulo (`src/modules/*/index.ts`) deve começar com:
+- Cada ficheiro de código novo (em `src/`, `scripts/` e `tests/`) deve começar com:
 
 ```ts
 /**
- * Vellum — <Nome do Módulo>
+ * Vellum — <Descrição curta do ficheiro>
  * © 2026 Leonardo Barreiras. Todos os direitos reservados.
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
@@ -190,6 +189,19 @@ Cada módulo expõe: `components/`, `actions/` (Server Actions), `services/`, `s
 - O componente `<AppFooter />` (`src/components/layout/AppFooter.tsx`, variantes `full` e `statusbar`) deve mostrar sempre:
 
 > © 2026 Vellum · Arquitetado e Desenvolvido por Leonardo Barreiras. Todos os direitos reservados.
+
+---
+
+## 9. Segurança (regras operacionais)
+
+- **Nunca** versionar segredos; variáveis documentadas em `.env.example`. Contas de demonstração: só com `VELLUM_DEMO_AUTH=true` **e** `VELLUM_DEMO_PASSWORD` privada em produção; nunca `SUPER_ADMIN` (exceto E2E).
+- Qualquer endpoint/ação que aceite credenciais, códigos ou links partilhados passa pelo limitador (`src/lib/rate-limit.ts`) e responde sem revelar se a conta existe.
+- Conteúdo de documentos entra sempre por `docContentSchema` (lista fechada) e ligações por `safeHref`; redirecionamentos por `safeNextPath`.
+- O instantâneo do cliente não inclui conteúdo rico de documentos; use `getDocumentContent`.
+- Alterações a cabeçalhos/CSP exigem `npm run build` + `npm run test:http`.
+- **O repositório é público:** nenhum segredo, URL com credenciais, dump, ficheiro `.env*` (exceto `.env.example`) nem dado pessoal pode ser versionado; antes de cada PR, rever o diff com essa lente. Não reescrever o histórico sem necessidade; se um segredo for exposto, **rodá-lo primeiro** e só depois limpar.
+- **Testes herméticos:** os testes não podem ler nem escrever em bases de dados reais nem enviar emails. Não contornar `tests/support/hermetic-env.ts`; testes sobre PostgreSQL só com `npm run test:pg` e uma base com «e2e» ou «test» no nome.
+- Relatórios de vulnerabilidades: ver `SECURITY.md`. Contexto completo para novas sessões/projetos: `.claude/CONTEXTO.md`.
 
 ---
 

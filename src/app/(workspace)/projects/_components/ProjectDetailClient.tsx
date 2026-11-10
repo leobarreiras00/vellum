@@ -70,6 +70,9 @@ export function ProjectDetailClient({ projectId, autoCreatePage }: { projectId: 
       autoCreated.current = true;
       void createPage(null);
     }
+    // Corre uma única vez por visita (`autoCreated` impede repetições); as restantes
+    // dependências mudam a cada render e não devem voltar a disparar a criação.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoCreatePage]);
 
   if (!project) {

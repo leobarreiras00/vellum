@@ -30,7 +30,7 @@ import type { EmailContent } from "@/lib/email-templates";
 
 export type MailProvider = "brevo" | "resend";
 export type MailMode = "provider" | "dev-inbox" | "off";
-export type MailKind = "confirm" | "login" | "invite" | "reset" | "test" | "support";
+export type MailKind = "confirm" | "login" | "invite" | "reset" | "test" | "support" | "notice";
 
 export interface MailStatus {
   mode: MailMode;

@@ -12,11 +12,14 @@
 import { useEffect, useRef } from "react";
 
 import { saveDocumentContentAction } from "@/app/(workspace)/actions";
+import { useAuth } from "@/context/AuthContext";
 import { useWorkspace } from "@/context/WorkspaceContext";
 import { dequeueSave, isClaimed, markConflict, queuedSaves } from "@/lib/offline-queue";
 
 export function OfflineSync() {
   const { run, notify } = useWorkspace();
+  const { user } = useAuth();
+  const userId = user?.userId ?? null;
   const busy = useRef(false);
   const runRef = useRef(run);
   runRef.current = run;
@@ -24,12 +27,13 @@ export function OfflineSync() {
   notifyRef.current = notify;
 
   useEffect(() => {
+    if (!userId) return;
     async function flush() {
-      if (busy.current || !navigator.onLine) return;
+      if (!userId || busy.current || !navigator.onLine) return;
       busy.current = true;
       try {
         let sent = 0;
-        for (const entry of queuedSaves()) {
+        for (const entry of queuedSaves(userId)) {
           if (entry.conflict || isClaimed(entry.id)) continue;
           const { id, title, summary, contentJson, baseUpdatedAt } = entry;
           const result = await runRef.current(
@@ -66,7 +70,7 @@ export function OfflineSync() {
       window.clearTimeout(first);
       window.removeEventListener("online", onOnline);
     };
-  }, []);
+  }, [userId]);
 
   return null;
 }

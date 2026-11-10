@@ -22,6 +22,7 @@ const KIND_LABELS = {
   reset: "Recuperação",
   test: "Teste",
   support: "Suporte",
+  notice: "Aviso de conta existente",
 } as const;
 
 export default function DevInboxPage() {

@@ -82,7 +82,7 @@ test("Login: entra com leonardo_barreiras e com o alias leo_barreiras", async ({
     await page.addInitScript(() => window.sessionStorage.setItem("vellum:intro-seen", "1"));
     await page.goto("/login");
     await page.getByLabel("Username ou email").fill(identifier);
-    await page.getByLabel("Palavra-passe", { exact: true }).fill("Atelier-2026");
+    await page.getByLabel("Palavra-passe", { exact: true }).fill(process.env.E2E_DEMO_PASSWORD!);
     await page.getByRole("button", { name: /^Entrar/ }).click();
     await page.waitForURL("**/dashboard");
   }

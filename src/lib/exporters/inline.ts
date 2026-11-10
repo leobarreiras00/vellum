@@ -9,6 +9,9 @@
  */
 import { isDocFont, isDocFontSize, isDocInk, type DocFont, type DocInk } from "@/components/editor/palette";
 import type { DocNode } from "@/lib/document-content";
+import { safeHref } from "@/lib/safe-href";
+
+export { safeHref };
 
 export interface TextRun {
   text: string;
@@ -53,14 +56,6 @@ export const FONT_FAMILIES: Record<DocFont, string> = {
   sans: "Plus Jakarta Sans",
   mono: "JetBrains Mono",
 };
-
-/** Só ligações http(s), mailto e âncoras internas sobrevivem à exportação. */
-export function safeHref(value: unknown): string | null {
-  if (typeof value !== "string") return null;
-  const href = value.trim();
-  if (/^(https?:|mailto:)/i.test(href) || href.startsWith("#")) return href;
-  return null;
-}
 
 export function inlineRuns(node: DocNode): TextRun[] {
   const out: TextRun[] = [];

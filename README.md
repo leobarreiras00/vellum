@@ -43,8 +43,8 @@ As ferramentas de conhecimento atuais obrigam a escolher entre flexibilidade e r
 | 1      | **Auth & RBAC**                         | Better-Auth, papéis por workspace, login animado por caneta SVG           |
 | 2      | **Workspace Engine**                    | Projetos, páginas aninhadas, notas, pesquisa `⌘K`, favoritos, lixo        |
 | 3      | **Editor Rico + Estúdio Mermaid**       | TipTap v2, modo bloco e modo documento paginado, diagramas em tempo real  |
-| 4      | **Calendário + Notificações**           | FullCalendar, recorrência, lembretes, ICS, centro de notificações         |
-| 5      | **Telemetria de Esforço & Dashboard**   | Tempo ativo, streaks, mapa de calor, gráficos Recharts                    |
+| 4      | **Calendário + Notificações**           | Calendário próprio, recorrência (subconjunto RRULE), lembretes, ICS, centro de notificações |
+| 5      | **Telemetria de Esforço & Dashboard**   | Tempo ativo, streaks, mapa de calor, gráficos próprios em SVG             |
 | 6      | **Exportação Fiel & Sincronização**     | PDF via Playwright, DOCX via `docx`, Markdown, fila offline               |
 
 ## Arquitetura Técnica
@@ -80,20 +80,18 @@ vellum/
 ├── .claude/
 │   ├── ARCHITECTURE.md     # Detalhe dos 6 módulos
 │   ├── PROGRESS.md         # Roadmap e checklist das fases
-│   └── skills/             # 5 skills obrigatórias (design, tipografia, movimento, impressão, segurança)
+│   └── skills/             # 7 skills obrigatórias (design, tipografia, movimento, impressão, segurança, acabamento, formulários)
 ├── prisma/                 # Esquema e migrações
 ├── src/
 │   ├── app/                # Rotas (App Router)
-│   ├── modules/
-│   │   ├── auth/           # 1 · Auth & RBAC
-│   │   ├── workspace/      # 2 · Workspace Engine
-│   │   ├── editor/         # 3 · Editor Rico + Estúdio Mermaid
-│   │   ├── calendar/       # 4 · Calendário + Notificações
-│   │   ├── telemetry/      # 5 · Telemetria & Dashboard
-│   │   └── export/         # 6 · Exportação & Sincronização
-│   ├── components/         # UI partilhada (shadcn/ui, layout, Footer)
-│   ├── lib/                # Prisma, auth, utilitários
-│   └── styles/             # Tokens e temas
+│   ├── components/         # Interface por área: auth, editor (1·3), calendar (4), layout, share, ui…
+│   ├── context/            # Auth e Workspace (estado do cliente)
+│   ├── lib/                # Regras e serviços: rbac, auth, workspace-store, store/ (json|postgres),
+│   │                       #   exporters/ (6), sync/, rate-limit, csp, document-content (esquema do editor)…
+│   └── middleware.ts       # Rotas privadas + CSP com nonce por pedido
+├── tests/                  # unit (Vitest), http (cabeçalhos/CSP sobre o build), e2e (Playwright)
+├── scripts/                # Auditoria das contas de demonstração, mocks e reposição dos E2E
+├── .env.example            # Variáveis de ambiente documentadas (sem segredos)
 ├── CLAUDE.md               # Regras de arquitetura
 ├── LICENSE                 # Licença proprietária
 └── README.md
@@ -130,7 +128,7 @@ Qualquer contribuição (humana ou agente de IA) segue obrigatoriamente as 5 ski
 
 ## Desenvolvimento local
 
-Não há ficheiros `.env` nem segredos no repositório: toda a configuração vem de variáveis de ambiente definidas na shell, na plataforma de alojamento ou no CI.
+Não há segredos no repositório: toda a configuração vem de variáveis de ambiente definidas na shell, na plataforma de alojamento ou no CI. O ficheiro [`.env.example`](.env.example) documenta todas as variáveis (sem valores secretos); para desenvolvimento pode copiá-lo para `.env.local`, que o Git ignora.
 
 Modo local (sem base de dados nem variáveis — dados em `.data/workspace.json`, contas em memória):
 
@@ -154,9 +152,22 @@ Testes (Vitest + Playwright sobre o build de produção; o segredo das sessões 
 
 ```bash
 npx playwright install chromium   # só na primeira vez (também usado pelo PDF no servidor)
-npm test
+npm test                                 # unitários (hermético: ignora DATABASE_URL, BREVO_*, VELLUM_* da shell)
 npm run build && npm run test:e2e        # modo json
 E2E_DATABASE_URL="postgresql://…/vellum_e2e" npm run test:e2e:pg   # sobre PostgreSQL (o nome da base tem de conter «e2e»; é esvaziada)
+```
+
+Os testes **nunca** tocam em bases de dados nem enviam emails reais, mesmo com as variáveis de produção exportadas na shell (`tests/support/hermetic-env.ts`). Outras suites:
+
+```bash
+# Repositório (RBAC, isolamento, partilha) sobre PostgreSQL real; a base tem de ter «e2e» ou «test» no nome
+E2E_DATABASE_URL="postgresql://…/vellum_e2e" DATABASE_URL="$E2E_DATABASE_URL" node scripts/e2e-reset-db.mjs
+E2E_DATABASE_URL="postgresql://…/vellum_e2e" npm run test:pg
+DATABASE_URL="postgresql://…" node scripts/check-integrity.mjs   # só leitura: linhas órfãs (23 verificações)
+
+# Cabeçalhos, CSP e rotas privadas sobre o build de produção
+npm run build && npm start &              # ou: npx next start -p 3100
+VELLUM_TEST_URL=http://127.0.0.1:3100 npm run test:http
 ```
 
 `tests/e2e/a11y.spec.ts` audita WCAG 2.2 AA com axe-core em todas as páginas e nos 5 temas.
@@ -169,7 +180,11 @@ E2E_DATABASE_URL="postgresql://…/vellum_e2e" npm run test:e2e:pg   # sobre Pos
 | `DATABASE_URL` | app, migrações | com `postgres` | Ligação PostgreSQL (Neon: a ligação direta, sem `-pooler`, com `sslmode=require`) |
 | `AUTH_SECRET` | app | em produção | 32+ caracteres (`openssl rand -base64 32`); sem ele, em desenvolvimento usa-se um segredo temporário |
 | `BETTER_AUTH_URL` | app | em produção | URL pública (`https://…`) |
-| `VELLUM_DEMO_AUTH` | app | não | `true` liga os perfis de demonstração em produção |
+| `VELLUM_DEMO_AUTH` | app | não | `true` liga os perfis de demonstração em produção (exige `VELLUM_DEMO_PASSWORD`) |
+| `VELLUM_DEMO_PASSWORD` | app | com `VELLUM_DEMO_AUTH` em produção | Palavra-passe **privada** (12+ caracteres) das contas de demonstração; as palavras-passe fixas do desenvolvimento nunca são aceites em produção |
+| `VELLUM_DEMO_SUPER_ADMIN` | app, testes | não | `true` dá `SUPER_ADMIN` às contas de demonstração (reservado aos testes E2E; em produção real fica desligado) |
+| `VELLUM_CSP` | app | não (`enforce`) | `report-only` regista violações da Content-Security-Policy sem bloquear; `off` desliga-a (válvula de emergência) |
+| `VELLUM_PROXY_HOPS` | app | não (`1`) | Nº de proxies de confiança (1–5) à frente da app; o IP do cliente lê-se do `X-Forwarded-For` a partir da direita |
 | `NEXT_PUBLIC_APP_URL` | app | em produção | URL pública usada nas ligações dos emails e dos links de partilha (produção: `https://vellumpt.up.railway.app`; local: `http://localhost:3000`). Sem ela, usa `BETTER_AUTH_URL` |
 | `EMAIL_PROVIDER` | app | não | `brevo` ou `resend` (sem ela, usa o fornecedor cuja chave existir) |
 | `BREVO_API_KEY` | app | para email (Brevo) | Chave da API do Brevo (SMTP & API → API Keys) |
@@ -264,11 +279,11 @@ Projetos, páginas, notas, membros, eventos do calendário, Notas do Dia, regist
 
 ### Perfis de demonstração RBAC
 
-Ativos em desenvolvimento (em produção só com `VELLUM_DEMO_AUTH=true`). Entram com um clique no ecrã de login ou manualmente:
+Ativos em desenvolvimento e testes, com as palavras-passe públicas abaixo (que só funcionam fora de produção). Em produção ficam desligados; só arrancam com `VELLUM_DEMO_AUTH=true` **e** uma `VELLUM_DEMO_PASSWORD` privada, e nunca são `SUPER_ADMIN`. Entram com um clique no ecrã de login ou manualmente:
 
 | Perfil        | Username      | Palavra-passe   | Papéis                      |
 | ------------- | ------------- | --------------- | --------------------------- |
-| Leonardo Barreiras | `leo`    | `Atelier-2026`  | `SUPER_ADMIN` · `OWNER`     |
+| Leonardo Barreiras | `leonardo_barreiras` | `Atelier-2026` | `SUPER_ADMIN` · `OWNER` (só em desenvolvimento) |
 | Ana Silva     | `ana.silva`   | `Editora-2026`  | `USER` · `EDITOR`           |
 | Marta Rocha   | `marta.rocha` | `Revisora-2026` | `USER` · `COMMENTER`        |
 | Pedro Costa   | `pedro.costa` | `Leitor-2026`   | `USER` · `VIEWER`           |

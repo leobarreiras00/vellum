@@ -4,19 +4,22 @@
  * Licença proprietária — ver LICENSE na raiz do repositório.
  */
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import { JetBrains_Mono, Newsreader, Plus_Jakarta_Sans } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { WallpaperProvider } from "@/components/providers/WallpaperProvider";
 import { SupportModalHost } from "@/components/support/SupportModal";
 import { AuthProvider } from "@/context/AuthContext";
+import { appUrl } from "@/lib/app-url";
 import { getSession } from "@/lib/auth";
 import { DEFAULT_THEME, THEME_INIT_SCRIPT } from "@/lib/themes";
 
 import "./globals.css";
 
 const serif = Newsreader({
-  subsets: ["latin", "latin-ext"],
+  // Só «latin»: cobre todo o português; «latin-ext» duplicava os ficheiros pré-carregados sem uso.
+  subsets: ["latin"],
   style: ["normal", "italic"],
   axes: ["opsz"],
   display: "swap",
@@ -24,19 +27,21 @@ const serif = Newsreader({
 });
 
 const sans = Plus_Jakarta_Sans({
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
   display: "swap",
   variable: "--font-sans",
 });
 
 const mono = JetBrains_Mono({
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
+  // Só aparece em código e dados técnicos: não vale um pré-carregamento em todas as páginas.
+  preload: false,
   display: "swap",
   variable: "--font-mono",
 });
 
 /** URL pública (variável de ambiente da plataforma) para as ligações absolutas da imagem Open Graph. */
-const siteUrl = process.env.BETTER_AUTH_URL ?? process.env.APP_URL ?? "http://localhost:3000";
+const siteUrl = appUrl();
 const description = "Escrever, organizar e paginar — num atelier editorial em tons creme.";
 
 export const metadata: Metadata = {
@@ -73,6 +78,8 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
+  // Nonce do pedido (middleware, src/lib/csp.ts): o script inline do tema só corre com ele.
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html
@@ -82,7 +89,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       suppressHydrationWarning
     >
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
         <ThemeProvider>

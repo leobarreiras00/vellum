@@ -8,11 +8,14 @@
  * janela anónima. Links revogados ou expirados deixam de abrir de imediato.
  */
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 
 import { hasShareAccess } from "@/app/shared/actions";
 import { SharedDocumentClient } from "@/components/share/SharedDocumentClient";
 import { SharedPasswordGate, SharedUnavailable } from "@/components/share/SharedGates";
 import { getSession } from "@/lib/auth";
+import { clientIpFrom } from "@/lib/client-ip";
+import { MINUTE, rateLimiter } from "@/lib/rate-limit";
 import { markShareOpened, readSharedDocument, resolveShareToken } from "@/lib/workspace-store";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +39,14 @@ export default async function SharedPage({ params, searchParams }: SharedPagePro
 
   const content = await readSharedDocument(token, typeof doc === "string" ? doc : null);
   if (!content) return <SharedUnavailable reason="not-found" />;
-  await markShareOpened(token);
+  // O contador de aberturas escreve no repositório inteiro: conta-se uma abertura por
+  // visitante e link a cada 30 minutos (refrescar a página não conta), com um teto por origem.
+  const ip = clientIpFrom(await headers());
+  const counts = !rateLimiter.consume([
+    { key: `share-open:ip:${ip}`, max: 60, windowMs: 10 * MINUTE },
+    { key: `share-open:link-ip:${access.linkId}:${ip}`, max: 1, windowMs: 30 * MINUTE },
+  ]).limited;
+  if (counts) await markShareOpened(token);
   const session = await getSession();
 
   return (

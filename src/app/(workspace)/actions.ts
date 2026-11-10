@@ -59,6 +59,7 @@ import {
   exportMarkdown,
   exportCalendarIcs,
   exportWorkspaceBackup,
+  getDocumentContent,
   getExportBundle,
   getWorkspaceSnapshot,
   importCalendarIcs,
@@ -98,6 +99,7 @@ import {
   shareLinkInputSchema,
   workspaceMemberInputSchema,
   SHARE_ROLE_LABELS,
+  type DocumentContentView,
   type WorkspaceSnapshot,
 } from "@/lib/workspace-types";
 
@@ -130,6 +132,26 @@ async function run<T>(fn: (user: SessionUser) => Promise<T>): Promise<WorkspaceA
     if (error instanceof ForbiddenError) return { ok: false, error: FORBIDDEN_MESSAGE };
     if (error instanceof NotFoundError || error instanceof ValidationError) return { ok: false, error: error.message };
     console.error("[vellum] Erro numa ação do workspace.", error);
+    return { ok: false, error: "Algo correu mal. Tente de novo dentro de momentos." };
+  }
+}
+
+/**
+ * Conteúdo de um só documento (o instantâneo não o inclui). Não devolve o
+ * instantâneo: é uma leitura, e o editor chama-a ao abrir o documento.
+ */
+export async function getDocumentContentAction(
+  documentId: unknown,
+): Promise<{ ok: true; data: DocumentContentView } | { ok: false; error: string }> {
+  const user = await getSession();
+  if (!user) return { ok: false, error: "A sua sessão terminou. Entre de novo." };
+  try {
+    return { ok: true, data: await getDocumentContent(user, idSchema.parse(documentId)) };
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, error: "Pedido inválido." };
+    if (error instanceof ForbiddenError) return { ok: false, error: FORBIDDEN_MESSAGE };
+    if (error instanceof NotFoundError) return { ok: false, error: error.message };
+    console.error("[vellum] Erro ao ler o conteúdo do documento.", error);
     return { ok: false, error: "Algo correu mal. Tente de novo dentro de momentos." };
   }
 }

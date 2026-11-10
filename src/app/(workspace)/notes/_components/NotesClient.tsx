@@ -175,7 +175,8 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
           <p className="eyebrow">{snapshot.workspace.name}</p>
           <h1 className="mt-3 text-4xl font-normal leading-tight tracking-tight">Notas Rápidas</h1>
           <p className="nums mt-2 font-serif text-lg text-muted">
-            Capture agora, organize depois · {formatNumber(snapshot.notes.length)} notas no mural
+            Capture agora, organize depois · {formatNumber(snapshot.notes.length)}{" "}
+            {snapshot.notes.length === 1 ? "nota" : "notas"} no mural
           </p>
         </div>
       </header>
@@ -186,43 +187,48 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
         data-testid="notes-filters"
         className="sticky top-0 z-20 -mx-2 mt-7 flex flex-wrap items-center gap-2.5 border-y border-subtle bg-canvas/95 px-2 py-2.5 backdrop-blur"
       >
-        <label htmlFor="notes-search" className="text-xs font-medium text-primary">
-          Pesquisar
-        </label>
-        <div className="relative min-w-[200px] flex-1 sm:max-w-sm">
-          <Search
-            aria-hidden="true"
-            className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
-            strokeWidth={1.6}
-          />
-          <Input
-            ref={searchRef}
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            id="notes-search"
-            placeholder="título, conteúdo ou projeto"
-            className="h-8 pl-8 pr-10 text-[13px]"
-          />
-          <kbd className="absolute right-2 top-1/2 -translate-y-1/2">/</kbd>
+        {/* Cada rótulo viaja com o seu campo: em ecrãs estreitos o grupo passa para a linha seguinte inteiro. */}
+        <div className="flex min-w-[min(100%,260px)] flex-1 items-center gap-2.5 sm:max-w-[28.5rem]">
+          <label htmlFor="notes-search" className="shrink-0 text-xs font-medium text-primary">
+            Pesquisar
+          </label>
+          <div className="relative min-w-0 flex-1">
+            <Search
+              aria-hidden="true"
+              className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted"
+              strokeWidth={1.6}
+            />
+            <Input
+              ref={searchRef}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              id="notes-search"
+              placeholder="título, conteúdo ou projeto"
+              className="h-8 pl-8 pr-10 text-[13px]"
+            />
+            <kbd className="absolute right-2 top-1/2 -translate-y-1/2">/</kbd>
+          </div>
         </div>
-        <label htmlFor="notes-project-filter" className="text-xs font-medium text-primary">
-          Projeto
-        </label>
-        <Select
-          id="notes-project-filter"
-          value={projectFilter}
-          onChange={(e) => setProjectFilter(e.target.value)}
-          className="h-8 w-auto min-w-[180px] text-[13px]"
-        >
-          <option value="">Todos os projetos</option>
-          <option value={NO_PROJECT}>Sem projeto</option>
-          {snapshot.projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
+        <div className="flex items-center gap-2.5">
+          <label htmlFor="notes-project-filter" className="shrink-0 text-xs font-medium text-primary">
+            Projeto
+          </label>
+          <Select
+            id="notes-project-filter"
+            value={projectFilter}
+            onChange={(e) => setProjectFilter(e.target.value)}
+            className="h-8 w-auto min-w-[180px] text-[13px]"
+          >
+            <option value="">Todos os projetos</option>
+            <option value={NO_PROJECT}>Sem projeto</option>
+            {snapshot.projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+        </div>
         {usedColors.length > 0 && (
           <div role="radiogroup" aria-label="Filtrar por cor" className="flex items-center gap-1">
             {usedColors.map((c) => (
@@ -247,8 +253,8 @@ export function NotesClient({ startComposing, initialProject, focusNoteId }: Not
         )}
         <span className="nums ml-auto text-xs text-muted" aria-live="polite">
           {filtered.length === snapshot.notes.length
-            ? `${filtered.length} notas`
-            : `${filtered.length} de ${snapshot.notes.length} notas`}
+            ? `${filtered.length} ${filtered.length === 1 ? "nota" : "notas"}`
+            : `${filtered.length} de ${snapshot.notes.length} ${snapshot.notes.length === 1 ? "nota" : "notas"}`}
         </span>
         {filtering && (
           <Button variant="ghost" size="sm" onClick={clearFilters}>
@@ -598,6 +604,8 @@ function ConvertDialog({ note, onClose }: { note: NoteView | null; onClose: () =
     const preferred =
       note.projectId && projects.some((p) => p.id === note.projectId) ? note.projectId : projects[0]?.id;
     setProjectId(preferred ?? "");
+    // Só repõe o projeto quando se abre outra nota, não a cada alteração à lista de projetos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note]);
 
   async function convert() {

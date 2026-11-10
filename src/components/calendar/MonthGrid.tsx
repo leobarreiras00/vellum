@@ -182,7 +182,7 @@ function MonthCell({
                   onNewEvent(day);
                 }}
                 aria-label={`Novo evento em ${dayLongLabel(day)}`}
-                className="grid size-5 place-items-center rounded text-muted opacity-0 transition-opacity hover:bg-surface hover:text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary group-hover:opacity-100"
+                className="grid size-6 place-items-center rounded text-muted opacity-0 transition-opacity hover:bg-surface hover:text-primary focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-primary group-hover:opacity-100"
               >
                 <Plus aria-hidden="true" className="size-3" strokeWidth={1.6} />
               </button>

@@ -20,7 +20,10 @@ test("gaveta de navegação no telemóvel", async ({ page }) => {
 test("documento no telemóvel: Folha A4 escalada sem deslocamento horizontal", async ({ page }) => {
   await loginAs(page, PROFILES.leo);
   await page.goto("/projects/prj-arquitetura/documents/doc-visao-geral");
-  await expect(page.getByTestId("a4-sheet")).toBeVisible();
+  // Dentro de #conteudo: com dados mais lentos (PostgreSQL) o Next envia o conteúdo por streaming
+  // (loading.tsx) e o `<div hidden>` do React pode coexistir com a folha real — o strict mode do
+  // Playwright recusava os dois. É o mesmo âmbito que o teste do editor já usa.
+  await expect(page.locator("#conteudo").getByTestId("a4-sheet")).toBeVisible();
   await expect(page.getByRole("toolbar", { name: "Formatação do documento" })).toBeVisible();
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);

@@ -233,7 +233,7 @@ export function CommentsDrawer({ documentId, subject, quote, onClearQuote, onClo
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
         {open.length === 0 ? (
-          <p className="py-6 text-center font-serif text-[15px] italic text-muted">Sem comentários em aberto.</p>
+          <p className="py-6 text-center font-serif text-[15px] text-muted">Sem comentários em aberto.</p>
         ) : (
           <ul className="space-y-2.5" aria-label="Comentários em aberto">
             {open.map(renderComment)}

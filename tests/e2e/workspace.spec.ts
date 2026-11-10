@@ -121,7 +121,9 @@ test("Notas Rápidas: criar, fixar, pesquisar e converter em documento", async (
   await expect(page.getByRole("article")).toHaveCount(6);
 
   // Barra de filtros no topo; o compositor é o primeiro cartão da grelha.
-  await expect(page.getByTestId("notes-filters")).toBeVisible();
+  // `:visible` ignora cópias ocultas que o React/Next possam manter no DOM durante o streaming:
+  // o `getByTestId` conta-as e o strict mode do Playwright rejeitava a ambiguidade.
+  await expect(page.locator('[data-testid="notes-filters"]:visible')).toBeVisible();
   const composer = page.getByRole("form", { name: "Nova nota rápida" });
   await composer.getByLabel("Nova nota").fill("Glossário de termos editoriais");
   await composer.getByLabel("Conteúdo").fill("Mancha gráfica, entrelinha, medida, viúvas e órfãs.");
